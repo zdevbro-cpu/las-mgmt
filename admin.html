@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAS 승인 관리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .header {
+            max-width: 1400px;
+            margin: 0 auto 30px;
+            background: white;
+            padding: 25px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .logo-small { width: 50px; height: 50px; }
+        .header h1 { color: #16a085; font-size: 28px; }
+        
+        .role-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .user-name { color: #2c3e50; font-weight: 500; }
+        
+        .btn-logout {
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn-logout:hover { background-color: #c0392b; }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .pending-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .pending-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .pending-header h3 {
+            color: #856404;
+            font-size: 18px;
+        }
+
+        .pending-count {
+            background: #ffc107;
+            color: #856404;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .pending-list { display: grid; gap: 15px; }
+
+        .pending-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ffc107;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .pending-info {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+        }
+
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-size: 12px; color: #7f8c8d; margin-bottom: 4px; }
+        .info-value { font-size: 14px; color: #2c3e50; font-weight: 500; }
+
+        .pending-actions { display: flex; gap: 10px; }
+
+        .btn-approve, .btn-reject {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-approve {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-approve:hover { background-color: #229954; }
+
+        .btn-reject {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .btn-reject:hover { background-color: #c0392b; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-card.warning {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+        }
+        
+        .stat-card h3 { font-size: 14px; margin-bottom: 10px; opacity: 0.9; }
+        .stat-card .number { font-size: 32px; font-weight: bold; }
+
+        .no-pending {
+            text-align: center;
+            padding: 40px;
+            color: #95a5a6;
+        }
+
+        .nav-links { margin-top: 30px; text-align: center; }
+
+        .nav-links a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            color: #16a085;
+            text-decoration: none;
+            border: 1px solid #16a085;
+            border-radius: 5px;
+            transition: all 0.3s;
+        }
+
+        .nav-links a:hover {
+            background-color: #16a085;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <svg class="logo-small" viewBox="0 0 100 100">
+                <path fill="#16a085" d="M20,30 L50,20 L80,30 L80,70 L50,80 L20,70 Z M30,40 L50,35 L70,40 L70,60 L50,65 L30,60 Z"/>
+                <path fill="#1abc9c" d="M30,40 L50,35 L70,40 L70,50 L50,55 L30,50 Z"/>
+            </svg>
+            <div>
+                <h1 id="pageTitle">LAS 승인 관리</h1>
+                <div class="role-badge" id="roleBadge">MANAGER</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="user-name" id="userName">사용자</span>
+            <button class="btn-logout" onclick="logout()">로그아웃</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 승인 대기 목록 -->
+        <div id="pendingSection" class="pending-section" style="display: none;">
+            <div class="pending-header">
+                <h3 id="pendingSectionTitle">⏳ 승인 대기 목록</h3>
+                <span class="pending-count" id="pendingCount">0</span>
+            </div>
+            <div id="pendingList" class="pending-list"></div>
+        </div>
+
+        <!-- 통계 -->
+        <div class="stats">
+            <div class="stat-card warning">
+                <h3>내 승인 대기</h3>
+                <div class="number" id="myPendingCount">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>전체 회원</h3>
+                <div class="number" id="totalUsers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>점주</h3>
+                <div class="number" id="totalOwners">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>점장</h3>
+                <div class="number" id="totalManagers">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>관리자</h3>
+                <div class="number" id="totalAdmins">0</div>
+            </div>
+        </div>
+
+        <div class="nav-links">
+            <a href="dashboard.html">대시보드로 이동</a>
+            <a href="work-diary.html">근무일지 보기</a>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // 현재 사용자 확인
+        function checkAuth() {
+            const userStr = sessionStorage.getItem('las_current_user');
+            if (!userStr) {
+                alert('로그인이 필요합니다.');
+                location.href = 'login.html';
+                return false;
+            }
+            
+            currentUser = JSON.parse(userStr);
+            
+            // 관리자 또는 점장만 접근 가능
+            if (currentUser.userType !== '관리자' && currentUser.userType !== '점장') {
+                alert('승인 권한이 없습니다.');
+                location.href = 'dashboard.html';
+                return false;
+            }
+
+            // UI 업데이트
+            document.getElementById('userName').textContent = currentUser.name;
+            
+            if (currentUser.userType === '관리자') {
+                document.getElementById('pageTitle').textContent = 'LAS 관리자 페이지';
+                document.getElementById('roleBadge').textContent = 'ADMINISTRATOR';
+                document.getElementById('pendingSectionTitle').textContent = '⏳ 점장 승인 대기 목록';
+            } else if (currentUser.userType === '점장') {
+                document.getElementById('pageTitle').textContent = 'LAS 점장 승인 관리';
+                document.getElementById('roleBadge').textContent = 'MANAGER';
+                document.getElementById('roleBadge').style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
+                document.getElementById('pendingSectionTitle').textContent = '⏳ 점주 승인 대기 목록';
+            }
+
+            return true;
+        }
+
+        // 승인 대기 목록 로드
+        function loadPendingRequests() {
+            const users = JSON.parse(localStorage.getItem('las_users') || '[]');
+            
+            // 현재 사용자가 승인할 수 있는 대기 목록만 필터링
+            let pending = [];
+            if (currentUser.userType === '관리자') {
+                // 관리자는 점장 승인
+                pending = users.filter(u => u.userType === '점장' && u.status === 'pending');
+            } else if (currentUser.userType === '점장') {
+                // 점장은 점주 승인
+                pending = users.filter(u => u.userType === '점주' && u.status === 'pending');
+            }
+
+            const pendingSection = document.getElementById('pendingSection');
+            const pendingList = document.getElementById('pendingList');
+            const pendingCount = document.getElementById('pendingCount');
+
+            if (pending.length === 0) {
+                pendingSection.style.display = 'block';
+                pendingList.innerHTML = '<div class="no-pending">승인 대기 중인 사용자가 없습니다.</div>';
+                pendingCount.textContent = '0';
+                return;
+            }
+
+            pendingSection.style.display = 'block';
+            pendingCount.textContent = pending.length;
+
+            pendingList.innerHTML = pending.map(user => `
+                <div class="pending-item">
+                    <div class="pending-info">
+                        <div class="info-item">
+                            <span class="info-label">구분</span>
+                            <span class="info-value" style="color: #e67e22; font-weight: bold;">${user.userType}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">이름</span>
+                            <span class="info-value">${user.name}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">이메일</span>
+                            <span class="info-value">${user.email}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">지점</span>
+                            <span class="info-value">${user.branch}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">신청일</span>
+                            <span class="info-value">${formatDate(user.createdAt)}</span>
+                        </div>
+                    </div>
+                    <div class="pending-actions">
+                        <button class="btn-approve" onclick="approveUser('${user.email}')">
+                            ✓ 승인
+                        </button>
+                        <button class="btn-reject" onclick="rejectUser('${user.email}')">
+                            ✗ 거부
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            updateStats(users);
+        }
+
+        // 승인
+        function approveUser(email) {
+            const users = JSON.parse(localStorage.getItem('las_users') || '[]');
+            const userIndex = users.findIndex(u => u.email === email);
+
+            if (userIndex === -1) return;
+
+            const targetUser = users[userIndex];
+            
+            // 승인 권한 확인
+            if (currentUser.userType === '관리자' && targetUser.userType !== '점장') {
+                alert('관리자는 점장만 승인할 수 있습니다.');
+                return;
+            }
+            if (currentUser.userType === '점장' && targetUser.userType !== '점주') {
+                alert('점장은 점주만 승인할 수 있습니다.');
+                return;
+            }
+
+            if (!confirm(`${targetUser.name}님(${targetUser.userType})을 승인하시겠습니까?`)) {
+                return;
+            }
+
+            users[userIndex].status = 'approved';
+            users[userIndex].approvedAt = new Date().toISOString();
+            users[userIndex].approver = currentUser.email;
+            localStorage.setItem('las_users', JSON.stringify(users));
+
+            alert(`${targetUser.name}님이 승인되었습니다.`);
+            loadPendingRequests();
+        }
+
+        // 거부
+        function rejectUser(email) {
+            const users = JSON.parse(localStorage.getItem('las_users') || '[]');
+            const userIndex = users.findIndex(u => u.email === email);
+
+            if (userIndex === -1) return;
+
+            const targetUser = users[userIndex];
+            const reason = prompt('거부 사유를 입력하세요 (선택사항):');
+
+            if (reason === null) return; // 취소
+
+            users[userIndex].status = 'rejected';
+            users[userIndex].rejectedAt = new Date().toISOString();
+            users[userIndex].rejecter = currentUser.email;
+            users[userIndex].rejectReason = reason || '별도 안내 예정';
+            localStorage.setItem('las_users', JSON.stringify(users));
+
+            alert(`${targetUser.name}님의 가입이 거부되었습니다.`);
+            loadPendingRequests();
+        }
+
+        // 통계 업데이트
+        function updateStats(users) {
+            const approved = users.filter(u => u.status === 'approved');
+            
+            // 내가 승인해야 할 대기 건수
+            let myPending = 0;
+            if (currentUser.userType === '관리자') {
+                myPending = users.filter(u => u.userType === '점장' && u.status === 'pending').length;
+            } else if (currentUser.userType === '점장') {
+                myPending = users.filter(u => u.userType === '점주' && u.status === 'pending').length;
+            }
+            
+            document.getElementById('myPendingCount').textContent = myPending;
+            document.getElementById('totalUsers').textContent = approved.length;
+            document.getElementById('totalOwners').textContent = approved.filter(u => u.userType === '점주').length;
+            document.getElementById('totalManagers').textContent = approved.filter(u => u.userType === '점장').length;
+            document.getElementById('totalAdmins').textContent = approved.filter(u => u.userType === '관리자').length;
+        }
+
+        // 날짜 포맷
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${month}/${day} ${hours}:${minutes}`;
+        }
+
+        // 로그아웃
+        function logout() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                sessionStorage.removeItem('las_current_user');
+                location.href = 'login.html';
+            }
+        }
+
+        // 페이지 로드
+        window.addEventListener('load', function() {
+            if (checkAuth()) {
+                loadPendingRequests();
+            }
+        });
+    </script>
+</body>
+</html>

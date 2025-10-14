@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAS 회원가입</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-text {
+            color: #16a085;
+            text-align: center;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+        }
+        
+        .logo h1 {
+            color: #16a085;
+            font-size: 32px;
+            font-weight: bold;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .form-group label .icon {
+            margin-right: 5px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #16a085;
+        }
+        
+        .radio-group {
+            margin-bottom: 20px;
+        }
+        
+        .radio-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .radio-options {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+        }
+        
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 5px;
+            accent-color: #16a085;
+        }
+        
+        .radio-option span {
+            font-size: 14px;
+            color: #2c3e50;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: #16a085;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #138d75;
+        }
+        
+        .btn-secondary {
+            background-color: white;
+            color: #16a085;
+            border: 1px solid #16a085;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .footer-link {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #16a085;
+        }
+        
+        .footer-link a {
+            color: #16a085;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .footer-link a:hover {
+            text-decoration: underline;
+        }
+
+        .approval-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #856404;
+            display: none;
+        }
+
+        .approval-notice.show {
+            display: block;
+        }
+
+        .approval-notice strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .approval-hierarchy {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            border-radius: 5px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+
+        .approval-hierarchy strong {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .hierarchy-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+        }
+
+        .hierarchy-item {
+            text-align: center;
+        }
+
+        .hierarchy-item .role {
+            font-weight: bold;
+            color: #16a085;
+            margin-bottom: 5px;
+        }
+
+        .hierarchy-item .arrow {
+            font-size: 20px;
+            color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-text">LAS 매장관리 시스템에 오신것을 환영합니다.</div>
+        
+        <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 100 100">
+                <path fill="#16a085" d="M20,30 L50,20 L80,30 L80,70 L50,80 L20,70 Z M30,40 L50,35 L70,40 L70,60 L50,65 L30,60 Z"/>
+                <path fill="#1abc9c" d="M30,40 L50,35 L70,40 L70,50 L50,55 L30,50 Z"/>
+            </svg>
+            <h1>회원가입</h1>
+        </div>
+
+        <form id="signupForm">
+            <div class="form-group">
+                <label><span class="icon">📧</span> 이메일</label>
+                <input type="email" id="email" placeholder="이메일을 입력하세요" required>
+            </div>
+
+            <div class="form-group">
+                <label><span class="icon">🔒</span> 비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
+            </div>
+
+            <div class="form-group">
+                <label><span class="icon">🔒</span> 비밀번호 확인</label>
+                <input type="password" id="passwordConfirm" placeholder="비밀번호를 확인하세요" required>
+            </div>
+
+            <div class="form-group">
+                <label>이름</label>
+                <input type="text" id="name" placeholder="이름을 입력하세요" required>
+            </div>
+
+            <div class="form-group">
+                <label>지점명</label>
+                <input type="text" id="branch" placeholder="지점명을 입력하세요" required>
+            </div>
+
+            <div class="form-group">
+                <label>핸드폰</label>
+                <input type="tel" id="phone" placeholder="핸드폰 번호를 입력하세요" required>
+            </div>
+
+            <div class="radio-group">
+                <label>구분</label>
+                <div class="radio-options">
+                    <div class="radio-option">
+                        <input type="radio" id="owner" name="userType" value="점주" checked>
+                        <span>점주</span>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="manager" name="userType" value="점장">
+                        <span>점장</span>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="admin" name="userType" value="관리자">
+                        <span>관리자</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="approvalNotice" class="approval-notice">
+                <strong>⏳ 승인 대기 안내</strong>
+                <ul style="margin: 8px 0 0 20px; font-size: 12px;">
+                    <li id="approvalText">승인이 필요합니다</li>
+                    <li>승인 완료 전까지 로그인이 불가능합니다</li>
+                    <li>승인 결과는 이메일로 통보됩니다</li>
+                </ul>
+            </div>
+
+            <div class="button-group">
+                <button type="submit" class="btn btn-primary">회원가입</button>
+                <button type="button" class="btn btn-secondary" onclick="location.href='login.html'">취소</button>
+            </div>
+        </form>
+
+        <div class="footer-link">
+            회원 가입하셨나요? <a href="login.html">로그인 하기</a>
+        </div>
+
+        <div class="approval-hierarchy">
+            <strong>💡 승인 권한 구조</strong>
+            <div class="hierarchy-flow">
+                <div class="hierarchy-item">
+                    <div class="role">관리자</div>
+                    <div style="font-size: 11px; color: #7f8c8d;">최고 권한</div>
+                </div>
+                <div class="hierarchy-item">
+                    <div class="arrow">→</div>
+                </div>
+                <div class="hierarchy-item">
+                    <div class="role">점장</div>
+                    <div style="font-size: 11px; color: #7f8c8d;">관리자가 승인</div>
+                </div>
+                <div class="hierarchy-item">
+                    <div class="arrow">→</div>
+                </div>
+                <div class="hierarchy-item">
+                    <div class="role">점주</div>
+                    <div style="font-size: 11px; color: #7f8c8d;">점장이 승인</div>
+                </div>
+            </div>
+            <ul style="font-size: 12px; margin-top: 10px; margin-left: 20px;">
+                <li><strong>관리자:</strong> 최고 권한자 (시스템 마스터)</li>
+                <li><strong>점장 가입:</strong> 관리자의 승인 필요</li>
+                <li><strong>점주 가입:</strong> 점장의 승인 필요</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 승인 안내 표시
+        document.querySelectorAll('input[name="userType"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const notice = document.getElementById('approvalNotice');
+                const approvalText = document.getElementById('approvalText');
+                
+                if (this.value === '관리자') {
+                    approvalText.textContent = '관리자 계정은 시스템 마스터의 승인이 필요합니다';
+                    notice.classList.add('show');
+                } else if (this.value === '점장') {
+                    approvalText.textContent = '점장 계정은 관리자의 승인이 필요합니다';
+                    notice.classList.add('show');
+                } else if (this.value === '점주') {
+                    approvalText.textContent = '점주 계정은 점장의 승인이 필요합니다';
+                    notice.classList.add('show');
+                } else {
+                    notice.classList.remove('show');
+                }
+            });
+        });
+
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const passwordConfirm = document.getElementById('passwordConfirm').value;
+            const name = document.getElementById('name').value;
+            const branch = document.getElementById('branch').value;
+            const phone = document.getElementById('phone').value;
+            const userType = document.querySelector('input[name="userType"]:checked').value;
+
+            // 비밀번호 확인
+            if (password !== passwordConfirm) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+
+            // 이메일 중복 확인
+            const users = JSON.parse(localStorage.getItem('las_users') || '[]');
+            if (users.some(user => user.email === email)) {
+                alert('이미 등록된 이메일입니다.');
+                return;
+            }
+
+            // 사용자 정보 생성
+            const newUser = {
+                email,
+                password,
+                name,
+                branch,
+                phone,
+                userType,
+                status: 'pending', // 모든 가입은 승인 대기
+                createdAt: new Date().toISOString(),
+                approvedAt: null,
+                approver: null
+            };
+
+            // 승인 권한 확인 메시지
+            let approverRole = '';
+            if (userType === '관리자') {
+                approverRole = '시스템 마스터';
+            } else if (userType === '점장') {
+                approverRole = '관리자';
+            } else if (userType === '점주') {
+                approverRole = '점장';
+            }
+
+            const confirmMsg = `${userType}으로 가입 신청하시겠습니까?\n\n` +
+                             `✓ ${approverRole}의 승인이 필요합니다\n` +
+                             `✓ 승인 완료 전까지 로그인이 불가능합니다\n` +
+                             `✓ 승인 결과는 관리 시스템에서 확인하실 수 있습니다`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            // 사용자 저장
+            users.push(newUser);
+            localStorage.setItem('las_users', JSON.stringify(users));
+
+            alert(
+                `${userType} 가입 신청이 완료되었습니다!\n\n` +
+                `${approverRole}의 승인 후 로그인이 가능합니다.\n` +
+                `승인 상태는 로그인 시 안내됩니다.`
+            );
+            
+            location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
