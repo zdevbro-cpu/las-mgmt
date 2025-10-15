@@ -1,0 +1,49 @@
+# dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# production
+/build
+/dist
+
+# misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+```
+
+### 2-2. 이미지 파일 확인
+
+다음 파일들이 있는지 확인:
+```
+public/
+  images/
+    ├── hero-cell.jpg  ✓
+    └── logo.png       ✓
+```
+
+---
+
+## 💻 Step 3: Git으로 GitHub에 업로드
+
+프로젝트 폴더에서 **터미널(명령 프롬프트)** 을 열고:
+
+### Windows 사용자:
+```
+프로젝트 폴더에서 Shift + 우클릭 → "여기에 PowerShell 창 열기"
+```
+
+### Mac/Linux 사용자:
+```
+터미널 열고 cd /path/to/las-mgmt
