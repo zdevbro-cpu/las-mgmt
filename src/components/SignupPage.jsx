@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react'
+import { Mail, Lock, User, Building, Phone } from 'lucide-react'
+import { localDB } from '../lib/supabase'
 
-export default function SignupPage() {
+export default function Signup({ onNavigate }) {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -10,178 +11,270 @@ export default function SignupPage() {
     branch: '',
     phone: '',
     userType: '점주'
-  });
-  const [showNotice, setShowNotice] = useState(false);
-  const navigate = useNavigate();
+  })
+  const [error, setError] = useState('')
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    if (name === 'userType') {
-      setShowNotice(true);
-    }
-  };
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    })
+    setError('')
+  }
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    e.preventDefault()
     
-    if (formData.password !== formData.passwordConfirm) {
-      alert('비밀번호가 일치하지 않습니다.');
-      return;
+    const { email, password, passwordConfirm, name, branch, phone, userType } = formData
+
+    // 유효성 검사
+    if (!email || !password || !passwordConfirm || !name || !branch || !phone) {
+      setError('모든 항목을 입력해주세요.')
+      return
     }
 
-    const users = JSON.parse(localStorage.getItem('las_users') || '[]');
-    if (users.some(user => user.email === formData.email)) {
-      alert('이미 등록된 이메일입니다.');
-      return;
+    if (password !== passwordConfirm) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
     }
 
-    let approverRole = '';
-    if (formData.userType === '관리자') approverRole = '시스템 마스터';
-    else if (formData.userType === '점장') approverRole = '관리자';
-    else if (formData.userType === '점주') approverRole = '점장';
-
-    if (!confirm(`${formData.userType}으로 가입 신청하시겠습니까?\n\n✓ ${approverRole}의 승인이 필요합니다\n✓ 승인 완료 전까지 로그인이 불가능합니다`)) {
-      return;
+    if (password.length < 6) {
+      setError('비밀번호는 6자 이상이어야 합니다.')
+      return
     }
 
+    // 이메일 중복 확인
+    const users = localDB.getUsers()
+    if (users.some(u => u.email === email)) {
+      setError('이미 등록된 이메일입니다.')
+      return
+    }
+
+    // 새 사용자 생성 (승인 대기 상태)
     const newUser = {
-      email: formData.email,
-      password: formData.password,
-      name: formData.name,
-      branch: formData.branch,
-      phone: formData.phone,
-      userType: formData.userType,
-      status: 'pending',
+      id: Date.now().toString(),
+      email,
+      password,
+      name,
+      branch,
+      phone,
+      userType,
+      status: 'pending', // 승인 대기
       createdAt: new Date().toISOString(),
       approvedAt: null
-    };
+    }
 
-    users.push(newUser);
-    localStorage.setItem('las_users', JSON.stringify(users));
+    users.push(newUser)
+    localDB.setUsers(users)
 
-    alert(`${formData.userType} 가입 신청이 완료되었습니다!\n\n${approverRole}의 승인 후 로그인이 가능합니다.`);
-    navigate('/login');
-  };
+    // 관리자에게 이메일 알림 (실제로는 백엔드 API 필요)
+    console.log(`📧 회원가입 승인 요청 이메일 전송됨: zdevbro@gmail.com`)
+    console.log('신청자:', newUser)
 
-  const getApproverText = () => {
-    if (formData.userType === '관리자') return '시스템 마스터의 승인이 필요합니다';
-    if (formData.userType === '점장') return '관리자의 승인이 필요합니다';
-    if (formData.userType === '점주') return '점장의 승인이 필요합니다';
-    return '';
-  };
+    alert(
+      `회원가입 신청이 완료되었습니다!\n\n` +
+      `관리자 승인 후 로그인이 가능합니다.\n` +
+      `승인 요청이 관리자에게 전송되었습니다.`
+    )
+    
+    onNavigate('login')
+  }
 
   return (
-    <div style={{
-      fontFamily: "'Noto Sans KR', sans-serif",
-      backgroundColor: '#f5f5f5',
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '400px',
-        margin: '0 auto',
-        background: 'white',
-        padding: '40px 30px',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <svg width="60" height="60" viewBox="0 0 100 100" style={{ margin: '0 auto 15px' }}>
-            <path fill="#16a085" d="M20,30 L50,20 L80,30 L80,70 L50,80 L20,70 Z M30,40 L50,35 L70,40 L70,60 L50,65 L30,60 Z"/>
-            <path fill="#1abc9c" d="M30,40 L50,35 L70,40 L70,50 L50,55 L30,50 Z"/>
-          </svg>
-          <h1 style={{ color: '#16a085', fontSize: '32px', fontWeight: 'bold' }}>회원가입</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+        {/* 안내 텍스트 */}
+        <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
+          LAS 매장관리 시스템에 오신것을 환영합니다.
+        </p>
+
+        {/* 로고 */}
+        <div className="flex flex-col items-center mb-6">
+          <img 
+            src="/images/logo.png" 
+            alt="LAS Logo" 
+            className="w-16 h-16 mb-2"
+            onError={(e) => e.target.style.display = 'none'}
+          />
+          <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
+            회원가입
+          </h1>
         </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              📧 이메일
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* 회원가입 폼 */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 이메일 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Mail size={18} />
+              이메일
             </label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="이메일을 입력하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="이메일을 입력하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              🔒 비밀번호
+          {/* 비밀번호 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Lock size={18} />
+              비밀번호
             </label>
-            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="비밀번호를 입력하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="비밀번호를 입력하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              🔒 비밀번호 확인
+          {/* 비밀번호 확인 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Lock size={18} />
+              비밀번호 확인
             </label>
-            <input type="password" name="passwordConfirm" value={formData.passwordConfirm} onChange={handleChange} placeholder="비밀번호를 확인하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="password"
+              name="passwordConfirm"
+              value={formData.passwordConfirm}
+              onChange={handleChange}
+              placeholder="비밀번호를 확인하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
+          {/* 이름 */}
+          <div>
+            <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               이름
             </label>
-            <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="이름을 입력하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="이름을 입력하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
+          {/* 지점명 */}
+          <div>
+            <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               지점명
             </label>
-            <input type="text" name="branch" value={formData.branch} onChange={handleChange} placeholder="지점명을 입력하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="text"
+              name="branch"
+              value={formData.branch}
+              onChange={handleChange}
+              placeholder="지점명을 입력하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              핸드폰
+          {/* 핸드폰 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Phone size={18} />
+              핸드폰 번호를 입력하세요
             </label>
-            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="핸드폰 번호를 입력하세요" required
-              style={{ width: '100%', padding: '12px 15px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '14px' }} />
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+              placeholder="핸드폰 번호를 입력하세요"
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
+          {/* 구분 */}
+          <div>
+            <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               구분
             </label>
-            <div style={{ display: 'flex', gap: '15px' }}>
-              {['점주', '점장', '관리자'].map(type => (
-                <label key={type} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                  <input type="radio" name="userType" value={type} checked={formData.userType === type} onChange={handleChange}
-                    style={{ width: '18px', height: '18px', marginRight: '5px' }} />
-                  <span style={{ fontSize: '14px', color: '#2c3e50' }}>{type}</span>
-                </label>
-              ))}
+            <div className="flex gap-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="userType"
+                  value="점주"
+                  checked={formData.userType === '점주'}
+                  onChange={handleChange}
+                  className="w-4 h-4"
+                />
+                <span style={{ color: '#000000', fontSize: '15px' }}>점주</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="userType"
+                  value="점장"
+                  checked={formData.userType === '점장'}
+                  onChange={handleChange}
+                  className="w-4 h-4"
+                />
+                <span style={{ color: '#000000', fontSize: '15px' }}>점장</span>
+              </label>
             </div>
           </div>
 
-          {showNotice && (
-            <div style={{ backgroundColor: '#fff3cd', border: '1px solid #ffc107', borderRadius: '5px', padding: '15px', marginBottom: '20px', fontSize: '13px', color: '#856404' }}>
-              <strong>⏳ 승인 안내</strong>
-              <ul style={{ margin: '8px 0 0 20px', fontSize: '12px' }}>
-                <li>{getApproverText()}</li>
-                <li>승인 완료 전까지 로그인이 불가능합니다</li>
-              </ul>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-            <button type="submit" style={{
-              flex: 1, padding: '12px', backgroundColor: '#16a085', color: 'white', border: 'none', borderRadius: '5px', fontSize: '16px', fontWeight: '500', cursor: 'pointer'
-            }}>
+          {/* 버튼들 */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
               회원가입
             </button>
-            <button type="button" onClick={() => navigate('/login')} style={{
-              flex: 1, padding: '12px', backgroundColor: 'white', color: '#16a085', border: '1px solid #16a085', borderRadius: '5px', fontSize: '16px', fontWeight: '500', cursor: 'pointer'
-            }}>
+            <button
+              type="button"
+              onClick={() => onNavigate('hero')}
+              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+            >
               취소
             </button>
           </div>
         </form>
+
+        {/* 로그인 링크 */}
+        <div className="mt-6 text-center">
+          <p style={{ color: '#000000', fontSize: '15px' }}>
+            회원 가입하셨나요?{' '}
+            <button
+              onClick={() => onNavigate('login')}
+              className="font-bold underline hover:opacity-80"
+              style={{ color: '#249689' }}
+            >
+              로그인 하기
+            </button>
+          </p>
+        </div>
       </div>
     </div>
-  );
+  )
 }

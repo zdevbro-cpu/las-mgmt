@@ -1,181 +1,157 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react'
+import { Mail, Lock } from 'lucide-react'
+import { localDB } from '../lib/supabase'
 
-export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+export default function Login({ onNavigate, onLogin }) {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  })
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    const user = sessionStorage.getItem('las_current_user');
-    if (user) {
-      const userData = JSON.parse(user);
-      if (userData.userType === '관리자' || userData.userType === '점장') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    })
+    setError('')
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    
+    const { email, password } = formData
+
+    if (!email || !password) {
+      setError('이메일과 비밀번호를 입력해주세요.')
+      return
     }
-  }, [navigate]);
 
-const handleLogin = (e) => {
-  e.preventDefault();
-  
-  console.log('🔐 로그인 시도:', email);
-  
-  const users = JSON.parse(localStorage.getItem('las_users') || '[]');
-  console.log('📋 전체 사용자 수:', users.length);
-  
-  if (users.length === 0) {
-    alert('⚠️ 등록된 사용자가 없습니다.\n\n메인 페이지로 돌아가서 테스트 계정을 생성하세요.');
-    navigate('/');
-    return;
-  }
-  
-  const user = users.find(u => u.email === email && u.password === password);
-  
-  if (!user) {
-    const emailExists = users.find(u => u.email === email);
-    if (emailExists) {
-      alert('❌ 비밀번호가 일치하지 않습니다.\n\n다시 확인해주세요.');
-    } else {
-      alert('❌ 등록되지 않은 이메일입니다.\n\n회원가입을 먼저 진행해주세요.');
+    const users = localDB.getUsers()
+    const user = users.find(u => u.email === email)
+
+    if (!user) {
+      setError('존재하지 않는 이메일입니다.')
+      return
     }
-    return;
-  }
 
-  if (user.status === 'pending') {
-    alert('⏳ 계정 승인 대기 중입니다.\n\n승인 완료 후 로그인이 가능합니다.');
-    return;
-  }
+    if (user.password !== password) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
 
-  if (user.status === 'rejected') {
-    alert('❌ 계정 승인이 거부되었습니다.\n\n거부 사유: ' + (user.rejectReason || '별도 안내 예정'));
-    return;
-  }
+    if (user.status === 'pending') {
+      setError('승인 대기 중입니다. 관리자 승인 후 로그인하실 수 있습니다.')
+      return
+    }
 
-  const currentUser = {
-    email: user.email,
-    name: user.name,
-    branch: user.branch,
-    phone: user.phone,
-    userType: user.userType,
-    loginTime: new Date().toISOString()
-  };
+    if (user.status === 'rejected') {
+      setError('가입이 거부되었습니다. 관리자에게 문의해주세요.')
+      return
+    }
 
-  sessionStorage.setItem('las_current_user', JSON.stringify(currentUser));
-  console.log('✅ 로그인 성공:', user.name, '/', user.userType);
-  
-  alert(`${user.name}님, 환영합니다!`);
-  
-  if (user.userType === '관리자' || user.userType === '점장') {
-    navigate('/admin');
-  } else {
-    navigate('/dashboard');
+    // 로그인 성공
+    onLogin(user)
   }
-};
 
   return (
-    <div style={{
-      fontFamily: "'Noto Sans KR', sans-serif",
-      backgroundColor: '#f5f5f5',
-      padding: '20px',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh'
-    }}>
-      <div style={{
-        maxWidth: '400px',
-        width: '100%',
-        background: 'white',
-        padding: '40px 30px',
-        borderRadius: '10px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ color: '#16a085', textAlign: 'center', fontSize: '14px', marginBottom: '20px' }}>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+        {/* 안내 텍스트 */}
+        <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS 매장관리 시스템에 오신것을 환영합니다.
-        </div>
-        
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <svg width="60" height="60" viewBox="0 0 100 100" style={{ margin: '0 auto 15px' }}>
-            <path fill="#16a085" d="M20,30 L50,20 L80,30 L80,70 L50,80 L20,70 Z M30,40 L50,35 L70,40 L70,60 L50,65 L30,60 Z"/>
-            <path fill="#1abc9c" d="M30,40 L50,35 L70,40 L70,50 L50,55 L30,50 Z"/>
-          </svg>
-          <h1 style={{ color: '#16a085', fontSize: '32px', fontWeight: 'bold' }}>로그인</h1>
+        </p>
+
+        {/* 로고 */}
+        <div className="flex flex-col items-center mb-6">
+          <img 
+            src="/images/logo.png" 
+            alt="LAS Logo" 
+            className="w-16 h-16 mb-2"
+            onError={(e) => e.target.style.display = 'none'}
+          />
+          <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
+            로그인
+          </h1>
         </div>
 
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              📧 이메일
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* 로그인 폼 */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 이메일 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Mail size={18} />
+              이메일
             </label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="이메일을 입력하세요"
-              required
-              style={{
-                width: '100%',
-                padding: '12px 15px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                fontSize: '14px'
-              }}
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontWeight: '500', fontSize: '14px' }}>
-              🔒 비밀번호
+          {/* 비밀번호 */}
+          <div>
+            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <Lock size={18} />
+              비밀번호
             </label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
               placeholder="비밀번호를 입력하세요"
-              required
-              style={{
-                width: '100%',
-                padding: '12px 15px',
-                border: '1px solid #ddd',
-                borderRadius: '5px',
-                fontSize: '14px'
-              }}
+              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', marginTop: '30px' }}>
-            <button type="submit" style={{
-              flex: 1,
-              padding: '12px',
-              border: 'none',
-              borderRadius: '5px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              backgroundColor: '#16a085',
-              color: 'white'
-            }}>
+          {/* 버튼들 */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
               로그인
             </button>
-            <button type="button" onClick={() => navigate('/signup')} style={{
-              flex: 1,
-              padding: '12px',
-              backgroundColor: 'white',
-              color: '#16a085',
-              border: '1px solid #16a085',
-              borderRadius: '5px',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}>
-              회원가입
+            <button
+              type="button"
+              onClick={() => onNavigate('hero')}
+              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+            >
+              취소
             </button>
           </div>
         </form>
+
+        {/* 회원가입 링크 */}
+        <div className="mt-6 text-center">
+          <p style={{ color: '#000000', fontSize: '15px' }}>
+            아직 회원이 아니신가요?{' '}
+            <button
+              onClick={() => onNavigate('signup')}
+              className="font-bold underline hover:opacity-80"
+              style={{ color: '#249689' }}
+            >
+              회원가입하기
+            </button>
+          </p>
+        </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,146 +1,334 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 
-export default function DashboardPage() {
-  const [user, setUser] = useState(null);
-  const navigate = useNavigate();
+export default function WorkDiary({ user, onNavigate }) {
+  const [formData, setFormData] = useState({
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    dailyCheck1: false,
+    dailyCheck2: false,
+    dailyCheck3: false,
+    outContent: '',
+    exemplary: '',
+    memorable: '',
+    suggestions: ''
+  })
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    const userStr = sessionStorage.getItem('las_current_user');
-    if (!userStr) {
-      navigate('/login');
-      return;
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setFormData({
+      ...formData,
+      [name]: type === 'checkbox' ? checked : value
+    })
+  }
+
+  const calculateWorkHours = () => {
+    if (!formData.startDate || !formData.startTime || !formData.endDate || !formData.endTime) {
+      return 0
     }
-    setUser(JSON.parse(userStr));
-  }, [navigate]);
+    const start = new Date(`${formData.startDate}T${formData.startTime}`)
+    const end = new Date(`${formData.endDate}T${formData.endTime}`)
+    const diff = (end - start) / (1000 * 60 * 60)
+    return diff > 0 ? diff.toFixed(1) : 0
+  }
 
-  const handleLogout = () => {
-    if (window.confirm('로그아웃 하시겠습니까?')) {
-      sessionStorage.removeItem('las_current_user');
-      navigate('/login');
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    try {
+      const workHours = calculateWorkHours()
+      
+      const diaryEntry = {
+        id: Date.now().toString(),
+        user_id: user.id,
+        user_name: user.name,
+        user_branch: user.branch,
+        user_type: user.userType || user.user_type,
+        start_date: formData.startDate,
+        start_time: formData.startTime,
+        end_date: formData.endDate,
+        end_time: formData.endTime,
+        work_hours: parseFloat(workHours),
+        daily_check1: formData.dailyCheck1,
+        daily_check2: formData.dailyCheck2,
+        daily_check3: formData.dailyCheck3,
+        out_content: formData.outContent,
+        exemplary: formData.exemplary,
+        memorable: formData.memorable,
+        suggestions: formData.suggestions,
+        created_at: new Date().toISOString()
+      }
+
+      const { data, error } = await supabase
+        .from('work_diaries')
+        .insert([diaryEntry])
+        .select()
+
+      if (error) {
+        console.error('근무일지 저장 오류:', error)
+        alert('근무일지 저장 중 오류가 발생했습니다: ' + error.message)
+        setLoading(false)
+        return
+      }
+
+      console.log('근무일지 저장 성공:', data)
+      alert('근무일지가 제출되었습니다!')
+      onNavigate('dashboard')
+    } catch (err) {
+      console.error('근무일지 제출 오류:', err)
+      alert('근무일지 제출 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
-  };
+  }
 
-  if (!user) return <div>로딩 중...</div>;
+  const isManager = user?.userType === '점장' || user?.user_type === '점장'
 
   return (
-    <div style={{
-      fontFamily: "'Noto Sans KR', sans-serif",
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      minHeight: '100vh',
-      padding: '40px'
-    }}>
-      <div style={{
-        maxWidth: '450px',
-        margin: '0 auto',
-        background: 'white',
-        padding: '60px 40px',
-        borderRadius: '20px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        textAlign: 'center'
-      }}>
-        <svg width="80" height="80" viewBox="0 0 100 100" style={{ margin: '0 auto 20px' }}>
-          <path fill="#16a085" d="M20,30 L50,20 L80,30 L80,70 L50,80 L20,70 Z M30,40 L50,35 L70,40 L70,60 L50,65 L30,60 Z"/>
-          <path fill="#1abc9c" d="M30,40 L50,35 L70,40 L70,50 L50,55 L30,50 Z"/>
-        </svg>
-        <h1 style={{ color: '#16a085', fontSize: '36px', marginBottom: '10px', fontWeight: 'bold' }}>LAS 근무관리시스템</h1>
-        <p style={{ color: '#16a085', fontSize: '14px', marginBottom: '30px' }}>LAS 매장관리 시스템에 오신것을 환영합니다.</p>
-        
-        <div style={{ background: '#f8f9fa', padding: '25px', borderRadius: '15px', marginBottom: '30px' }}>
-          <div style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>🏢 지점명</span>
-            <span style={{ color: '#16a085', fontWeight: '500' }}>{user.branch}</span>
-          </div>
-          <div style={{ marginBottom: '15px', paddingBottom: '15px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>👤 이름</span>
-            <span style={{ color: '#16a085', fontWeight: '500' }}>{user.name}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#2c3e50', fontWeight: '600' }}>📋 구분</span>
-            <span style={{ color: '#16a085', fontWeight: '500' }}>{user.userType}</span>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        {/* 헤더 - 중앙정렬 */}
+        <div className="flex flex-col items-center justify-center mb-6">
+          <div className="flex items-center gap-4 mb-2">
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-16 h-16"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+              {(user?.userType === '점주' || user?.user_type === '점주') ? '점주근무일지' : 'SM점장 근무일지'}
+            </h1>
           </div>
         </div>
 
-        {/* ⭐ 버튼 수정: 각 버튼이 올바른 경로로 이동하도록 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '15px' }}>
-          <button 
-            onClick={() => {
-              console.log('근무일지 버튼 클릭 → /work-diary로 이동');
-              navigate('/work-diary');
-            }} 
-            style={{
-              padding: '15px', 
-              backgroundColor: '#16a085', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '10px', 
-              fontSize: '16px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.3s'
-            }}
-          >
-            근무일지
-          </button>
-          
-          <button 
-            onClick={() => {
-              console.log('판매관리 버튼 클릭 → /sales로 이동');
-              navigate('/sales');
-            }} 
-            style={{
-              padding: '15px', 
-              backgroundColor: '#16a085', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '10px', 
-              fontSize: '16px', 
-              fontWeight: '500', 
-              cursor: 'pointer', 
-              transition: 'all 0.3s'
-            }}
-          >
-            판매관리
-          </button>
+        {/* 사용자 정보 */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              지점명
+            </label>
+            <input
+              type="text"
+              value={user?.branch || ''}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              이름
+            </label>
+            <input
+              type="text"
+              value={user?.name || ''}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+        </div>
 
-          {(user.userType === '관리자' || user.userType === '점장') && (
-            <button 
-              onClick={() => {
-                console.log('승인관리 버튼 클릭 → /admin으로 이동');
-                navigate('/admin');
-              }} 
-              style={{
-                padding: '15px', 
-                backgroundColor: '#16a085', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '10px', 
-                fontSize: '16px', 
-                fontWeight: '500', 
-                cursor: 'pointer', 
-                transition: 'all 0.3s'
-              }}
-            >
-              승인관리
-            </button>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* 근무일자 선택 */}
+          <div className="border-t pt-6">
+            <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+              근무일자 시간을 선택해 주세요
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  출근시간
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    required
+                    className="flex-1 px-4 py-2 border border-gray-300"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleChange}
+                    step="1800"
+                    required
+                    className="px-4 py-2 border border-gray-300"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  퇴근시간
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleChange}
+                    required
+                    className="flex-1 px-4 py-2 border border-gray-300"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleChange}
+                    step="1800"
+                    required
+                    className="px-4 py-2 border border-gray-300"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-4 bg-teal-50 rounded-lg">
+              <p className="font-bold" style={{ color: '#249689', fontSize: '15px' }}>
+                총 근무시간: {calculateWorkHours()} 시간
+              </p>
+            </div>
+          </div>
+
+          {/* 일일 확인목록 (점장만) */}
+          {isManager && (
+            <div className="border-t pt-6">
+              <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+                일일 확인목록
+              </h3>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="dailyCheck1"
+                    checked={formData.dailyCheck1}
+                    onChange={handleChange}
+                    className="w-5 h-5"
+                  />
+                  <span style={{ color: '#000000', fontSize: '15px' }}>매장 청결점검</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="dailyCheck2"
+                    checked={formData.dailyCheck2}
+                    onChange={handleChange}
+                    className="w-5 h-5"
+                  />
+                  <span style={{ color: '#000000', fontSize: '15px' }}>직원 업무교육</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="dailyCheck3"
+                    checked={formData.dailyCheck3}
+                    onChange={handleChange}
+                    className="w-5 h-5"
+                  />
+                  <span style={{ color: '#000000', fontSize: '15px' }}>직원 체크리스트 점검</span>
+                </label>
+              </div>
+            </div>
           )}
-        </div>
 
-        <button onClick={handleLogout} style={{
-          width: '100%', 
-          padding: '12px', 
-          backgroundColor: 'white', 
-          color: '#e74c3c', 
-          border: '2px solid #e74c3c', 
-          borderRadius: '10px', 
-          fontSize: '14px', 
-          fontWeight: '500', 
-          cursor: 'pointer', 
-          transition: 'all 0.3s'
-        }}>
-          나가기
-        </button>
+          {/* 외근 시 내용 */}
+          <div className="border-t pt-6">
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              외근 시 내용을 적어주세요
+            </label>
+            <textarea
+              name="outContent"
+              value={formData.outContent}
+              onChange={handleChange}
+              placeholder="외근 시 내용을 적어주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+
+          {/* 주인형 모집내용 */}
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              주인형 모집내용을 적어주세요
+            </label>
+            <textarea
+              name="exemplary"
+              value={formData.exemplary}
+              onChange={handleChange}
+              placeholder="주인형 모집내용을 적어주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+
+          {/* 인상깊은 고객 */}
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              오늘 인상깊은 고객에 대해 적어주세요
+            </label>
+            <textarea
+              name="memorable"
+              value={formData.memorable}
+              onChange={handleChange}
+              placeholder="오늘 인상깊은 고객에 대해 적어주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+
+          {/* 건의사항 */}
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              건의사항이 있으시면 적어주세요
+            </label>
+            <textarea
+              name="suggestions"
+              value={formData.suggestions}
+              onChange={handleChange}
+              placeholder="건의사항이 있으시면 적어주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+
+          {/* 버튼들 - 제출/취소만 */}
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              {loading ? '저장 중...' : '제출'}
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('dashboard')}
+              disabled={loading}
+              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+            >
+              취소
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-  );
+  )
 }

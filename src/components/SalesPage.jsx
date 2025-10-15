@@ -1,162 +1,342 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react'
+import { localDB } from '../lib/supabase'
 
-export default function SalesPage() {
-  const [user, setUser] = useState(null);
-  const navigate = useNavigate();
+export default function SalesManagement({ user, onNavigate }) {
+  const [formData, setFormData] = useState({
+    customerName: '',
+    birthDate: '',
+    address: '',
+    phone: '',
+    email: '',
+    bookTitle: '',
+    paymentMethod: '카드',
+    quantity: '',
+    depositor: '',
+    depositDeadline: '',
+    orderDetails: ''
+  })
 
-  useEffect(() => {
-    const userStr = sessionStorage.getItem('las_current_user');
-    if (!userStr) {
-      navigate('/login');
-      return;
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setFormData({
+      ...formData,
+      [name]: value
+    })
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    
+    const saleEntry = {
+      id: Date.now().toString(),
+      userId: user.id,
+      userName: user.name,
+      userBranch: user.branch,
+      ...formData,
+      createdAt: new Date().toISOString()
     }
-    setUser(JSON.parse(userStr));
-  }, [navigate]);
 
-  if (!user) return <div style={{ padding: '20px', textAlign: 'center' }}>로딩 중...</div>;
+    const sales = localDB.getSales()
+    sales.push(saleEntry)
+    localDB.setSales(sales)
+
+    alert('판매 정보가 저장되었습니다!')
+    onNavigate('dashboard')
+  }
 
   return (
-    <div style={{ fontFamily: "'Noto Sans KR', sans-serif", backgroundColor: '#f5f5f5', padding: '20px', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ 
-          background: 'white', 
-          padding: '25px 30px', 
-          borderRadius: '10px', 
-          boxShadow: '0 2px 10px rgba(0,0,0,0.1)', 
-          marginBottom: '30px', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center' 
-        }}>
-          <div>
-            <h1 style={{ color: '#16a085', fontSize: '28px', marginBottom: '10px' }}>LAS Book Store</h1>
-            <p style={{ color: '#7f8c8d', fontSize: '14px' }}>LAS Book을 신청합니다.</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button 
-              onClick={() => {
-                console.log('대시보드로 이동');
-                navigate('/dashboard');
-              }} 
-              style={{ 
-                padding: '10px 20px', 
-                background: '#16a085', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '5px', 
-                cursor: 'pointer', 
-                fontWeight: '500' 
-              }}
-            >
-              대시보드
-            </button>
-            <button 
-              onClick={() => {
-                console.log('근무일지로 이동');
-                navigate('/work-diary');
-              }} 
-              style={{ 
-                padding: '10px 20px', 
-                background: '#3498db', 
-                color: 'white', 
-                border: 'none', 
-                borderRadius: '5px', 
-                cursor: 'pointer', 
-                fontWeight: '500' 
-              }}
-            >
-              근무일지
-            </button>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-12 h-12"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
+              LAS Book Store
+            </h1>
           </div>
         </div>
 
-        <div style={{ background: 'white', padding: '40px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)' }}>
-          <h2 style={{ color: '#16a085', fontSize: '24px', marginBottom: '20px' }}>지점명과 담당자 이름을 확인하세요</h2>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
-            <div>
-              <label style={{ display: 'block', color: '#2c3e50', fontWeight: '600', marginBottom: '8px' }}>지점명</label>
-              <input 
-                type="text" 
-                value={user.branch}
-                readOnly
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  border: '1px solid #ddd', 
-                  borderRadius: '5px', 
-                  backgroundColor: '#f8f9fa',
-                  fontSize: '14px'
-                }} 
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: '#2c3e50', fontWeight: '600', marginBottom: '8px' }}>이름</label>
-              <input 
-                type="text" 
-                value={user.name}
-                readOnly
-                style={{ 
-                  width: '100%', 
-                  padding: '12px', 
-                  border: '1px solid #ddd', 
-                  borderRadius: '5px', 
-                  backgroundColor: '#f8f9fa',
-                  fontSize: '14px'
-                }} 
-              />
+        <p className="text-center mb-6" style={{ color: '#249689', fontSize: '15px' }}>
+          LAS Book을 신청합니다.
+        </p>
+
+        {/* 사용자 정보 */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              지점명
+            </label>
+            <input
+              type="text"
+              value={user?.branch || ''}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+          <div>
+            <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              이름
+            </label>
+            <input
+              type="text"
+              value={user?.name || ''}
+              readOnly
+              className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* 구매자 기본정보 */}
+          <div className="border-t pt-6">
+            <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+              구매자 기본정보
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  이름
+                </label>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={formData.customerName}
+                  onChange={handleChange}
+                  placeholder="구매자 성함을 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  생년월일
+                </label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleChange}
+                  placeholder="구매자 생년월일을 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  주소
+                </label>
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  placeholder="구매자 주소를 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  연락처
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="구매자 연락처를 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  이메일
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="구매자 이메일을 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  저녁명
+                </label>
+                <input
+                  type="text"
+                  name="bookTitle"
+                  value={formData.bookTitle}
+                  onChange={handleChange}
+                  placeholder="구매자 저녁명을 적어주세요"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
             </div>
           </div>
 
-          <div style={{ 
-            background: '#e3f2fd', 
-            padding: '30px', 
-            borderRadius: '10px', 
-            textAlign: 'center',
-            border: '2px dashed #2196f3'
-          }}>
-            <h3 style={{ color: '#1565c0', fontSize: '20px', marginBottom: '15px' }}>📚 판매관리 기능</h3>
-            <p style={{ color: '#1565c0', fontSize: '14px', marginBottom: '20px' }}>
-              이전에 개발된 판매관리 페이지를 여기에 통합하세요.
-            </p>
-            <div style={{ 
-              display: 'inline-block', 
-              background: 'white', 
-              padding: '20px 30px', 
-              borderRadius: '10px',
-              textAlign: 'left'
-            }}>
-              <p style={{ color: '#1565c0', fontSize: '14px', marginBottom: '10px', fontWeight: 'bold' }}>
-                💡 기존 판매관리 페이지 파일 위치:
-              </p>
-              <ul style={{ color: '#1565c0', fontSize: '13px', marginLeft: '20px' }}>
-                <li>public/sales.html 확인</li>
-                <li>src/pages/sales.jsx 확인</li>
-                <li>프로젝트 폴더에서 검색: *sales* 또는 *판매*</li>
-              </ul>
+          {/* 결제정보 */}
+          <div className="border-t pt-6">
+            <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+              결제정보
+            </h3>
+            <div className="space-y-4">
+              {/* 결제방법 */}
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="카드"
+                    checked={formData.paymentMethod === '카드'}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
+                  <span style={{ color: '#000000', fontSize: '15px' }}>카드</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="입금"
+                    checked={formData.paymentMethod === '입금'}
+                    onChange={handleChange}
+                    className="w-4 h-4"
+                  />
+                  <span style={{ color: '#000000', fontSize: '15px' }}>입금</span>
+                </label>
+              </div>
+
+              {/* 판매수량 */}
+              <div>
+                <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                  판매수량
+                </label>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  placeholder="수량만 입력"
+                  required
+                  min="1"
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+
+              {/* 입금자 (입금 선택시만) */}
+              {formData.paymentMethod === '입금' && (
+                <>
+                  <div>
+                    <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                      입금자명
+                    </label>
+                    <input
+                      type="text"
+                      name="depositor"
+                      value={formData.depositor}
+                      onChange={handleChange}
+                      placeholder="입금자명"
+                      required
+                      className="w-full px-4 py-2 border border-gray-300"
+                      style={{ borderRadius: '10px', fontSize: '15px' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-2" style={{ color: '#000000', fontSize: '15px' }}>
+                      입금기한
+                    </label>
+                    <input
+                      type="date"
+                      name="depositDeadline"
+                      value={formData.depositDeadline}
+                      onChange={handleChange}
+                      placeholder="입금기한"
+                      required
+                      className="w-full px-4 py-2 border border-gray-300"
+                      style={{ borderRadius: '10px', fontSize: '15px' }}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '30px' }}>
-            <button 
-              onClick={() => navigate('/dashboard')} 
-              style={{
-                padding: '12px 30px',
-                background: '#16a085',
-                color: 'white',
-                border: 'none',
-                borderRadius: '5px',
-                fontSize: '16px',
-                fontWeight: '500',
-                cursor: 'pointer'
-              }}
+          {/* 주문정보 */}
+          <div className="border-t pt-6">
+            <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+              주문정보
+            </h3>
+            <textarea
+              name="orderDetails"
+              value={formData.orderDetails}
+              onChange={handleChange}
+              placeholder="주문상품명과 수량을 적어주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+            />
+          </div>
+
+          {/* 버튼들 */}
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              매장관리 시스템으로 가기
+              확인
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('dashboard')}
+              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+            >
+              판매관리
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate('dashboard')}
+              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+            >
+              취소
             </button>
           </div>
+        </form>
+
+        {/* 하단 링크 */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => onNavigate('dashboard')}
+            className="font-bold underline hover:opacity-80"
+            style={{ color: '#249689', fontSize: '15px' }}
+          >
+            매장관리 시스템으로 가기
+          </button>
         </div>
       </div>
     </div>
-  );
+  )
 }
