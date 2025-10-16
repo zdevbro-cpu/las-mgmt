@@ -2,13 +2,12 @@ import { LogOut } from 'lucide-react'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   return (
-    
-     <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white">
       {/* 메인 컨텐츠 */}
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* 페이지 타이틀 */}
-          <div className="flex items-center justify-center gap-1.5 mb-8"> {/* flex 컨테이너 추가 및 gap 조정 */}
+          <div className="flex items-center justify-center gap-1.5 mb-8">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 

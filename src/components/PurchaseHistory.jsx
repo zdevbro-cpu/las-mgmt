@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Search, ArrowLeft } from 'lucide-react'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL,
-  process.env.REACT_APP_SUPABASE_ANON_KEY
-)
+// Supabase 클라이언트 초기화
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
-export default function PurchaseHistory({ onNavigate }) {
+let supabase = null
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey)
+}
+
+export default function PurchaseHistory({ user, onNavigate }) {
   const [searchType, setSearchType] = useState('phone')
   const [searchValue, setSearchValue] = useState('')
   const [purchases, setPurchases] = useState([])
@@ -18,6 +22,12 @@ export default function PurchaseHistory({ onNavigate }) {
   const handleSearch = async () => {
     if (!searchValue.trim()) {
       alert('검색어를 입력해주세요')
+      return
+    }
+
+    if (!supabase) {
+      alert('데이터베이스 연결 오류. 환경 변수를 확인하세요.')
+      console.error('Supabase 초기화 실패. .env 파일을 확인하세요.')
       return
     }
 
@@ -35,11 +45,19 @@ export default function PurchaseHistory({ onNavigate }) {
 
       const { data, error } = await query.order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase 쿼리 오류:', error)
+        throw error
+      }
+      
       setPurchases(data || [])
+      
+      if (!data || data.length === 0) {
+        alert('검색 결과가 없습니다')
+      }
     } catch (error) {
       console.error('검색 오류:', error)
-      alert('검색 중 오류가 발생했습니다')
+      alert('검색 중 오류가 발생했습니다: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -49,6 +67,9 @@ export default function PurchaseHistory({ onNavigate }) {
     setSelectedPurchase(purchase)
     setShowModal(true)
   }
+
+  // 환경 변수 경고 메시지
+  const showEnvWarning = !supabaseUrl || !supabaseKey
 
   return (
     <div className="min-h-screen bg-white">
@@ -78,6 +99,15 @@ export default function PurchaseHistory({ onNavigate }) {
             <div style={{ width: '100px' }}></div>
           </div>
 
+          {/* 환경 변수 경고 */}
+          {showEnvWarning && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <strong>⚠️ 환경 변수 오류:</strong> Supabase URL 또는 Key가 설정되지 않았습니다.
+              <br />
+              <small>.env 파일을 확인하거나 Vercel 환경 변수를 설정하세요.</small>
+            </div>
+          )}
+
           {/* 검색 영역 */}
           <div className="mb-6">
             <div className="flex gap-2 mb-4">
@@ -102,12 +132,12 @@ export default function PurchaseHistory({ onNavigate }) {
               />
               <button
                 onClick={handleSearch}
-                disabled={loading}
-                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+                disabled={loading || showEnvWarning}
+                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
                 <Search size={20} />
-                검색
+                {loading ? '검색 중...' : '검색'}
               </button>
             </div>
           </div>
@@ -144,7 +174,7 @@ export default function PurchaseHistory({ onNavigate }) {
                 ) : purchases.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '15px' }}>
-                      검색 결과가 없습니다
+                      검색어를 입력하고 검색 버튼을 눌러주세요
                     </td>
                   </tr>
                 ) : (
@@ -167,7 +197,7 @@ export default function PurchaseHistory({ onNavigate }) {
                         {purchase.customer_email}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {purchase.order_info?.substring(0, 30)}...
+                        {purchase.order_info?.substring(0, 30)}{purchase.order_info?.length > 30 ? '...' : ''}
                       </td>
                     </tr>
                   ))
@@ -195,7 +225,7 @@ export default function PurchaseHistory({ onNavigate }) {
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl"
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
               >
                 ×
               </button>
@@ -208,7 +238,7 @@ export default function PurchaseHistory({ onNavigate }) {
                 </label>
                 <input
                   type="text"
-                  value={selectedPurchase.customer_name}
+                  value={selectedPurchase.customer_name || ''}
                   readOnly
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -221,7 +251,7 @@ export default function PurchaseHistory({ onNavigate }) {
                 </label>
                 <input
                   type="text"
-                  value={selectedPurchase.customer_phone}
+                  value={selectedPurchase.customer_phone || ''}
                   readOnly
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -234,7 +264,7 @@ export default function PurchaseHistory({ onNavigate }) {
                 </label>
                 <input
                   type="text"
-                  value={selectedPurchase.customer_email}
+                  value={selectedPurchase.customer_email || ''}
                   readOnly
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -247,7 +277,7 @@ export default function PurchaseHistory({ onNavigate }) {
                 </label>
                 <input
                   type="text"
-                  value={new Date(selectedPurchase.created_at).toLocaleString('ko-KR')}
+                  value={selectedPurchase.created_at ? new Date(selectedPurchase.created_at).toLocaleString('ko-KR') : ''}
                   readOnly
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -259,7 +289,7 @@ export default function PurchaseHistory({ onNavigate }) {
                   📦 주문 정보
                 </label>
                 <textarea
-                  value={selectedPurchase.order_info}
+                  value={selectedPurchase.order_info || ''}
                   readOnly
                   rows={6}
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
