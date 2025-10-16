@@ -41,7 +41,7 @@ export default function SalesManagement({ user, onNavigate }) {
         customer_phone: formData.phone,        // ← phone → customer_phone
         customer_email: formData.email,        // ← email → customer_email
         payment_method: formData.paymentMethod,
-        payment_amount: null,  // 추후 추가 가능
+        // payment_amount: null,  // 추후 추가 가능
         quantity: parseInt(formData.quantity) || null,
         depositor: formData.depositor || null,
         deposit_bank: formData.depositBank || null,
