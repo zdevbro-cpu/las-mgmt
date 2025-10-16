@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
 import AdminApproval from './components/AdminApproval'
+import PurchaseHistory from './components/PurchaseHistory'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('hero')
@@ -60,6 +61,8 @@ function App() {
         return <WorkDiary user={currentUser} onNavigate={setCurrentPage} />
       case 'sales':
         return <SalesManagement user={currentUser} onNavigate={setCurrentPage} />
+      case 'purchaseHistory':
+        return <PurchaseHistory user={currentUser} onNavigate={setCurrentPage} />
       case 'admin':
         return <AdminApproval user={currentUser} onLogout={handleLogout} />
       default:
