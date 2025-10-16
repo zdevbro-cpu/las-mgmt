@@ -289,19 +289,19 @@ export default function PurchaseHistory({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* 상세 정보 모달 */}
+      {/* 상세 정보 모달 - max-w-md 유지 (축소된 크기) */}
       {showModal && selectedPurchase && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-2xl p-4 max-w-lg w-full max-h-[85vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-2xl p-4 max-w-md w-full max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: '10px' }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold" style={{ color: '#249689', fontSize: '18px' }}>
+              <h3 className="font-bold" style={{ color: '#249689', fontSize: '17px' }}>
                 구매 상세 정보
               </h3>
               <button
@@ -315,7 +315,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <div className="space-y-3">
               {/* 구매자 정보 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '13px' }}>
                   👤 구매자 정보
                 </h4>
                 <div className="space-y-1.5">
@@ -342,7 +342,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
               {/* 구매내역 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '13px' }}>
                   📦 구매내역
                 </h4>
                 <textarea
@@ -361,7 +361,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               {/* 결제 정보 (있는 경우) */}
               {(selectedPurchase.payment_method || selectedPurchase.payment_amount || selectedPurchase.quantity) && (
                 <div className="border-2 rounded-lg p-3" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
-                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '14px' }}>
+                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '13px' }}>
                     💳 결제 정보
                   </h4>
                   <div className="space-y-1.5">
