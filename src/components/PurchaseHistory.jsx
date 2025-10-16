@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Search, ArrowLeft, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function PurchaseHistory({ user, onNavigate }) {
@@ -127,7 +126,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
               style={{ color: '#249689', fontSize: '15px' }}
             >
-              <ArrowLeft size={20} />
+              <span style={{ fontSize: '18px' }}>←</span>
               뒤로가기
             </button>
             <div className="flex items-center gap-1.5">
@@ -162,7 +161,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
                 className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
-                <Search size={20} />
+                <span style={{ fontSize: '18px' }}>🔍</span>
                 {loading ? '검색 중...' : '검색'}
               </button>
               <button
@@ -179,7 +178,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
             </p>
           </div>
 
-          {/* 구매 목록 테이블 - 순서: 상세/이름/전화번호/이메일/주문정보/구매일시 */}
+          {/* 구매 목록 테이블 */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
@@ -233,10 +232,10 @@ export default function PurchaseHistory({ user, onNavigate }) {
                         <button
                           onClick={() => handleRowClick(purchase)}
                           className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-                          style={{ color: '#249689' }}
+                          style={{ color: '#249689', fontSize: '18px' }}
                           title="상세 보기"
                         >
-                          <Eye size={18} />
+                          👁️
                         </button>
                       </td>
                       <td 
@@ -290,7 +289,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* 상세 정보 모달 - max-w-xl → max-w-lg (20% 더 축소) */}
+      {/* 상세 정보 모달 */}
       {showModal && selectedPurchase && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
