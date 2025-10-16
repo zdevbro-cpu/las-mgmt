@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase'
 
 
 // Supabase 클라이언트 초기화
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
+// const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
+// const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
 let supabase;
 if (supabaseUrl && supabaseKey) {
