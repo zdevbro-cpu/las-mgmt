@@ -27,7 +27,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
       const { data, error } = await supabase
         .from('work_diaries')
         .select('*')
-        .order('work_date', { ascending: false })
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('근무일지 조회 오류:', error)
@@ -73,6 +73,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
   }
 
   const formatDate = (dateString) => {
+    if (!dateString) return '-'
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
       year: 'numeric',
@@ -81,9 +82,14 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     })
   }
 
-  const formatTime = (dateString) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
+  const formatTime = (timeString) => {
+    if (!timeString) return '-'
+    // HH:MM 형식이면 그대로 반환
+    if (timeString.includes(':') && timeString.length <= 5) {
+      return timeString
+    }
+    // ISO 날짜 형식이면 시간만 추출
+    const date = new Date(timeString)
     return date.toLocaleTimeString('ko-KR', {
       hour: '2-digit',
       minute: '2-digit'
@@ -93,8 +99,8 @@ export default function AdminWorkDiary({ user, onNavigate }) {
   // 근무일지 목록별 이모지
   const getStatusEmoji = (diary) => {
     const now = new Date()
-    const workDate = new Date(diary.work_date)
-    const isToday = workDate.toDateString() === now.toDateString()
+    const createdDate = new Date(diary.created_at)
+    const isToday = createdDate.toDateString() === now.toDateString()
     
     if (isToday) return '📝'
     if (diary.special_notes) return '⭐'
@@ -167,11 +173,13 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                             {diary.user_name} ({diary.branch_name})
                           </div>
                           <div className="text-sm text-gray-600 mt-1">
-                            📅 {formatDate(diary.work_date)}
+                            📅 {formatDate(diary.created_at)}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            🕐 {formatTime(diary.start_time)} ~ {formatTime(diary.end_time)}
-                          </div>
+                          {diary.start_time && diary.end_time && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              🕐 {formatTime(diary.start_time)} ~ {formatTime(diary.end_time)}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -224,20 +232,22 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                         </tr>
                         <tr className="border-b">
                           <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
-                            근무일
+                            작성일
                           </td>
                           <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                            {formatDate(selectedDiary.work_date)}
+                            {formatDate(selectedDiary.created_at)}
                           </td>
                         </tr>
-                        <tr className="border-b">
-                          <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
-                            근무시간
-                          </td>
-                          <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                            {formatTime(selectedDiary.start_time)} ~ {formatTime(selectedDiary.end_time)}
-                          </td>
-                        </tr>
+                        {selectedDiary.start_time && selectedDiary.end_time && (
+                          <tr className="border-b">
+                            <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
+                              근무시간
+                            </td>
+                            <td className="py-3 px-4" style={{ fontSize: '15px' }}>
+                              {formatTime(selectedDiary.start_time)} ~ {formatTime(selectedDiary.end_time)}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
