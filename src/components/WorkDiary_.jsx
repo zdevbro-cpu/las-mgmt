@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 // 30분 단위 시간 옵션 생성
 const generateTimeOptions = () => {
@@ -14,15 +15,7 @@ const generateTimeOptions = () => {
 
 const TIME_OPTIONS = generateTimeOptions()
 
-export default function WorkDiary({ user: propUser, onNavigate }) {
-  // 사용자 정보 (props로 받거나 기본값 사용)
-  const [user] = useState(propUser || {
-    id: 'demo-user-1',
-    name: '홍길동',
-    branch: '강남점',
-    userType: '점장'
-  })
-
+export default function WorkDiary({ user, onNavigate }) {
   const [formData, setFormData] = useState({
     startDate: '',
     startTime: '',
@@ -68,7 +61,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         user_id: user.id,
         user_name: user.name,
         user_branch: user.branch,
-        user_type: user.userType,
+        user_type: user.userType || user.user_type,
         start_date: formData.startDate,
         start_time: formData.startTime,
         end_date: formData.endDate,
@@ -84,32 +77,21 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         created_at: new Date().toISOString()
       }
 
-      // 실제 환경에서는 여기서 데이터베이스에 저장
-      console.log('제출된 근무일지:', diaryEntry)
-      
-      // 시뮬레이션을 위한 지연
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      alert('근무일지가 제출되었습니다!')
-      
-      if (onNavigate) {
-        onNavigate('dashboard')
+      const { data, error } = await supabase
+        .from('work_diaries')
+        .insert([diaryEntry])
+        .select()
+
+      if (error) {
+        console.error('근무일지 저장 오류:', error)
+        alert('근무일지 저장 중 오류가 발생했습니다: ' + error.message)
+        setLoading(false)
+        return
       }
-      
-      // 폼 초기화
-      setFormData({
-        startDate: '',
-        startTime: '',
-        endDate: '',
-        endTime: '',
-        dailyCheck1: false,
-        dailyCheck2: false,
-        dailyCheck3: false,
-        outContent: '',
-        exemplary: '',
-        memorable: '',
-        suggestions: ''
-      })
+
+      console.log('근무일지 저장 성공:', data)
+      alert('근무일지가 제출되었습니다!')
+      onNavigate('dashboard')
     } catch (err) {
       console.error('근무일지 제출 오류:', err)
       alert('근무일지 제출 중 오류가 발생했습니다.')
@@ -118,28 +100,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
     }
   }
 
-  const handleCancel = () => {
-    if (window.confirm('작성 중인 내용이 사라집니다. 취소하시겠습니까?')) {
-      setFormData({
-        startDate: '',
-        startTime: '',
-        endDate: '',
-        endTime: '',
-        dailyCheck1: false,
-        dailyCheck2: false,
-        dailyCheck3: false,
-        outContent: '',
-        exemplary: '',
-        memorable: '',
-        suggestions: ''
-      })
-      if (onNavigate) {
-        onNavigate('dashboard')
-      }
-    }
-  }
-
-  const isManager = user?.userType === '점장'
+  const isManager = user?.userType === '점장' || user?.user_type === '점장'
 
   return (
     <div className="min-h-screen bg-gray-50 p-2">
@@ -147,11 +108,14 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         {/* 헤더 - 중앙정렬 */}
         <div className="flex flex-col items-center justify-center mb-4">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xl">L</span>
-            </div>
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-10 h-10 object-cover"
+              onError={(e) => e.target.style.display = 'none'}
+            />
             <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              {user?.userType === '점주' ? '점주 근무일지' : 'SM점장 근무일지'}
+              {(user?.userType === '점주' || user?.user_type === '점주') ? '점주근무일지' : 'SM점장 근무일지'}
             </h1>
           </div>
         </div>
@@ -185,13 +149,13 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 근무일자 선택 */}
+ {/* 근무일자 선택 */}
           <div className="border-t pt-6">
             <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
               근무일자 시간을 선택해 주세요
             </h3>
             {/* 출근시간 */}
-            <div className="mb-4">
+            <div className="mb-4"> {/* 각 시간 선택을 위한 div 추가 */}
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                 출근시간
               </label>
@@ -222,7 +186,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
             </div>
             
             {/* 퇴근시간 */}
-            <div>
+            <div> {/* 각 시간 선택을 위한 div 추가 */}
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                 퇴근시간
               </label>
@@ -258,7 +222,6 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
               </p>
             </div>
           </div>
-
           {/* 일일 확인목록 (점장만) */}
           {isManager && (
             <div className="border-t pt-6">
@@ -376,7 +339,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
             </button>
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={() => onNavigate('dashboard')}
               disabled={loading}
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
