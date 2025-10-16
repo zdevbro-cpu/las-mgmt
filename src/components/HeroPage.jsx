@@ -19,7 +19,7 @@ export default function HeroPage({ onNavigate }) {
             </h1>
           </div>
           <button
-            onClick={() => window.close()}
+            onClick={handleSystemExit}
             className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg hover:bg-gray-100 transition-colors"
             // 버튼 패딩, 텍스트 크기 조정 
             style={{ color: '#000000', border: '2px solid #7f95eb' }}
