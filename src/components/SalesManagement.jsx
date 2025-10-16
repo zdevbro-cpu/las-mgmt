@@ -29,6 +29,7 @@ export default function SalesManagement({ user, onNavigate }) {
     setLoading(true)
     
     try {
+      // ✅ 필드명을 PurchaseHistory와 일치시킴
       const saleEntry = {
         id: Date.now().toString(),
         user_id: user.id,
@@ -37,13 +38,15 @@ export default function SalesManagement({ user, onNavigate }) {
         customer_name: formData.customerName,
         birth_date: formData.birthDate || null,
         address: formData.address,
-        phone: formData.phone,
-        email: formData.email,
+        customer_phone: formData.phone,        // ← phone → customer_phone
+        customer_email: formData.email,        // ← email → customer_email
         payment_method: formData.paymentMethod,
+        payment_amount: null,  // 추후 추가 가능
         quantity: parseInt(formData.quantity) || null,
         depositor: formData.depositor || null,
         deposit_bank: formData.depositBank || null,
-        order_details: formData.orderDetails || null,
+        order_info: formData.orderDetails || null,  // ← order_details → order_info
+        branch_name: user.branch,  // ← 추가
         created_at: new Date().toISOString()
       }
 
@@ -61,7 +64,24 @@ export default function SalesManagement({ user, onNavigate }) {
 
       console.log('판매 정보 저장 성공:', data)
       alert('판매 정보가 저장되었습니다!')
-      onNavigate('dashboard')
+      
+      // 폼 초기화
+      setFormData({
+        customerName: '',
+        birthDate: '',
+        address: '',
+        phone: '',
+        email: '',
+        paymentMethod: '카드',
+        quantity: '',
+        depositor: '',
+        depositBank: '',
+        orderDetails: ''
+      })
+      
+      // 대시보드로 이동하거나 현재 페이지 유지
+      // onNavigate('dashboard')  // 주석 처리: 계속 입력 가능하도록
+      
     } catch (err) {
       console.error('판매 정보 제출 오류:', err)
       alert('판매 정보 제출 중 오류가 발생했습니다.')
@@ -91,8 +111,6 @@ export default function SalesManagement({ user, onNavigate }) {
             </h1>
           </div>
         </div>
-
-
 
         {/* 사용자 정보 */}
         <div className="grid grid-cols-2 gap-1.5 mb-4">
@@ -154,7 +172,6 @@ export default function SalesManagement({ user, onNavigate }) {
                   value={formData.birthDate}
                   onChange={handleChange}
                   placeholder="구매자 생년월일을 적어주세요"
-                  required
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
@@ -318,15 +335,17 @@ export default function SalesManagement({ user, onNavigate }) {
           <div className="flex gap-2">
             <button
               type="submit"
-              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              disabled={loading}
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              확인
+              {loading ? '저장 중...' : '확인'}
             </button>
             <button
               type="button"
               onClick={() => onNavigate('dashboard')}
-              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               취소
