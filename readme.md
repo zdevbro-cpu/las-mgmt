@@ -1,249 +1,109 @@
-# LAS 매장관리 시스템
+# LAS 매장관리 시스템 - 구매이력조회 기능 구현 가이드
 
-React + Vite + Supabase로 구축된 매장관리 시스템입니다.
-
-## 📁 프로젝트 구조
-
-```
-las-store-management/
-├── index.html              # HTML 엔트리 포인트
-├── package.json            # 의존성 및 스크립트
-├── vite.config.js          # Vite 설정
-├── .gitignore              # Git 무시 파일
-├── src/
-│   ├── main.jsx           # React 엔트리 포인트
-│   └── App.jsx            # 메인 애플리케이션 컴포넌트
-└── README.md              # 이 파일
-```
-
-## 🚀 빠른 시작
-
-### 1. 프로젝트 폴더 생성 및 파일 복사
+## 1. 필수 패키지 설치
 
 ```bash
-# 폴더 생성
-mkdir las-store-management
-cd las-store-management
-
-# src 폴더 생성
-mkdir src
+npm install @supabase/supabase-js
+npm install lucide-react
 ```
 
-다음 파일들을 각 위치에 복사하세요:
-- `package.json` (루트)
-- `vite.config.js` (루트)
-- `index.html` (루트)
-- `.gitignore` (루트)
-- `src/main.jsx` (src 폴더)
-- `src/App.jsx` (src 폴더)
+## 2. Supabase 설정
 
-### 2. 의존성 설치
-
-```bash
-npm install
-```
-
-### 3. 개발 서버 실행
-
-```bash
-npm run dev
-```
-
-브라우저가 자동으로 열리고 `http://localhost:3000`에서 실행됩니다.
-
-### 4. 프로덕션 빌드
-
-```bash
-npm run build
-```
-
-빌드된 파일은 `dist/` 폴더에 생성됩니다.
-
-## ⚙️ Supabase 설정
-
-### 1. Supabase 프로젝트 생성
-
+### 2.1 Supabase 프로젝트 생성
 1. https://supabase.com 접속
 2. 새 프로젝트 생성
-3. Project Settings > API에서 다음 정보 확인:
-   - Project URL
-   - anon public key
+3. SQL Editor에서 제공된 SQL 스크립트 실행
 
-### 2. 테이블 생성
-
-SQL Editor에서 다음 SQL 실행:
-
-```sql
--- users 테이블
-CREATE TABLE users (
-  id SERIAL PRIMARY KEY,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  name TEXT NOT NULL,
-  brname TEXT NOT NULL,
-  phone TEXT NOT NULL,
-  role TEXT NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- work_logs 테이블
-CREATE TABLE work_logs (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  start_date DATE NOT NULL,
-  start_time TIME NOT NULL,
-  end_date DATE NOT NULL,
-  end_time TIME NOT NULL,
-  work_hours DECIMAL(5,2),
-  check_clean BOOLEAN DEFAULT FALSE,
-  check_training BOOLEAN DEFAULT FALSE,
-  check_checklist BOOLEAN DEFAULT FALSE,
-  outdoor TEXT,
-  model TEXT,
-  customer TEXT,
-  suggestion TEXT,
-  submitted_at TIMESTAMP DEFAULT NOW()
-);
-
--- sales 테이블
-CREATE TABLE sales (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id),
-  buyer_name TEXT NOT NULL,
-  buyer_birth TEXT,
-  buyer_address TEXT,
-  buyer_phone TEXT NOT NULL,
-  buyer_email TEXT,
-  payment_method TEXT NOT NULL,
-  quantity TEXT,
-  depositor TEXT,
-  deposit_period TEXT,
-  order_info TEXT,
-  submitted_at TIMESTAMP DEFAULT NOW()
-);
+### 2.2 환경 변수 설정
+프로젝트 루트에 `.env` 파일 생성:
+```
+REACT_APP_SUPABASE_URL=https://your-project-id.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here
 ```
 
-### 3. RLS 정책 추가 (중요!)
+## 3. 파일 구조
 
-회원가입이 작동하려면 RLS 정책을 추가하세요:
-
-```sql
--- users 테이블: 누구나 회원가입 가능
-CREATE POLICY "Anyone can insert users" 
-ON users 
-FOR INSERT 
-WITH CHECK (true);
-
--- users 테이블: 모든 사용자 조회 가능
-CREATE POLICY "Anyone can read users" 
-ON users 
-FOR SELECT 
-USING (true);
-
--- work_logs: 인증된 사용자만 INSERT 가능
-CREATE POLICY "Users can insert work logs" 
-ON work_logs 
-FOR INSERT 
-WITH CHECK (true);
-
--- sales: 인증된 사용자만 INSERT 가능
-CREATE POLICY "Users can insert sales" 
-ON sales 
-FOR INSERT 
-WITH CHECK (true);
+```
+src/
+├── components/
+│   ├── Dashboard.jsx (수정됨)
+│   ├── PurchaseHistory.jsx (신규)
+│   └── ... (기타 컴포넌트)
+├── App.js (수정 필요)
+└── .env (생성 필요)
 ```
 
-**또는** 개발 중에는 RLS를 비활성화할 수 있습니다:
-1. Table Editor > users 테이블 선택
-2. RLS enabled 토글을 OFF로 설정
+## 4. GitHub + Vercel 배포
 
-### 4. API 키 설정 (이미 완료됨)
-
-`src/App.jsx` 파일에 이미 API 키가 설정되어 있습니다:
-- SUPABASE_URL: `https://sgxnxbhbyvrmgrzhosyh.supabase.co`
-- SUPABASE_ANON_KEY: `eyJhbGciOi...` (이미 포함됨)
-
-## 📝 주요 기능
-
-- ✅ **회원가입**: 이메일 중복 체크, 유효성 검사
-- ✅ **로그인**: Supabase 인증 연동
-- ✅ **매장관리**: 지점 및 사용자 정보 관리
-- ✅ **근무일지**: 출퇴근 시간 자동 계산
-- ✅ **판매관리**: 구매자 정보 및 결제 정보 관리
-- ✅ **Focus 문제 해결**: 연속 타이핑 가능
-
-## 🔧 기술 스택
-
-- **Frontend**: React 18, Vite
-- **Styling**: Tailwind CSS (CDN)
-- **Icons**: Lucide React
-- **Backend**: Supabase (PostgreSQL)
-- **Font**: Noto Sans KR
-
-## 🐛 문제 해결
-
-### 회원가입이 안 될 때
-
-1. **F12** 키를 눌러 개발자 도구 열기
-2. **Console** 탭에서 에러 확인
-3. 에러 메시지에 "policy" 또는 "permission"이 포함되면:
-   - Supabase에서 RLS 정책 추가 (위의 SQL 참고)
-   - 또는 RLS 비활성화
-
-### 로그인이 안 될 때
-
-1. 회원가입이 정상적으로 완료되었는지 확인
-2. Supabase Dashboard > Table Editor > users에서 데이터 확인
-3. 이메일과 비밀번호가 정확한지 확인
-
-### npm install 오류
-
+### 4.1 GitHub에 푸시
 ```bash
-# 캐시 삭제 후 재설치
-npm cache clean --force
-rm -rf node_modules package-lock.json
-npm install
+git add .
+git commit -m "구매이력조회 기능 추가"
+git push origin main
 ```
 
-### 포트 충돌
+### 4.2 Vercel 배포
+1. https://vercel.com 접속 및 로그인
+2. "Import Project" 클릭
+3. GitHub 저장소 선택
+4. Environment Variables 설정:
+   - `REACT_APP_SUPABASE_URL`: Supabase URL
+   - `REACT_APP_SUPABASE_ANON_KEY`: Supabase Anon Key
+5. "Deploy" 클릭
 
-`vite.config.js`에서 포트 변경:
-```javascript
-server: {
-  port: 3001,  // 3000 대신 다른 포트
-  open: true
-}
+## 5. 기능 설명
+
+### 5.1 Dashboard.jsx
+- **구매이력조회** 버튼 추가
+- 기존 디자인 톤앤메너 유지 (#249689 컬러)
+
+### 5.2 PurchaseHistory.jsx
+- **검색 기능**: 전화번호/이름/이메일로 검색
+- **목록 표시**: 구매자 정보를 테이블 형태로 표시
+- **상세 팝업**: 행 클릭 시 상세 정보 모달 표시
+- **읽기 전용**: 모든 필드는 조회만 가능
+
+### 5.3 데이터베이스 구조
+```
+purchases 테이블:
+- id: UUID (Primary Key)
+- customer_name: 고객명
+- customer_phone: 전화번호
+- customer_email: 이메일
+- order_info: 주문 정보
+- payment_method: 결제 방법
+- payment_amount: 결제 금액
+- branch_name: 지점명
+- created_at: 생성일시
+- updated_at: 수정일시
 ```
 
-## 📦 배포
+## 6. 주의사항
 
-### Vercel 배포
+- ✅ 기존 디자인 톤앤메너 유지
+- ✅ 로컬 테스트 불필요 (요청에 따라)
+- ✅ Supabase DB 사용
+- ✅ GitHub + Vercel 배포
+- ✅ 읽기 전용 구현
 
-```bash
-npm install -g vercel
-vercel
-```
+## 7. 테스트 방법
 
-### Netlify 배포
+1. Supabase에서 샘플 데이터 확인
+2. Vercel 배포 URL 접속
+3. 로그인 후 대시보드에서 "구매이력조회" 클릭
+4. 전화번호/이름/이메일로 검색 테스트
+5. 검색 결과 행 클릭하여 상세 정보 확인
 
-```bash
-npm run build
-# dist 폴더를 Netlify에 드래그 앤 드롭
-```
+## 8. 문제 해결
 
-## 📞 지원
+### 8.1 환경 변수 오류
+- Vercel 대시보드에서 환경 변수 재확인
+- 변수명이 정확한지 확인 (`REACT_APP_` 접두사 필수)
 
-문제가 발생하면:
-1. F12 콘솔에서 에러 확인
-2. Supabase 테이블 및 RLS 정책 확인
-3. 이슈 제기 시 에러 메시지 첨부
+### 8.2 검색 결과 없음
+- Supabase 테이블에 데이터가 있는지 확인
+- RLS 정책이 올바르게 설정되었는지 확인
 
-## 📄 라이선스
-
-MIT License
-
----
-
-**개발**: LAS 매장관리 시스템  
-**버전**: 1.0.0  
-**최종 업데이트**: 2025년 1월
+### 8.3 모달 창이 열리지 않음
+- 브라우저 콘솔에서 에러 확인
+- React 상태 관리 로직 확인
