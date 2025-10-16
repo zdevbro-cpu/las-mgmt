@@ -85,12 +85,12 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
       }
 
       // 실제 환경에서는 여기서 데이터베이스에 저장
-      console.log('제출된 근무일지:', diaryEntry)
+      console.log('저장된 근무일지:', diaryEntry)
       
       // 시뮬레이션을 위한 지연
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      alert('근무일지가 제출되었습니다!')
+      alert('근무일지가 저장되었습니다!')
       
       if (onNavigate) {
         onNavigate('dashboard')
@@ -111,8 +111,8 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         suggestions: ''
       })
     } catch (err) {
-      console.error('근무일지 제출 오류:', err)
-      alert('근무일지 제출 중 오류가 발생했습니다.')
+      console.error('근무일지 저장 오류:', err)
+      alert('근무일지 저장 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -367,7 +367,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
             />
           </div>
 
-          {/* 버튼들 - 제출/취소만 */}
+          {/* 버튼들 - 저장/취소만 */}
           <div className="flex gap-2 pt-4">
             <button
               type="submit"
@@ -375,7 +375,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
               className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              {loading ? '저장 중...' : '제출'}
+              {loading ? '저장 중...' : '저장'}
             </button>
             <button
               type="button"
@@ -384,7 +384,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
-              취소
+              나가기
             </button>
           </div>
         </form>

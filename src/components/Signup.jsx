@@ -109,7 +109,8 @@ export default function Signup({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-2">
+
+    <div className="min-h-screen bg-gray-50 p-2">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         {/* 안내 텍스트 */}
         <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
@@ -284,7 +285,7 @@ export default function Signup({ onNavigate }) {
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
-              취소
+              나가기
             </button>
           </div>
         </form>

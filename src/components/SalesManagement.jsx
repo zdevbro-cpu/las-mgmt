@@ -92,7 +92,6 @@ export default function SalesManagement({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gray-50 p-2">
-      
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
       <p className="text-center mb-4 font-bold text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS Book을 신청합니다.
