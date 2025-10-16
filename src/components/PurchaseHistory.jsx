@@ -16,12 +16,6 @@ export default function PurchaseHistory({ user, onNavigate }) {
       return
     }
 
-    if (!supabase) {
-      alert('데이터베이스 연결 오류. 환경 변수를 확인하세요.')
-      console.error('Supabase 초기화 실패. .env 파일을 확인하세요.')
-      return
-    }
-
     setLoading(true)
     try {
       let query = supabase.from('purchases').select('*')
@@ -59,9 +53,6 @@ export default function PurchaseHistory({ user, onNavigate }) {
     setShowModal(true)
   }
 
-  // 환경 변수 경고 메시지
-  const showEnvWarning = !supabaseUrl || !supabaseKey
-
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto p-6">
@@ -90,15 +81,6 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <div style={{ width: '100px' }}></div>
           </div>
 
-          {/* 환경 변수 경고 */}
-          {showEnvWarning && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              <strong>⚠️ 환경 변수 오류:</strong> Supabase URL 또는 Key가 설정되지 않았습니다.
-              <br />
-              <small>.env 파일을 확인하거나 Vercel 환경 변수를 설정하세요.</small>
-            </div>
-          )}
-
           {/* 검색 영역 */}
           <div className="mb-6">
             <div className="flex gap-2 mb-4">
@@ -123,7 +105,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               />
               <button
                 onClick={handleSearch}
-                disabled={loading || showEnvWarning}
+                disabled={loading}
                 className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
