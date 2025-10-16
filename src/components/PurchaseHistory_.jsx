@@ -6,13 +6,14 @@ export default function PurchaseHistory({ user, onNavigate }) {
   const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState(null)
-  const [allPurchaseHistory, setAllPurchaseHistory] = useState([])
   const [showModal, setShowModal] = useState(false)
 
+  // 페이지 로드 시 전체 판매(구매) 목록 가져오기
   useEffect(() => {
     fetchAllPurchases()
   }, [])
 
+  // 전체 판매(구매) 목록 가져오기
   const fetchAllPurchases = async () => {
     setLoading(true)
     try {
@@ -41,14 +42,17 @@ export default function PurchaseHistory({ user, onNavigate }) {
     }
   }
 
+  // 통합 검색 기능 - 이름, 전화번호, 이메일 모두 검색
   const handleSearch = async () => {
     if (!searchValue.trim()) {
+      // 검색어가 없으면 전체 목록 표시
       fetchAllPurchases()
       return
     }
 
     setLoading(true)
     try {
+      // OR 조건으로 이름, 전화번호, 이메일 모두 검색
       const { data, error } = await supabase
         .from('sales')
         .select('*')
@@ -75,42 +79,18 @@ export default function PurchaseHistory({ user, onNavigate }) {
     }
   }
 
+  // 초기화 버튼
   const handleReset = () => {
     setSearchValue('')
     fetchAllPurchases()
   }
 
-  // 동일인의 모든 구매이력 조회
-  const fetchSamePersonHistory = async (purchase) => {
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .or(`customer_name.eq.${purchase.customer_name},customer_phone.eq.${purchase.customer_phone}`)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('동일인 구매이력 조회 오류:', error)
-        return [purchase]
-      }
-
-      console.log('동일인 구매이력:', data)
-      return data || [purchase]
-    } catch (error) {
-      console.error('동일인 구매이력 조회 오류:', error)
-      return [purchase]
-    }
-  }
-
-  const handleRowClick = async (purchase) => {
+  const handleRowClick = (purchase) => {
     setSelectedPurchase(purchase)
     setShowModal(true)
-    
-    // 동일인의 모든 구매이력 조회
-    const history = await fetchSamePersonHistory(purchase)
-    setAllPurchaseHistory(history)
   }
 
+  // 날짜만 표시 (시간 제외)
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('ko-KR', {
@@ -120,48 +100,19 @@ export default function PurchaseHistory({ user, onNavigate }) {
     })
   }
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('ko-KR', {
+  // 구매내역 포맷팅 (구매일시 + 구매내역)
+  const formatPurchaseHistory = (purchase) => {
+    const date = new Date(purchase.created_at).toLocaleString('ko-KR', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     })
-  }
-
-  // 개별 구매 항목 포맷팅
-  const formatSinglePurchase = (purchase, index) => {
-    const date = formatDateTime(purchase.created_at)
+    
     const orderInfo = purchase.order_info || '주문 정보 없음'
-    const quantity = purchase.quantity ? `${purchase.quantity}개` : ''
-    const paymentMethod = purchase.payment_method || ''
     
-    return `[${index + 1}번째 구매]
-📅 구매일시: ${date}
-💳 결제방법: ${paymentMethod}
-📦 수량: ${quantity}
-📝 주문내역: ${orderInfo}
-${purchase.depositor ? `💰 입금자: ${purchase.depositor}` : ''}
-${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
-`
-  }
-
-  // 전체 구매이력 통합 포맷팅
-  const formatAllPurchaseHistory = () => {
-    if (!allPurchaseHistory || allPurchaseHistory.length === 0) {
-      return '구매이력이 없습니다.'
-    }
-
-    const totalCount = allPurchaseHistory.length
-    const header = `📊 총 구매횟수: ${totalCount}회\n${'='.repeat(50)}\n\n`
-    
-    const historyText = allPurchaseHistory
-      .map((purchase, index) => formatSinglePurchase(purchase, index))
-      .join('\n' + '-'.repeat(50) + '\n\n')
-
-    return header + historyText
+    return `📅 구매일시: ${date}\n\n📦 주문내역:\n${orderInfo}`
   }
 
   return (
@@ -338,7 +289,7 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
         </div>
       </div>
 
-      {/* 상세 정보 모달 - 동일인의 모든 구매이력 표시 */}
+      {/* 상세 정보 모달 - max-w-md 유지 (축소된 크기) */}
       {showModal && selectedPurchase && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -386,36 +337,55 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
                       <span className="text-xs">{selectedPurchase.address}</span>
                     </div>
                   )}
-                  {selectedPurchase.age && (
-                    <div className="flex">
-                      <span className="font-bold w-20 text-xs">나이:</span>
-                      <span className="text-xs">{selectedPurchase.age}세</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {/* 전체 구매이력 그룹 */}
+              {/* 구매내역 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
                 <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
-                  📦 전체 구매이력
-                  <span className="ml-2 text-xs font-normal text-gray-600">
-                    (동일인 기준: 이름 또는 연락처 일치)
-                  </span>
+                  📦 구매내역
                 </h4>
                 <textarea
-                  value={formatAllPurchaseHistory()}
+                  value={formatPurchaseHistory(selectedPurchase)}
                   readOnly
-                  rows={15}
+                  rows={7}
                   className="w-full px-3 py-2 border border-gray-300 bg-white text-xs"
                   style={{ 
                     borderRadius: '10px',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: 'monospace'
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap'
                   }}
                 />
               </div>
+
+              {/* 결제 정보 (있는 경우) */}
+              {(selectedPurchase.payment_method || selectedPurchase.payment_amount || selectedPurchase.quantity) && (
+                <div className="border-2 rounded-lg p-3" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
+                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '14px' }}>
+                    💳 결제 정보
+                  </h4>
+                  <div className="space-y-1.5">
+                    {selectedPurchase.payment_method && (
+                      <div className="flex">
+                        <span className="font-bold w-20 text-xs">결제방법:</span>
+                        <span className="text-xs">{selectedPurchase.payment_method}</span>
+                      </div>
+                    )}
+                    {selectedPurchase.payment_amount && (
+                      <div className="flex">
+                        <span className="font-bold w-20 text-xs">결제금액:</span>
+                        <span className="text-xs">{selectedPurchase.payment_amount.toLocaleString()}원</span>
+                      </div>
+                    )}
+                    {selectedPurchase.quantity && (
+                      <div className="flex">
+                        <span className="font-bold w-20 text-xs">수량:</span>
+                        <span className="text-xs">{selectedPurchase.quantity}개</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-4 flex justify-end">
