@@ -350,7 +350,7 @@ export default function SalesManagement({ user, onNavigate }) {
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
-              취소
+              나가기
             </button>
           </div>
         </form>
