@@ -68,14 +68,16 @@ export default function ShippingList({ user, onNavigate }) {
 
       // 날짜 필터
       if (startDate) {
-        query = query.gte('created_at', new Date(startDate).toISOString())
-      }
-      if (endDate) {
-        const endDateTime = new Date(endDate)
-        endDateTime.setHours(23, 59, 59, 999)
-        query = query.lte('created_at', endDateTime.toISOString())
+        const startDateTime = new Date(startDate)
+        startDateTime.setHours(0, 0, 0, 0)  // 00:00:00부터
+        query = query.gte('created_at', startDateTime.toISOString())
       }
 
+      if (endDate) {
+        const endDateTime = new Date(endDate)
+        endDateTime.setHours(23, 59, 59, 999)  // 23:59:59까지
+        query = query.lte('created_at', endDateTime.toISOString())
+      }
       const { data, error } = await query
 
       if (error) {
