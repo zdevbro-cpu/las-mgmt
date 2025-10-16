@@ -17,7 +17,7 @@ export default function ShippingList({ user, onNavigate }) {
     '✅ 3. 각 목록 앞에 체크박스 배치',
     '✅ 4. 체크한 항목의 이름/연락처/주소/구매내용 표시',
     '✅ 5. PDF 미리보기 기능',
-    '✅ 6. PDF 열기/다른이름으로저장/취소 기능',
+    '✅ 6. 송장 인쇄 기능',
     '✅ 7. 민감정보 제외 (작성일/이름/주소/연락처/주문내역/수량만 표시)',
     '✅ 8. 송장형태 출력 구현'
   ]
@@ -576,65 +576,67 @@ export default function ShippingList({ user, onNavigate }) {
                 총 {selectedItems.length}건의 송장이 생성됩니다
               </p>
               
-              {selectedItems.map((item, index) => (
-                <div key={item.id} className="mb-6 p-4 bg-white border-2 rounded-lg" style={{ borderColor: '#249689', width: '100mm', margin: '0 auto 20px' }}>
-                  {/* 송장 헤더 */}
-                  <div className="text-center pb-3 mb-3" style={{ borderBottom: '2px solid #000' }}>
-                    <h4 className="font-bold mb-1" style={{ fontSize: '18px' }}>📦 배송 송장</h4>
-                    <p className="text-xs text-gray-600">No. {String(index + 1).padStart(4, '0')}</p>
-                  </div>
+              <div className="space-y-6">
+                {selectedItems.map((item, index) => (
+                  <div key={item.id} className="bg-white border-2 rounded-lg p-4 mx-auto" style={{ borderColor: '#249689', maxWidth: '400px' }}>
+                    {/* 송장 헤더 */}
+                    <div className="text-center pb-3 mb-3 border-b-2 border-black">
+                      <h4 className="font-bold mb-1 text-lg">📦 배송 송장</h4>
+                      <p className="text-xs text-gray-600">No. {String(index + 1).padStart(4, '0')}</p>
+                    </div>
 
-                  {/* 수취인 정보 */}
-                  <div className="mb-3">
-                    <div className="font-bold mb-2 pl-2" style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', borderLeft: '3px solid #249689', fontSize: '11px' }}>
-                      📍 수취인 정보
-                    </div>
-                    <div className="space-y-1 text-xs pl-2">
-                      <div className="flex">
-                        <span className="font-bold w-16">성명</span>
-                        <span>{item.customer_name || '-'}</span>
+                    {/* 수취인 정보 */}
+                    <div className="mb-3">
+                      <div className="font-bold mb-2 px-2 py-1 bg-gray-100 border-l-4" style={{ borderColor: '#249689' }}>
+                        📍 수취인 정보
                       </div>
-                      <div className="flex">
-                        <span className="font-bold w-16">연락처</span>
-                        <span>{item.customer_phone || '-'}</span>
-                      </div>
-                      <div className="flex">
-                        <span className="font-bold w-16">주소</span>
-                        <span className="flex-1">{item.address || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 주문 정보 */}
-                  <div className="mb-3">
-                    <div className="font-bold mb-2 pl-2" style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', borderLeft: '3px solid #249689', fontSize: '11px' }}>
-                      📝 주문 정보
-                    </div>
-                    <div className="space-y-1 text-xs pl-2">
-                      <div className="flex">
-                        <span className="font-bold w-16">주문일</span>
-                        <span>{formatDate(item.created_at)}</span>
-                      </div>
-                      <div className="flex">
-                        <span className="font-bold w-16">수량</span>
-                        <span>{item.quantity || '-'}개</span>
-                      </div>
-                      <div className="mt-2">
-                        <div className="font-bold mb-1">주문내역</div>
-                        <div className="border border-gray-300 p-2 bg-gray-50 text-xs whitespace-pre-wrap" style={{ minHeight: '40px' }}>
-                          {item.order_info || '주문 정보 없음'}
+                      <div className="space-y-1.5 text-sm px-2 mt-2">
+                        <div className="flex gap-2">
+                          <span className="font-bold min-w-16">성명</span>
+                          <span>{item.customer_name || '-'}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="font-bold min-w-16">연락처</span>
+                          <span>{item.customer_phone || '-'}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="font-bold min-w-16">주소</span>
+                          <span className="flex-1">{item.address || '-'}</span>
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* 푸터 */}
-                  <div className="text-center pt-2 mt-3 border-t border-dashed border-gray-300 text-xs text-gray-600">
-                    LAS Book Store · 배송 송장<br/>
-                    발행일: {new Date().toLocaleDateString('ko-KR')}
+                    {/* 주문 정보 */}
+                    <div className="mb-3">
+                      <div className="font-bold mb-2 px-2 py-1 bg-gray-100 border-l-4" style={{ borderColor: '#249689' }}>
+                        📝 주문 정보
+                      </div>
+                      <div className="space-y-1.5 text-sm px-2 mt-2">
+                        <div className="flex gap-2">
+                          <span className="font-bold min-w-16">주문일</span>
+                          <span>{formatDate(item.created_at)}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="font-bold min-w-16">수량</span>
+                          <span>{item.quantity || '-'}개</span>
+                        </div>
+                        <div className="mt-2">
+                          <div className="font-bold mb-1">주문내역</div>
+                          <div className="border border-gray-300 p-2 bg-gray-50 text-sm rounded" style={{ minHeight: '60px', whiteSpace: 'pre-wrap' }}>
+                            {item.order_info || '주문 정보 없음'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 푸터 */}
+                    <div className="text-center pt-2 mt-3 border-t border-dashed border-gray-300 text-xs text-gray-600">
+                      LAS Book Store · 배송 송장<br/>
+                      발행일: {new Date().toLocaleDateString('ko-KR')}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* 액션 버튼 */}
@@ -645,13 +647,6 @@ export default function ShippingList({ user, onNavigate }) {
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
                 🖨️ 송장 인쇄
-              </button>
-              <button
-                onClick={handleDownloadPDF}
-                className="px-6 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
-              >
-                💾 PDF 저장
               </button>
               <button
                 onClick={() => setShowPreview(false)}
