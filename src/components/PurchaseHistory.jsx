@@ -2,16 +2,6 @@ import { useState } from 'react'
 import { Search, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
-
- Supabase 클라이언트 초기화
- const supabaseUrl =  import.meta.env.VITE_SUPABASE_URL;
- const supabaseKey =import.meta.env.VITE_SUPABASE_ANON_KEY;
-
- let supabase;
- if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey)
- }
-
 export default function PurchaseHistory({ user, onNavigate }) {
   const [searchType, setSearchType] = useState('phone')
   const [searchValue, setSearchValue] = useState('')
