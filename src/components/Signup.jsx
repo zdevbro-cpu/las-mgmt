@@ -121,10 +121,10 @@ export default function Signup({ onNavigate }) {
           <img 
             src="/images/logo.png" 
             alt="LAS Logo" 
-            className="w-16 h-16"
+            className="w-10 h-10 object-cover"
             onError={(e) => e.target.style.display = 'none'}
           />
-          <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+          <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
             회원가입
           </h1>
         </div>
