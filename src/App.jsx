@@ -5,9 +5,14 @@ import Signup from './components/Signup'
 import Dashboard from './components/Dashboard'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
-import AdminApproval from './components/AdminApproval'
 import PurchaseHistory from './components/PurchaseHistory'
 import ShippingList from './components/ShippingList'
+
+// 관리자 페이지들
+import AdminDashboard from './components/AdminDashboard'
+import AdminUsers from './components/AdminUsers'
+import AdminWorkDiary from './components/AdminWorkDiary'
+import AdminCustomers from './components/AdminCustomers'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('hero')
@@ -21,7 +26,7 @@ function App() {
         const user = JSON.parse(userStr)
         setCurrentUser(user)
         if (user.userType === '관리자' || user.user_type === '관리자') {
-          setCurrentPage('admin')
+          setCurrentPage('adminDashboard')
         } else {
           setCurrentPage('dashboard')
         }
@@ -36,7 +41,7 @@ function App() {
     setCurrentUser(user)
     sessionStorage.setItem('las_current_user', JSON.stringify(user))
     if (user.userType === '관리자' || user.user_type === '관리자') {
-      setCurrentPage('admin')
+      setCurrentPage('adminDashboard')
     } else {
       setCurrentPage('dashboard')
     }
@@ -56,6 +61,8 @@ function App() {
         return <Login onNavigate={setCurrentPage} onLogin={handleLogin} />
       case 'signup':
         return <Signup onNavigate={setCurrentPage} />
+      
+      // 일반 사용자 페이지
       case 'dashboard':
         return <Dashboard user={currentUser} onNavigate={setCurrentPage} onLogout={handleLogout} />
       case 'workDiary':
@@ -66,8 +73,17 @@ function App() {
         return <ShippingList user={currentUser} onNavigate={setCurrentPage} />
       case 'purchaseHistory':
         return <PurchaseHistory user={currentUser} onNavigate={setCurrentPage} />
-      case 'admin':
-        return <AdminApproval user={currentUser} onLogout={handleLogout} />
+      
+      // 관리자 페이지
+      case 'adminDashboard':
+        return <AdminDashboard user={currentUser} onNavigate={setCurrentPage} onLogout={handleLogout} />
+      case 'adminUsers':
+        return <AdminUsers user={currentUser} onNavigate={setCurrentPage} />
+      case 'adminWorkDiary':
+        return <AdminWorkDiary user={currentUser} onNavigate={setCurrentPage} />
+      case 'adminCustomers':
+        return <AdminCustomers user={currentUser} onNavigate={setCurrentPage} />
+      
       default:
         return <HeroPage onNavigate={setCurrentPage} />
     }
