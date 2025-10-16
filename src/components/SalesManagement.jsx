@@ -341,7 +341,7 @@ export default function SalesManagement({ user, onNavigate }) {
               className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              {loading ? '저장 중...' : '확인'}
+              {loading ? '저장 중...' : '저장'}
             </button>
             <button
               type="button"
