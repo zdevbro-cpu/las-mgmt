@@ -110,8 +110,8 @@ export default function Signup({ onNavigate }) {
 
   return (
 
-    <div className="min-h-screen bg-gray-50 p-2">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+    <div className="flex items-start justify-center min-h-screen bg-gray-50 p-2">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mt-10">
         {/* 안내 텍스트 */}
         <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS 매장관리 시스템에 오신것을 환영합니다.
