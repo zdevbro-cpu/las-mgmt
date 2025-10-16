@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -10,15 +10,51 @@ export default function PurchaseHistory({ user, onNavigate }) {
   const [selectedPurchase, setSelectedPurchase] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
+  // 페이지 로드 시 전체 판매(구매) 목록 가져오기
+  useEffect(() => {
+    fetchAllPurchases()
+  }, [])
+
+  // 전체 판매(구매) 목록 가져오기 - sales 테이블 사용
+  const fetchAllPurchases = async () => {
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('sales')  // purchases → sales로 변경
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('전체 목록 조회 오류:', error)
+        alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
+        return
+      }
+      
+      console.log('조회된 데이터:', data)
+      setPurchases(data || [])
+      
+      if (!data || data.length === 0) {
+        console.log('데이터가 없습니다. 판매관리에서 판매 데이터를 추가하거나 Supabase에 샘플 데이터를 추가하세요.')
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error)
+      alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 검색 기능 - sales 테이블 사용
   const handleSearch = async () => {
     if (!searchValue.trim()) {
-      alert('검색어를 입력해주세요')
+      // 검색어가 없으면 전체 목록 표시
+      fetchAllPurchases()
       return
     }
 
     setLoading(true)
     try {
-      let query = supabase.from('purchases').select('*')
+      let query = supabase.from('sales').select('*')  // purchases → sales로 변경
       
       if (searchType === 'phone') {
         query = query.ilike('customer_phone', `%${searchValue}%`)
@@ -31,10 +67,12 @@ export default function PurchaseHistory({ user, onNavigate }) {
       const { data, error } = await query.order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Supabase 쿼리 오류:', error)
-        throw error
+        console.error('Supabase 검색 오류:', error)
+        alert('검색 중 오류가 발생했습니다: ' + error.message)
+        return
       }
       
+      console.log('검색 결과:', data)
       setPurchases(data || [])
       
       if (!data || data.length === 0) {
@@ -46,6 +84,12 @@ export default function PurchaseHistory({ user, onNavigate }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  // 초기화 버튼
+  const handleReset = () => {
+    setSearchValue('')
+    fetchAllPurchases()
   }
 
   const handleRowClick = (purchase) => {
@@ -112,6 +156,14 @@ export default function PurchaseHistory({ user, onNavigate }) {
                 <Search size={20} />
                 {loading ? '검색 중...' : '검색'}
               </button>
+              <button
+                onClick={handleReset}
+                disabled={loading}
+                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
+              >
+                초기화
+              </button>
             </div>
           </div>
 
@@ -141,13 +193,19 @@ export default function PurchaseHistory({ user, onNavigate }) {
                 {loading ? (
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center" style={{ fontSize: '15px' }}>
-                      검색 중...
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
+                        로딩 중...
+                      </div>
                     </td>
                   </tr>
                 ) : purchases.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '15px' }}>
-                      검색어를 입력하고 검색 버튼을 눌러주세요
+                      <div>
+                        <p className="mb-2">등록된 판매 내역이 없습니다</p>
+                        <p className="text-sm">판매관리에서 판매 데이터를 추가하세요</p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -178,6 +236,13 @@ export default function PurchaseHistory({ user, onNavigate }) {
               </tbody>
             </table>
           </div>
+
+          {/* 총 개수 표시 */}
+          {purchases.length > 0 && (
+            <div className="mt-4 text-right text-gray-600" style={{ fontSize: '14px' }}>
+              총 <strong style={{ color: '#249689' }}>{purchases.length}</strong>건
+            </div>
+          )}
         </div>
       </div>
 
@@ -269,6 +334,36 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
               </div>
+
+              {selectedPurchase.payment_method && (
+                <div>
+                  <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                    💳 결제 방법
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedPurchase.payment_method}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                </div>
+              )}
+
+              {selectedPurchase.payment_amount && (
+                <div>
+                  <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                    💰 결제 금액
+                  </label>
+                  <input
+                    type="text"
+                    value={`${selectedPurchase.payment_amount.toLocaleString()}원`}
+                    readOnly
+                    className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                    style={{ borderRadius: '10px', fontSize: '15px' }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex justify-end">
