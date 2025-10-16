@@ -269,7 +269,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
                 일일 확인목록
               </h3>
               <div className="space-y-1">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-1 cursor-pointer">
                   <input
                     type="checkbox"
                     name="dailyCheck1"
