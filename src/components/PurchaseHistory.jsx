@@ -91,6 +91,16 @@ export default function PurchaseHistory({ user, onNavigate }) {
     setShowModal(true)
   }
 
+  // 날짜만 표시 (시간 제외)
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  }
+
   // 구매내역 포맷팅 (구매일시 + 구매내역)
   const formatPurchaseHistory = (purchase) => {
     const date = new Date(purchase.created_at).toLocaleString('ko-KR', {
@@ -108,7 +118,6 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* max-w-6xl → max-w-3xl (약 1/2 크기) */}
       <div className="max-w-3xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* 헤더 */}
@@ -170,7 +179,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
             </p>
           </div>
 
-          {/* 구매 목록 테이블 - 순서 변경: 상세/이름/전화번호/이메일/주문정보 */}
+          {/* 구매 목록 테이블 - 순서: 상세/이름/전화번호/이메일/주문정보/구매일시 */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
@@ -190,12 +199,15 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
                     주문정보
                   </th>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                    구매일
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center" style={{ fontSize: '14px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center" style={{ fontSize: '14px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -204,7 +216,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   </tr>
                 ) : purchases.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '14px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '14px' }}>
                       <div>
                         <p className="mb-2">등록된 판매 내역이 없습니다</p>
                         <p className="text-sm">판매관리에서 판매 데이터를 추가하세요</p>
@@ -255,6 +267,13 @@ export default function PurchaseHistory({ user, onNavigate }) {
                       >
                         {purchase.order_info?.substring(0, 20)}{purchase.order_info?.length > 20 ? '...' : ''}
                       </td>
+                      <td 
+                        className="px-3 py-3 cursor-pointer" 
+                        style={{ fontSize: '14px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
+                        {formatDate(purchase.created_at)}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -271,70 +290,70 @@ export default function PurchaseHistory({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* 상세 정보 모달 - max-w-2xl → max-w-xl (약 90% 축소) */}
+      {/* 상세 정보 모달 - max-w-xl → max-w-lg (20% 더 축소) */}
       {showModal && selectedPurchase && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-2xl p-5 max-w-xl w-full max-h-[85vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-2xl p-4 max-w-lg w-full max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: '10px' }}
           >
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold" style={{ color: '#249689', fontSize: '18px' }}>
                 구매 상세 정보
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-gray-500 hover:text-gray-700 text-xl font-bold"
               >
                 ×
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* 구매자 정보 그룹 */}
-              <div className="border-2 rounded-lg p-4" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-3" style={{ color: '#249689', fontSize: '15px' }}>
+              <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
                   👤 구매자 정보
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <div className="flex">
-                    <span className="font-bold w-20 text-sm">이름:</span>
-                    <span className="text-sm">{selectedPurchase.customer_name || '-'}</span>
+                    <span className="font-bold w-20 text-xs">이름:</span>
+                    <span className="text-xs">{selectedPurchase.customer_name || '-'}</span>
                   </div>
                   <div className="flex">
-                    <span className="font-bold w-20 text-sm">전화번호:</span>
-                    <span className="text-sm">{selectedPurchase.customer_phone || '-'}</span>
+                    <span className="font-bold w-20 text-xs">전화번호:</span>
+                    <span className="text-xs">{selectedPurchase.customer_phone || '-'}</span>
                   </div>
                   <div className="flex">
-                    <span className="font-bold w-20 text-sm">이메일:</span>
-                    <span className="text-sm break-all">{selectedPurchase.customer_email || '-'}</span>
+                    <span className="font-bold w-20 text-xs">이메일:</span>
+                    <span className="text-xs break-all">{selectedPurchase.customer_email || '-'}</span>
                   </div>
                   {selectedPurchase.address && (
                     <div className="flex">
-                      <span className="font-bold w-20 text-sm">주소:</span>
-                      <span className="text-sm">{selectedPurchase.address}</span>
+                      <span className="font-bold w-20 text-xs">주소:</span>
+                      <span className="text-xs">{selectedPurchase.address}</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* 구매내역 그룹 */}
-              <div className="border-2 rounded-lg p-4" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-3" style={{ color: '#249689', fontSize: '15px' }}>
+              <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
                   📦 구매내역
                 </h4>
                 <textarea
                   value={formatPurchaseHistory(selectedPurchase)}
                   readOnly
-                  rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 bg-white text-sm"
+                  rows={7}
+                  className="w-full px-3 py-2 border border-gray-300 bg-white text-xs"
                   style={{ 
                     borderRadius: '10px',
-                    lineHeight: '1.6',
+                    lineHeight: '1.5',
                     whiteSpace: 'pre-wrap'
                   }}
                 />
@@ -342,27 +361,27 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
               {/* 결제 정보 (있는 경우) */}
               {(selectedPurchase.payment_method || selectedPurchase.payment_amount || selectedPurchase.quantity) && (
-                <div className="border-2 rounded-lg p-4" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
-                  <h4 className="font-bold mb-3" style={{ color: '#6b7280', fontSize: '15px' }}>
+                <div className="border-2 rounded-lg p-3" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
+                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '14px' }}>
                     💳 결제 정보
                   </h4>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {selectedPurchase.payment_method && (
                       <div className="flex">
-                        <span className="font-bold w-20 text-sm">결제방법:</span>
-                        <span className="text-sm">{selectedPurchase.payment_method}</span>
+                        <span className="font-bold w-20 text-xs">결제방법:</span>
+                        <span className="text-xs">{selectedPurchase.payment_method}</span>
                       </div>
                     )}
                     {selectedPurchase.payment_amount && (
                       <div className="flex">
-                        <span className="font-bold w-20 text-sm">결제금액:</span>
-                        <span className="text-sm">{selectedPurchase.payment_amount.toLocaleString()}원</span>
+                        <span className="font-bold w-20 text-xs">결제금액:</span>
+                        <span className="text-xs">{selectedPurchase.payment_amount.toLocaleString()}원</span>
                       </div>
                     )}
                     {selectedPurchase.quantity && (
                       <div className="flex">
-                        <span className="font-bold w-20 text-sm">수량:</span>
-                        <span className="text-sm">{selectedPurchase.quantity}개</span>
+                        <span className="font-bold w-20 text-xs">수량:</span>
+                        <span className="text-xs">{selectedPurchase.quantity}개</span>
                       </div>
                     )}
                   </div>
@@ -370,10 +389,10 @@ export default function PurchaseHistory({ user, onNavigate }) {
               )}
             </div>
 
-            <div className="mt-5 flex justify-end">
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-5 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors text-sm"
+                className="px-4 py-1.5 font-bold rounded-lg hover:bg-gray-100 transition-colors text-xs"
                 style={{ border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px' }}
               >
                 닫기
