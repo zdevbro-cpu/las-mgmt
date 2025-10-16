@@ -17,7 +17,9 @@ export default function ShippingList({ user, onNavigate }) {
     '✅ 3. 각 목록 앞에 체크박스 배치',
     '✅ 4. 체크한 항목의 이름/연락처/주소/구매내용 표시',
     '✅ 5. PDF 미리보기 기능',
-    '✅ 6. PDF 열기/다른이름으로저장/취소 기능'
+    '✅ 6. PDF 열기/다른이름으로저장/취소 기능',
+    '✅ 7. 민감정보 제외 (작성일/이름/주소/연락처/주문내역/수량만 표시)',
+    '✅ 8. 송장형태 출력 구현'
   ]
 
   useEffect(() => {
@@ -149,15 +151,10 @@ export default function ShippingList({ user, onNavigate }) {
     setShowPreview(true)
   }
 
-  // PDF 생성 및 다운로드
-  const handleDownloadPDF = () => {
-    // 실제 구현시 jsPDF 또는 다른 PDF 라이브러리 사용
-    alert('PDF 다운로드 기능은 jsPDF 라이브러리를 추가하여 구현할 수 있습니다.')
-    // 예시: const doc = new jsPDF()...
-  }
 
-  // PDF 인쇄 (새 창에서 열기)
-  const handlePrintPDF = () => {
+
+  // 송장 형태로 인쇄
+  const handlePrintInvoice = () => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
       alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
@@ -169,116 +166,176 @@ export default function ShippingList({ user, onNavigate }) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>주문 발송 목록</title>
+        <title>배송 송장</title>
         <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
           body { 
             font-family: 'Malgun Gothic', sans-serif; 
-            padding: 20px;
-            line-height: 1.6;
+            padding: 0;
+            line-height: 1.4;
           }
-          .header { 
-            text-align: center; 
-            margin-bottom: 30px;
-            border-bottom: 3px solid #249689;
-            padding-bottom: 15px;
+          
+          .page {
+            width: 100mm;
+            padding: 8mm;
+            page-break-after: always;
+            border: 1px dashed #ccc;
+            margin: 0 auto 5mm auto;
           }
-          .header h1 { 
-            color: #249689; 
-            margin: 0;
+          
+          .page:last-child {
+            page-break-after: auto;
           }
-          .item { 
-            border: 2px solid #249689; 
-            padding: 15px; 
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-            border-radius: 8px;
+          
+          .invoice-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 5mm;
+            margin-bottom: 5mm;
           }
-          .item-header {
-            background-color: #f0fffe;
-            padding: 10px;
-            margin: -15px -15px 15px -15px;
-            border-bottom: 2px solid #249689;
+          
+          .invoice-header h1 {
+            font-size: 18pt;
             font-weight: bold;
-            font-size: 16px;
+            margin-bottom: 2mm;
           }
-          .field { 
-            margin: 8px 0;
+          
+          .invoice-number {
+            font-size: 10pt;
+            color: #666;
+          }
+          
+          .section {
+            margin-bottom: 5mm;
+          }
+          
+          .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            background-color: #f0f0f0;
+            padding: 2mm;
+            margin-bottom: 2mm;
+            border-left: 3mm solid #249689;
+          }
+          
+          .field {
             display: flex;
+            padding: 1.5mm 0;
+            font-size: 10pt;
           }
-          .field-label { 
-            font-weight: bold; 
-            width: 100px;
-            color: #249689;
+          
+          .field-label {
+            font-weight: bold;
+            width: 20mm;
+            flex-shrink: 0;
           }
+          
           .field-value {
             flex: 1;
+            word-break: break-all;
           }
-          .order-info {
-            background-color: #f9fafb;
-            padding: 10px;
-            margin-top: 10px;
-            border-left: 3px solid #249689;
+          
+          .order-box {
+            border: 1px solid #ddd;
+            padding: 3mm;
+            background-color: #fafafa;
+            min-height: 20mm;
+            font-size: 9pt;
             white-space: pre-wrap;
+            word-break: break-word;
           }
+          
+          .footer {
+            margin-top: 5mm;
+            padding-top: 3mm;
+            border-top: 1px dashed #ccc;
+            text-align: center;
+            font-size: 8pt;
+            color: #666;
+          }
+          
           @media print {
-            body { margin: 0; }
-            .item { page-break-inside: avoid; }
+            body {
+              margin: 0;
+              padding: 0;
+            }
+            .page {
+              width: 100mm;
+              height: auto;
+              border: none;
+              margin: 0;
+              padding: 8mm;
+              page-break-after: always;
+            }
+            .page:last-child {
+              page-break-after: auto;
+            }
           }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h1>📦 주문 발송 목록</h1>
-          <p>생성일시: ${new Date().toLocaleString('ko-KR')}</p>
-          <p>총 ${selectedItems.length}건</p>
-        </div>
         ${selectedItems.map((item, index) => `
-          <div class="item">
-            <div class="item-header">[${index + 1}] ${item.customer_name}</div>
-            <div class="field">
-              <span class="field-label">이름:</span>
-              <span class="field-value">${item.customer_name || '-'}</span>
+          <div class="page">
+            <!-- 송장 헤더 -->
+            <div class="invoice-header">
+              <h1>📦 배송 송장</h1>
+              <div class="invoice-number">No. ${String(index + 1).padStart(4, '0')}</div>
             </div>
-            <div class="field">
-              <span class="field-label">연락처:</span>
-              <span class="field-value">${item.customer_phone || '-'}</span>
+            
+            <!-- 수취인 정보 -->
+            <div class="section">
+              <div class="section-title">📍 수취인 정보</div>
+              <div class="field">
+                <div class="field-label">성명</div>
+                <div class="field-value">${item.customer_name || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">연락처</div>
+                <div class="field-value">${item.customer_phone || '-'}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">주소</div>
+                <div class="field-value">${item.address || '-'}</div>
+              </div>
             </div>
-            <div class="field">
-              <span class="field-label">주소:</span>
-              <span class="field-value">${item.address || '-'}</span>
+            
+            <!-- 주문 정보 -->
+            <div class="section">
+              <div class="section-title">📝 주문 정보</div>
+              <div class="field">
+                <div class="field-label">주문일</div>
+                <div class="field-value">${formatDate(item.created_at)}</div>
+              </div>
+              <div class="field">
+                <div class="field-label">수량</div>
+                <div class="field-value">${item.quantity || '-'}개</div>
+              </div>
+              <div style="margin-top: 2mm;">
+                <div class="field-label" style="margin-bottom: 1mm;">주문내역</div>
+                <div class="order-box">${item.order_info || '주문 정보 없음'}</div>
+              </div>
             </div>
-            ${item.customer_email ? `
-            <div class="field">
-              <span class="field-label">이메일:</span>
-              <span class="field-value">${item.customer_email}</span>
-            </div>
-            ` : ''}
-            ${item.age ? `
-            <div class="field">
-              <span class="field-label">나이:</span>
-              <span class="field-value">${item.age}세</span>
-            </div>
-            ` : ''}
-            <div class="field">
-              <span class="field-label">주문일시:</span>
-              <span class="field-value">${formatDateTime(item.created_at)}</span>
-            </div>
-            <div class="field">
-              <span class="field-label">결제방법:</span>
-              <span class="field-value">${item.payment_method || '-'}</span>
-            </div>
-            ${item.quantity ? `
-            <div class="field">
-              <span class="field-label">수량:</span>
-              <span class="field-value">${item.quantity}개</span>
-            </div>
-            ` : ''}
-            <div class="order-info">
-              <strong>📝 주문내용:</strong><br/>
-              ${item.order_info || '주문 정보 없음'}
+            
+            <!-- 푸터 -->
+            <div class="footer">
+              LAS Book Store · 배송 송장<br/>
+              발행일: ${new Date().toLocaleDateString('ko-KR')}
             </div>
           </div>
         `).join('')}
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 500);
+          }
+        </script>
       </body>
       </html>
     `
@@ -286,11 +343,6 @@ export default function ShippingList({ user, onNavigate }) {
     printWindow.document.write(htmlContent)
     printWindow.document.close()
     printWindow.focus()
-    
-    // 문서 로드 후 인쇄 다이얼로그 자동 실행
-    setTimeout(() => {
-      printWindow.print()
-    }, 250)
   }
 
   const isSelected = (purchase) => {
@@ -495,20 +547,20 @@ export default function ShippingList({ user, onNavigate }) {
         </div>
       </div>
 
-      {/* PDF 미리보기 모달 */}
+      {/* 송장 미리보기 모달 */}
       {showPreview && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={() => setShowPreview(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: '10px' }}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
-                📄 주문 발송 목록 미리보기
+                📄 배송 송장 미리보기
               </h3>
               <button
                 onClick={() => setShowPreview(false)}
@@ -518,59 +570,68 @@ export default function ShippingList({ user, onNavigate }) {
               </button>
             </div>
 
-            {/* 미리보기 내용 */}
-            <div className="border-2 border-gray-200 rounded-lg p-6 mb-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
-              <div className="text-center mb-6 pb-4" style={{ borderBottom: '3px solid #249689' }}>
-                <h2 className="font-bold mb-2" style={{ color: '#249689', fontSize: '24px' }}>
-                  📦 주문 발송 목록
-                </h2>
-                <p className="text-sm text-gray-600">
-                  생성일시: {new Date().toLocaleString('ko-KR')} | 총 {selectedItems.length}건
-                </p>
-              </div>
-
+            {/* 미리보기 내용 - 송장 형태 */}
+            <div className="border-2 border-gray-200 rounded-lg p-4 mb-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
+              <p className="text-center text-sm text-gray-600 mb-4">
+                총 {selectedItems.length}건의 송장이 생성됩니다
+              </p>
+              
               {selectedItems.map((item, index) => (
-                <div key={item.id} className="mb-6 p-4 border-2 rounded-lg" style={{ borderColor: '#249689', backgroundColor: 'white' }}>
-                  <div className="mb-3 pb-2 font-bold" style={{ borderBottom: '2px solid #249689', color: '#249689', fontSize: '16px' }}>
-                    [{index + 1}] {item.customer_name}
+                <div key={item.id} className="mb-6 p-4 bg-white border-2 rounded-lg" style={{ borderColor: '#249689', width: '100mm', margin: '0 auto 20px' }}>
+                  {/* 송장 헤더 */}
+                  <div className="text-center pb-3 mb-3" style={{ borderBottom: '2px solid #000' }}>
+                    <h4 className="font-bold mb-1" style={{ fontSize: '18px' }}>📦 배송 송장</h4>
+                    <p className="text-xs text-gray-600">No. {String(index + 1).padStart(4, '0')}</p>
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex">
-                      <span className="font-bold w-24" style={{ color: '#249689' }}>이름:</span>
-                      <span>{item.customer_name || '-'}</span>
+
+                  {/* 수취인 정보 */}
+                  <div className="mb-3">
+                    <div className="font-bold mb-2 pl-2" style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', borderLeft: '3px solid #249689', fontSize: '11px' }}>
+                      📍 수취인 정보
                     </div>
-                    <div className="flex">
-                      <span className="font-bold w-24" style={{ color: '#249689' }}>연락처:</span>
-                      <span>{item.customer_phone || '-'}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="font-bold w-24" style={{ color: '#249689' }}>주소:</span>
-                      <span>{item.address || '-'}</span>
-                    </div>
-                    {item.customer_email && (
+                    <div className="space-y-1 text-xs pl-2">
                       <div className="flex">
-                        <span className="font-bold w-24" style={{ color: '#249689' }}>이메일:</span>
-                        <span>{item.customer_email}</span>
+                        <span className="font-bold w-16">성명</span>
+                        <span>{item.customer_name || '-'}</span>
                       </div>
-                    )}
-                    <div className="flex">
-                      <span className="font-bold w-24" style={{ color: '#249689' }}>주문일시:</span>
-                      <span>{formatDateTime(item.created_at)}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="font-bold w-24" style={{ color: '#249689' }}>결제방법:</span>
-                      <span>{item.payment_method || '-'}</span>
-                    </div>
-                    {item.quantity && (
                       <div className="flex">
-                        <span className="font-bold w-24" style={{ color: '#249689' }}>수량:</span>
-                        <span>{item.quantity}개</span>
+                        <span className="font-bold w-16">연락처</span>
+                        <span>{item.customer_phone || '-'}</span>
                       </div>
-                    )}
-                    <div className="mt-3 p-3 rounded" style={{ backgroundColor: '#f0fffe', border: '1px solid #249689' }}>
-                      <div className="font-bold mb-1" style={{ color: '#249689' }}>📝 주문내용:</div>
-                      <div className="whitespace-pre-wrap text-sm">{item.order_info || '주문 정보 없음'}</div>
+                      <div className="flex">
+                        <span className="font-bold w-16">주소</span>
+                        <span className="flex-1">{item.address || '-'}</span>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* 주문 정보 */}
+                  <div className="mb-3">
+                    <div className="font-bold mb-2 pl-2" style={{ backgroundColor: '#f0f0f0', padding: '4px 8px', borderLeft: '3px solid #249689', fontSize: '11px' }}>
+                      📝 주문 정보
+                    </div>
+                    <div className="space-y-1 text-xs pl-2">
+                      <div className="flex">
+                        <span className="font-bold w-16">주문일</span>
+                        <span>{formatDate(item.created_at)}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="font-bold w-16">수량</span>
+                        <span>{item.quantity || '-'}개</span>
+                      </div>
+                      <div className="mt-2">
+                        <div className="font-bold mb-1">주문내역</div>
+                        <div className="border border-gray-300 p-2 bg-gray-50 text-xs whitespace-pre-wrap" style={{ minHeight: '40px' }}>
+                          {item.order_info || '주문 정보 없음'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 푸터 */}
+                  <div className="text-center pt-2 mt-3 border-t border-dashed border-gray-300 text-xs text-gray-600">
+                    LAS Book Store · 배송 송장<br/>
+                    발행일: {new Date().toLocaleDateString('ko-KR')}
                   </div>
                 </div>
               ))}
@@ -579,18 +640,18 @@ export default function ShippingList({ user, onNavigate }) {
             {/* 액션 버튼 */}
             <div className="flex gap-3 justify-end">
               <button
-                onClick={handlePrintPDF}
+                onClick={handlePrintInvoice}
                 className="px-6 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
-                🖨️ 열기/인쇄
+                🖨️ 송장 인쇄
               </button>
               <button
                 onClick={handleDownloadPDF}
                 className="px-6 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors"
                 style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
               >
-                💾 다른이름으로 저장
+                💾 PDF 저장
               </button>
               <button
                 onClick={() => setShowPreview(false)}
