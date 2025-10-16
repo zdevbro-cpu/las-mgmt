@@ -36,7 +36,7 @@ export default function SalesManagement({ user, onNavigate }) {
         user_name: user.name,
         user_branch: user.branch,
         customer_name: formData.customerName,
-        birth_date: formData.birthDate || null,
+        age: parseInt(formData.age) || null,
         address: formData.address,
         customer_phone: formData.phone,        // ← phone → customer_phone
         customer_email: formData.email,        // ← email → customer_email
@@ -68,7 +68,7 @@ export default function SalesManagement({ user, onNavigate }) {
       // 폼 초기화
       setFormData({
         customerName: '',
-        birthDate: '',
+        age: '',
         address: '',
         phone: '',
         email: '',
@@ -164,14 +164,16 @@ export default function SalesManagement({ user, onNavigate }) {
               </div>
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  생년월일
+                  나이
                 </label>
                 <input
-                  type="date"
-                  name="birthDate"
-                  value={formData.birthDate}
+                  type="number"
+                  name="age"
+                  value={formData.age}
                   onChange={handleChange}
-                  placeholder="구매자 생년월일을 적어주세요"
+                  placeholder="구매자 나이를 적어주세요"
+                  min="1"
+                  max="150"
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
