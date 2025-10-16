@@ -95,15 +95,13 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     return `${hours}시간 ${minutes}분`
   }
 
-  // 근무일지 목록별 이모지
+  // 근무일지 목록별 이모지 - 옵션 1: 중요도 기반
   const getStatusEmoji = (diary) => {
-    const now = new Date()
-    const createdDate = new Date(diary.created_at)
-    const isToday = createdDate.toDateString() === now.toDateString()
-    
-    if (isToday) return '📝'
+    // 우선순위: 인상깊은 고객 > 건의사항 > 외근 > 일반
     if (diary.memorable) return '⭐'
-    return '📄'
+    if (diary.suggestions) return '💡'
+    if (diary.out_content) return '🚗'
+    return '📝'
   }
 
   return (
@@ -143,6 +141,12 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                 근무일지 목록
               </h2>
               <p className="text-sm text-gray-600 mt-1">총 {diaries.length}건</p>
+              <div className="mt-2 text-xs text-gray-500 space-y-1">
+                <div>⭐ 인상깊은 고객</div>
+                <div>💡 건의사항</div>
+                <div>🚗 외근 내용</div>
+                <div>📝 일반</div>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto">
