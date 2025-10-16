@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY
 
-let supabase = null
+let supabase;
 if (supabaseUrl && supabaseKey) {
   supabase = createClient(supabaseUrl, supabaseKey)
 }
