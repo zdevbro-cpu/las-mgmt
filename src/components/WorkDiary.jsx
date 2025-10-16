@@ -147,6 +147,17 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         {/* 헤더 - 중앙정렬 */}
         <div className="flex flex-col items-center justify-center mb-4">
           <div className="flex items-center gap-1.5 mb-2">
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-10 h-10 object-cover"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
+              {(user?.userType === '점주' || user?.user_type === '점주') ? '점주근무일지' : 'SM점장 근무일지'}
+            </h1>
+          </div>
+        </div>
             <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center">
               <span className="text-white font-bold text-xl">L</span>
             </div>
