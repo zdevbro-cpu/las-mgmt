@@ -117,7 +117,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
