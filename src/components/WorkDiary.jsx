@@ -145,7 +145,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
     <div className="min-h-screen bg-gray-50 p-2">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
         {/* 헤더 - 중앙정렬 */}
-        <div className="flex flex-col items-center justify-center mb-4">
+        <div className="flex flex-col items-center justify-center mb-2">
           <div className="flex items-center gap-1.5 mb-2">
             <img 
               src="/images/logo.png" 
@@ -160,7 +160,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
         </div>
 
         {/* 사용자 정보 */}
-        <div className="grid grid-cols-2 gap-1.5 mb-4">
+        <div className="grid grid-cols-2 gap-1.5 "mb-2>
           <div>
             <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               지점명
@@ -187,14 +187,14 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-2.5">
           {/* 근무일자 선택 */}
-          <div className="border-t pt-6">
-            <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+          <div className="border-t pt-4">
+            <h3 className="font-bold mb-2" style={{ color: '#000000', fontSize: '15px' }}>
               근무일자 시간을 선택해 주세요
             </h3>
             {/* 출근시간 */}
-            <div className="mb-4">
+            <div className="mb-2">
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                 출근시간
               </label>
@@ -264,11 +264,11 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
 
           {/* 일일 확인목록 (점장만) */}
           {isManager && (
-            <div className="border-t pt-6">
-              <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
+            <div className="border-t pt-4">
+              <h3 className="font-bold mb-2" style={{ color: '#000000', fontSize: '15px' }}>
                 일일 확인목록
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-1">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -279,7 +279,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
                   />
                   <span style={{ color: '#000000', fontSize: '15px' }}>매장 청결점검</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-1 cursor-pointer">
                   <input
                     type="checkbox"
                     name="dailyCheck2"
@@ -304,7 +304,7 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
           )}
 
           {/* 외근 시 내용 */}
-          <div className="border-t pt-6">
+          <div className="border-t pt-4">
             <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               외근 시 내용을 적어주세요
             </label>
