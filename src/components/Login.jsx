@@ -76,9 +76,8 @@ export default function Login({ onNavigate, onLogin }) {
       setLoading(false)
     }
   }
-
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-2">
+    <div className="min-h-screen bg-gray-50 flex justify-center p-2">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         {/* 안내 텍스트 */}
         <p className="text-center mb-4 font-bold text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
