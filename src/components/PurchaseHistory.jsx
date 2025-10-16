@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Search, ArrowLeft } from 'lucide-react'
+import { Search, ArrowLeft, Eye } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function PurchaseHistory({ user, onNavigate }) {
-  const [searchType, setSearchType] = useState('phone')
   const [searchValue, setSearchValue] = useState('')
   const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(false)
@@ -15,12 +14,12 @@ export default function PurchaseHistory({ user, onNavigate }) {
     fetchAllPurchases()
   }, [])
 
-  // 전체 판매(구매) 목록 가져오기 - sales 테이블 사용
+  // 전체 판매(구매) 목록 가져오기
   const fetchAllPurchases = async () => {
     setLoading(true)
     try {
       const { data, error } = await supabase
-        .from('sales')  // purchases → sales로 변경
+        .from('sales')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -34,7 +33,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
       setPurchases(data || [])
       
       if (!data || data.length === 0) {
-        console.log('데이터가 없습니다. 판매관리에서 판매 데이터를 추가하거나 Supabase에 샘플 데이터를 추가하세요.')
+        console.log('데이터가 없습니다. 판매관리에서 판매 데이터를 추가하세요.')
       }
     } catch (error) {
       console.error('데이터 조회 오류:', error)
@@ -44,7 +43,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
     }
   }
 
-  // 검색 기능 - sales 테이블 사용
+  // 통합 검색 기능 - 이름, 전화번호, 이메일 모두 검색
   const handleSearch = async () => {
     if (!searchValue.trim()) {
       // 검색어가 없으면 전체 목록 표시
@@ -54,17 +53,12 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
     setLoading(true)
     try {
-      let query = supabase.from('sales').select('*')  // purchases → sales로 변경
-      
-      if (searchType === 'phone') {
-        query = query.ilike('customer_phone', `%${searchValue}%`)
-      } else if (searchType === 'name') {
-        query = query.ilike('customer_name', `%${searchValue}%`)
-      } else if (searchType === 'email') {
-        query = query.ilike('customer_email', `%${searchValue}%`)
-      }
-
-      const { data, error } = await query.order('created_at', { ascending: false })
+      // OR 조건으로 이름, 전화번호, 이메일 모두 검색
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Supabase 검색 오류:', error)
@@ -97,6 +91,21 @@ export default function PurchaseHistory({ user, onNavigate }) {
     setShowModal(true)
   }
 
+  // 구매내역 포맷팅 (구매일시 + 구매내역)
+  const formatPurchaseHistory = (purchase) => {
+    const date = new Date(purchase.created_at).toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    
+    const orderInfo = purchase.order_info || '주문 정보 없음'
+    
+    return `📅 구매일시: ${date}\n\n📦 주문내역:\n${orderInfo}`
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-6xl mx-auto p-6">
@@ -125,25 +134,15 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <div style={{ width: '100px' }}></div>
           </div>
 
-          {/* 검색 영역 */}
+          {/* 통합 검색 영역 */}
           <div className="mb-6">
-            <div className="flex gap-2 mb-4">
-              <select
-                value={searchType}
-                onChange={(e) => setSearchType(e.target.value)}
-                className="px-4 py-2 border border-gray-300"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-              >
-                <option value="phone">전화번호</option>
-                <option value="name">이름</option>
-                <option value="email">이메일</option>
-              </select>
+            <div className="flex gap-2 mb-2">
               <input
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder={`${searchType === 'phone' ? '전화번호' : searchType === 'name' ? '이름' : '이메일'}을 입력하세요`}
+                placeholder="이름, 전화번호, 이메일로 검색하세요"
                 className="flex-1 px-4 py-2 border border-gray-300"
                 style={{ borderRadius: '10px', fontSize: '15px' }}
               />
@@ -165,6 +164,9 @@ export default function PurchaseHistory({ user, onNavigate }) {
                 초기화
               </button>
             </div>
+            <p className="text-sm text-gray-500 ml-1">
+              💡 이름, 전화번호, 이메일 중 아무거나 입력하세요
+            </p>
           </div>
 
           {/* 구매 목록 테이블 */}
@@ -172,6 +174,9 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6' }}>
+                  <th className="px-4 py-3 text-center font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689', width: '60px' }}>
+                    상세
+                  </th>
                   <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
                     구매일시
                   </th>
@@ -192,7 +197,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center" style={{ fontSize: '15px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center" style={{ fontSize: '15px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -201,7 +206,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   </tr>
                 ) : purchases.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '15px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '15px' }}>
                       <div>
                         <p className="mb-2">등록된 판매 내역이 없습니다</p>
                         <p className="text-sm">판매관리에서 판매 데이터를 추가하세요</p>
@@ -212,22 +217,51 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   purchases.map((purchase) => (
                     <tr
                       key={purchase.id}
-                      onClick={() => handleRowClick(purchase)}
-                      className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={() => handleRowClick(purchase)}
+                          className="p-2 rounded-full hover:bg-gray-200 transition-colors"
+                          style={{ color: '#249689' }}
+                          title="상세 보기"
+                        >
+                          <Eye size={20} />
+                        </button>
+                      </td>
+                      <td 
+                        className="px-4 py-3 cursor-pointer" 
+                        style={{ fontSize: '15px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
                         {new Date(purchase.created_at).toLocaleString('ko-KR')}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                      <td 
+                        className="px-4 py-3 cursor-pointer" 
+                        style={{ fontSize: '15px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
                         {purchase.customer_name}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                      <td 
+                        className="px-4 py-3 cursor-pointer" 
+                        style={{ fontSize: '15px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
                         {purchase.customer_phone}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                      <td 
+                        className="px-4 py-3 cursor-pointer" 
+                        style={{ fontSize: '15px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
                         {purchase.customer_email}
                       </td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                      <td 
+                        className="px-4 py-3 cursor-pointer" 
+                        style={{ fontSize: '15px' }}
+                        onClick={() => handleRowClick(purchase)}
+                      >
                         {purchase.order_info?.substring(0, 30)}{purchase.order_info?.length > 30 ? '...' : ''}
                       </td>
                     </tr>
@@ -270,98 +304,78 @@ export default function PurchaseHistory({ user, onNavigate }) {
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  👤 구매자 이름
-                </label>
-                <input
-                  type="text"
-                  value={selectedPurchase.customer_name || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  📞 전화번호
-                </label>
-                <input
-                  type="text"
-                  value={selectedPurchase.customer_phone || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  📧 이메일
-                </label>
-                <input
-                  type="text"
-                  value={selectedPurchase.customer_email || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  📅 구매일시
-                </label>
-                <input
-                  type="text"
-                  value={selectedPurchase.created_at ? new Date(selectedPurchase.created_at).toLocaleString('ko-KR') : ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  📦 주문 정보
-                </label>
-                <textarea
-                  value={selectedPurchase.order_info || ''}
-                  readOnly
-                  rows={6}
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              {selectedPurchase.payment_method && (
-                <div>
-                  <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                    💳 결제 방법
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedPurchase.payment_method}
-                    readOnly
-                    className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
+              {/* 구매자 정보 그룹 */}
+              <div className="border-2 rounded-lg p-4" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
+                <h4 className="font-bold mb-3" style={{ color: '#249689', fontSize: '16px' }}>
+                  👤 구매자 정보
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex">
+                    <span className="font-bold w-24" style={{ fontSize: '15px' }}>이름:</span>
+                    <span style={{ fontSize: '15px' }}>{selectedPurchase.customer_name || '-'}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-bold w-24" style={{ fontSize: '15px' }}>전화번호:</span>
+                    <span style={{ fontSize: '15px' }}>{selectedPurchase.customer_phone || '-'}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="font-bold w-24" style={{ fontSize: '15px' }}>이메일:</span>
+                    <span style={{ fontSize: '15px' }}>{selectedPurchase.customer_email || '-'}</span>
+                  </div>
+                  {selectedPurchase.address && (
+                    <div className="flex">
+                      <span className="font-bold w-24" style={{ fontSize: '15px' }}>주소:</span>
+                      <span style={{ fontSize: '15px' }}>{selectedPurchase.address}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {selectedPurchase.payment_amount && (
-                <div>
-                  <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                    💰 결제 금액
-                  </label>
-                  <input
-                    type="text"
-                    value={`${selectedPurchase.payment_amount.toLocaleString()}원`}
-                    readOnly
-                    className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
+              {/* 구매내역 그룹 */}
+              <div className="border-2 rounded-lg p-4" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
+                <h4 className="font-bold mb-3" style={{ color: '#249689', fontSize: '16px' }}>
+                  📦 구매내역
+                </h4>
+                <textarea
+                  value={formatPurchaseHistory(selectedPurchase)}
+                  readOnly
+                  rows={8}
+                  className="w-full px-4 py-3 border border-gray-300 bg-white"
+                  style={{ 
+                    borderRadius: '10px', 
+                    fontSize: '15px',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                />
+              </div>
+
+              {/* 결제 정보 (있는 경우) */}
+              {(selectedPurchase.payment_method || selectedPurchase.payment_amount || selectedPurchase.quantity) && (
+                <div className="border-2 rounded-lg p-4" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
+                  <h4 className="font-bold mb-3" style={{ color: '#6b7280', fontSize: '16px' }}>
+                    💳 결제 정보
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedPurchase.payment_method && (
+                      <div className="flex">
+                        <span className="font-bold w-24" style={{ fontSize: '15px' }}>결제방법:</span>
+                        <span style={{ fontSize: '15px' }}>{selectedPurchase.payment_method}</span>
+                      </div>
+                    )}
+                    {selectedPurchase.payment_amount && (
+                      <div className="flex">
+                        <span className="font-bold w-24" style={{ fontSize: '15px' }}>결제금액:</span>
+                        <span style={{ fontSize: '15px' }}>{selectedPurchase.payment_amount.toLocaleString()}원</span>
+                      </div>
+                    )}
+                    {selectedPurchase.quantity && (
+                      <div className="flex">
+                        <span className="font-bold w-24" style={{ fontSize: '15px' }}>수량:</span>
+                        <span style={{ fontSize: '15px' }}>{selectedPurchase.quantity}개</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
