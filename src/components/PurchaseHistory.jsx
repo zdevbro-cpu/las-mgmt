@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Search, ArrowLeft } from 'lucide-react'
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
+
 
 // Supabase 클라이언트 초기화
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL
