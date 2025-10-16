@@ -68,7 +68,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              구매목록 출력
+              송장출력
             </button>
             <button
               onClick={() => onNavigate('purchaseHistory')}

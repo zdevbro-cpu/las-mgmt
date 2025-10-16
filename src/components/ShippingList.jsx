@@ -656,75 +656,76 @@ export default function ShippingList({ user, onNavigate }) {
                 총 {selectedItems.length}건의 송장이 생성됩니다 (A4 용지 1장당 4개)
               </p>
               
-              <div className="space-y-8">
+              <div className="space-y-4">
                 {(() => {
                   const pages = []
                   for (let i = 0; i < selectedItems.length; i += 4) {
                     pages.push(
-                      <div key={`page-${i}`} className="border-2 border-gray-400 p-4 bg-white" style={{ width: '794px', minHeight: '500px' }}>
-                        <div className="grid grid-cols-2 gap-3" style={{ gridTemplateRows: '1fr 1fr' }}>
-                          {selectedItems.slice(i, i + 4).map((item, index) => (
-                            <div key={item.id} className="bg-white border-2 rounded-lg p-3" style={{ borderColor: '#249689' }}>
-                              {/* 송장 헤더 */}
-                              <div className="text-center pb-2 mb-2 border-b-2 border-black">
-                                <h4 className="font-bold text-sm">📦 배송 송장</h4>
-                                <p className="text-xs text-gray-600">No. {String(i + index + 1).padStart(4, '0')}</p>
-                              </div>
+                      <div key={`page-${i}`} className="border-2 border-gray-400 p-2 bg-white mx-auto" style={{ width: '100%', maxWidth: '700px', aspectRatio: '210/297' }}>
+                        <div className="h-full flex flex-col">
+                          <div className="flex-1 grid grid-cols-2 gap-2" style={{ gridTemplateRows: '1fr 1fr' }}>
+                            {selectedItems.slice(i, i + 4).map((item, index) => (
+                              <div key={item.id} className="bg-white border-2 rounded p-2 flex flex-col" style={{ borderColor: '#249689', fontSize: '11px' }}>
+                                {/* 송장 헤더 */}
+                                <div className="text-center pb-1 mb-1 border-b-2 border-black">
+                                  <h4 className="font-bold" style={{ fontSize: '13px' }}>📦 배송 송장</h4>
+                                  <p style={{ fontSize: '9px', color: '#666' }}>No. {String(i + index + 1).padStart(4, '0')}</p>
+                                </div>
 
-                              {/* 수취인 정보 */}
-                              <div className="mb-2">
-                                <div className="font-bold text-xs mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689' }}>
-                                  📍 수취인 정보
+                                {/* 수취인 정보 */}
+                                <div className="mb-1 flex-shrink-0">
+                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
+                                    📍 수취인
+                                  </div>
+                                  <div className="space-y-0.5 px-1" style={{ fontSize: '9px' }}>
+                                    <div className="flex gap-1">
+                                      <span className="font-bold" style={{ width: '35px' }}>성명</span>
+                                      <span className="flex-1 truncate">{item.customer_name || '-'}</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <span className="font-bold" style={{ width: '35px' }}>연락처</span>
+                                      <span className="flex-1 truncate">{item.customer_phone || '-'}</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <span className="font-bold" style={{ width: '35px' }}>주소</span>
+                                      <span className="flex-1" style={{ fontSize: '8px', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.address || '-'}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5 text-xs px-1 mt-1">
-                                  <div className="flex gap-1">
-                                    <span className="font-bold w-12">성명</span>
-                                    <span className="flex-1">{item.customer_name || '-'}</span>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <span className="font-bold w-12">연락처</span>
-                                    <span className="flex-1">{item.customer_phone || '-'}</span>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <span className="font-bold w-12">주소</span>
-                                    <span className="flex-1 text-xs">{item.address || '-'}</span>
-                                  </div>
-                                </div>
-                              </div>
 
-                              {/* 주문 정보 */}
-                              <div className="mb-2">
-                                <div className="font-bold text-xs mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689' }}>
-                                  📝 주문 정보
-                                </div>
-                                <div className="space-y-0.5 text-xs px-1 mt-1">
-                                  <div className="flex gap-1">
-                                    <span className="font-bold w-12">주문일</span>
-                                    <span>{formatDate(item.created_at)}</span>
+                                {/* 주문 정보 */}
+                                <div className="mb-1 flex-1 flex flex-col">
+                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
+                                    📝 주문
                                   </div>
-                                  <div className="flex gap-1">
-                                    <span className="font-bold w-12">수량</span>
-                                    <span>{item.quantity || '-'}개</span>
+                                  <div className="space-y-0.5 px-1 flex-shrink-0" style={{ fontSize: '9px' }}>
+                                    <div className="flex gap-1">
+                                      <span className="font-bold" style={{ width: '35px' }}>주문일</span>
+                                      <span>{formatDate(item.created_at)}</span>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <span className="font-bold" style={{ width: '35px' }}>수량</span>
+                                      <span>{item.quantity || '-'}개</span>
+                                    </div>
                                   </div>
-                                  <div className="mt-1">
-                                    <div className="font-bold text-xs mb-0.5">주문내역</div>
-                                    <div className="border border-gray-300 p-1 bg-gray-50 text-xs rounded overflow-hidden" style={{ minHeight: '40px', maxHeight: '50px', fontSize: '10px', lineHeight: '1.3' }}>
+                                  <div className="px-1 mt-1 flex-1 flex flex-col">
+                                    <div className="font-bold mb-0.5" style={{ fontSize: '9px' }}>주문내역</div>
+                                    <div className="border border-gray-300 p-1 bg-gray-50 rounded flex-1 overflow-hidden" style={{ fontSize: '8px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                       {item.order_info || '주문 정보 없음'}
                                     </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* 푸터 */}
-                              <div className="text-center pt-1 mt-1 border-t border-dashed border-gray-300" style={{ fontSize: '9px', color: '#666' }}>
-                                LAS Book Store<br/>
-                                {new Date().toLocaleDateString('ko-KR')}
+                                {/* 푸터 */}
+                                <div className="text-center pt-1 border-t border-dashed border-gray-300 flex-shrink-0" style={{ fontSize: '8px', color: '#666' }}>
+                                  LAS Book Store · {new Date().toLocaleDateString('ko-KR')}
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="text-center mt-2 text-xs text-gray-500">
-                          페이지 {Math.floor(i / 4) + 1} / {Math.ceil(selectedItems.length / 4)}
+                            ))}
+                          </div>
+                          <div className="text-center mt-1 flex-shrink-0" style={{ fontSize: '10px', color: '#666' }}>
+                            페이지 {Math.floor(i / 4) + 1} / {Math.ceil(selectedItems.length / 4)}
+                          </div>
                         </div>
                       </div>
                     )
