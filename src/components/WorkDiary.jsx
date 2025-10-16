@@ -103,25 +103,25 @@ export default function WorkDiary({ user, onNavigate }) {
   const isManager = user?.userType === '점장' || user?.user_type === '점장'
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-gray-50 p-2">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
         {/* 헤더 - 중앙정렬 */}
-        <div className="flex flex-col items-center justify-center mb-6">
-          <div className="flex items-center gap-4 mb-2">
+        <div className="flex flex-col items-center justify-center mb-4">
+          <div className="flex items-center gap-1.5 mb-2">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 
-              className="w-16 h-16"
+              className="w-10 h-10 object-cover"
               onError={(e) => e.target.style.display = 'none'}
             />
-            <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               {(user?.userType === '점주' || user?.user_type === '점주') ? '점주근무일지' : 'SM점장 근무일지'}
             </h1>
           </div>
         </div>
 
         {/* 사용자 정보 */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-1.5 mb-4">
           <div>
             <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               지점명
@@ -148,80 +148,80 @@ export default function WorkDiary({ user, onNavigate }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* 근무일자 선택 */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+ {/* 근무일자 선택 */}
           <div className="border-t pt-6">
             <h3 className="font-bold mb-4" style={{ color: '#000000', fontSize: '15px' }}>
               근무일자 시간을 선택해 주세요
             </h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  출근시간
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    name="startDate"
-                    value={formData.startDate}
-                    onChange={handleChange}
-                    required
-                    className="flex-1 px-4 py-2 border border-gray-300"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
-                  <select
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                    required
-                    className="px-4 py-2 border border-gray-300 bg-white"
-                    style={{ borderRadius: '10px', fontSize: '15px', minWidth: '100px' }}
-                  >
-                    <option value="">선택</option>
-                    {TIME_OPTIONS.map(time => (
-                      <option key={time} value={time}>{time}</option>
-                    ))}
-                  </select>
-                </div>
+            {/* 출근시간 */}
+            <div className="mb-4"> {/* 각 시간 선택을 위한 div 추가 */}
+              <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                출근시간
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  required
+                  className="flex-1 px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                <select
+                  name="startTime"
+                  value={formData.startTime}
+                  onChange={handleChange}
+                  required
+                  className="px-4 py-2 border border-gray-300 bg-white"
+                  style={{ borderRadius: '10px', fontSize: '15px', minWidth: '100px' }}
+                >
+                  <option value="">선택</option>
+                  {TIME_OPTIONS.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  퇴근시간
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    name="endDate"
-                    value={formData.endDate}
-                    onChange={handleChange}
-                    required
-                    className="flex-1 px-4 py-2 border border-gray-300"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
-                  <select
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                    required
-                    className="px-4 py-2 border border-gray-300 bg-white"
-                    style={{ borderRadius: '10px', fontSize: '15px', minWidth: '100px' }}
-                  >
-                    <option value="">선택</option>
-                    {TIME_OPTIONS.map(time => (
-                      <option key={time} value={time}>{time}</option>
-                    ))}
-                  </select>
-                </div>
+            </div>
+            
+            {/* 퇴근시간 */}
+            <div> {/* 각 시간 선택을 위한 div 추가 */}
+              <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                퇴근시간
+              </label>
+              <div className="flex gap-1.5">
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  required
+                  className="flex-1 px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                <select
+                  name="endTime"
+                  value={formData.endTime}
+                  onChange={handleChange}
+                  required
+                  className="px-4 py-2 border border-gray-300 bg-white"
+                  style={{ borderRadius: '10px', fontSize: '15px', minWidth: '100px' }}
+                >
+                  <option value="">선택</option>
+                  {TIME_OPTIONS.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="mt-4 p-4 bg-teal-50 rounded-lg">
+            <div className="mt-4 p-2 bg-teal-50 rounded-lg">
               <p className="font-bold" style={{ color: '#249689', fontSize: '15px' }}>
                 총 근무시간: {calculateWorkHours()} 시간
               </p>
             </div>
           </div>
-
           {/* 일일 확인목록 (점장만) */}
           {isManager && (
             <div className="border-t pt-6">
@@ -229,7 +229,7 @@ export default function WorkDiary({ user, onNavigate }) {
                 일일 확인목록
               </h3>
               <div className="space-y-3">
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     name="dailyCheck1"
@@ -239,7 +239,7 @@ export default function WorkDiary({ user, onNavigate }) {
                   />
                   <span style={{ color: '#000000', fontSize: '15px' }}>매장 청결점검</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     name="dailyCheck2"
@@ -249,7 +249,7 @@ export default function WorkDiary({ user, onNavigate }) {
                   />
                   <span style={{ color: '#000000', fontSize: '15px' }}>직원 업무교육</span>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     name="dailyCheck3"
@@ -273,7 +273,7 @@ export default function WorkDiary({ user, onNavigate }) {
               value={formData.outContent}
               onChange={handleChange}
               placeholder="외근 시 내용을 적어주세요"
-              rows={4}
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
@@ -289,7 +289,7 @@ export default function WorkDiary({ user, onNavigate }) {
               value={formData.exemplary}
               onChange={handleChange}
               placeholder="주인형 모집내용을 적어주세요"
-              rows={4}
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
@@ -305,7 +305,7 @@ export default function WorkDiary({ user, onNavigate }) {
               value={formData.memorable}
               onChange={handleChange}
               placeholder="오늘 인상깊은 고객에 대해 적어주세요"
-              rows={4}
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
@@ -321,18 +321,18 @@ export default function WorkDiary({ user, onNavigate }) {
               value={formData.suggestions}
               onChange={handleChange}
               placeholder="건의사항이 있으시면 적어주세요"
-              rows={4}
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
           </div>
 
           {/* 버튼들 - 제출/취소만 */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               {loading ? '저장 중...' : '제출'}
@@ -341,7 +341,7 @@ export default function WorkDiary({ user, onNavigate }) {
               type="button"
               onClick={() => onNavigate('dashboard')}
               disabled={loading}
-              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               취소

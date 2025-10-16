@@ -78,25 +78,26 @@ export default function Login({ onNavigate, onLogin }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-2">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         {/* 안내 텍스트 */}
-        <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
+        <p className="text-center mb-4 font-bold text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS 매장관리 시스템에 오신것을 환영합니다.
         </p>
 
         {/* 로고 */}
-        <div className="flex flex-col items-center mb-6">
+        <div className="flex items-center justify-center mb-4 gap-2"> {/* flex, items-center, justify-center, gap-2 추가 */}
           <img 
             src="/images/logo.png" 
             alt="LAS Logo" 
-            className="w-16 h-16 mb-2"
+            className="h-10 w-10 object-cover" // 로고 크기 조정 (원래 w-16 h-16에서 줄여서 타이틀과 균형을 맞춤)
             onError={(e) => e.target.style.display = 'none'}
           />
-          <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+          <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
             로그인
           </h1>
         </div>
+
 
         {/* 에러 메시지 */}
         {error && (
@@ -109,7 +110,7 @@ export default function Login({ onNavigate, onLogin }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 이메일 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Mail size={18} />
               이메일
             </label>
@@ -126,7 +127,7 @@ export default function Login({ onNavigate, onLogin }) {
 
           {/* 비밀번호 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Lock size={18} />
               비밀번호
             </label>
@@ -142,10 +143,10 @@ export default function Login({ onNavigate, onLogin }) {
           </div>
 
           {/* 버튼들 */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             <button
               type="submit"
-              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               로그인
@@ -153,7 +154,7 @@ export default function Login({ onNavigate, onLogin }) {
             <button
               type="button"
               onClick={() => onNavigate('hero')}
-              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               취소

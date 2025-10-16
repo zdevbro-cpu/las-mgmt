@@ -11709,9 +11709,9 @@ class GoTrueClient {
     /**
      * Signs in a user by verifying a message signed by the user's private key.
      * Supports Ethereum (via Sign-In-With-Ethereum) & Solana (Sign-In-With-Solana) standards,
-     * both of which derive from the EIP-4361 standard
+     * both of which derive from the EIp-2361 standard
      * With slight variation on Solana's side.
-     * @reference https://eips.ethereum.org/EIPS/eip-4361
+     * @reference https://eips.ethereum.org/EIPS/eip-2361
      */ async signInWithWeb3(credentials) {
         const { chain } = credentials;
         switch(chain){

@@ -116,7 +116,7 @@ _c = Home;
 function MainPage(param) {
     let { setCurrentPage } = param;
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "min-h-screen flex flex-col bg-white px-4 py-3",
+        className: "min-h-screen flex flex-col bg-white px-4 py-2.5",
         children: [
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                 className: "text-right mb-2",
@@ -253,7 +253,7 @@ function MainPage(param) {
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                 onClick: ()=>setCurrentPage('login'),
-                                className: "w-full bg-teal-600 text-white py-3 rounded-lg font-semibold hover:bg-teal-700",
+                                className: "w-full bg-teal-600 text-white py-2.5 rounded-lg font-semibold hover:bg-teal-700",
                                 children: "로그인"
                             }, void 0, false, {
                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -262,7 +262,7 @@ function MainPage(param) {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                 onClick: ()=>setCurrentPage('signup'),
-                                className: "w-full border-2 border-teal-600 text-teal-600 py-3 rounded-lg font-semibold hover:bg-teal-50",
+                                className: "w-full border-2 border-teal-600 text-teal-600 py-2.5 rounded-lg font-semibold hover:bg-teal-50",
                                 children: "회원가입"
                             }, void 0, false, {
                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -328,7 +328,7 @@ function LoginPage(param) {
             className: "w-full max-w-sm border-2 border-teal-600 rounded-xl p-6",
             children: [
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "text-center mb-6",
+                    className: "text-center mb-4",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             className: "w-24 mx-auto mb-3",
@@ -541,7 +541,7 @@ function LoginPage(param) {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-2 pt-3",
+                            className: "flex gap-1.5 pt-3",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                     onClick: handleLogin,
@@ -646,7 +646,7 @@ function SignupPage(param) {
     if (success) return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "min-h-screen flex items-center justify-center px-4",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-            className: "max-w-sm bg-green-50 border-2 border-green-500 rounded-xl p-8 text-center",
+            className: "max-w-sm bg-green-50 border-2 border-green-500 rounded-xl p-6 text-center",
             children: [
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                     className: "text-5xl mb-4",
@@ -798,7 +798,7 @@ function SignupPage(param) {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-4",
+                            className: "flex gap-1.5",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
                                     children: [
@@ -887,7 +887,7 @@ function SignupPage(param) {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-2",
+                            className: "flex gap-1.5",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                     onClick: handleSignup,
@@ -942,10 +942,10 @@ function StorePage(param) {
             className: "w-full max-w-sm border-2 border-teal-600 rounded-xl p-6",
             children: [
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "text-center mb-6",
+                    className: "text-center mb-4",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
-                            className: "text-2xl font-bold text-teal-700 mb-6",
+                            className: "text-2xl font-bold text-teal-700 mb-4",
                             children: "LAS 매장관리"
                         }, void 0, false, {
                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -1022,7 +1022,7 @@ function StorePage(param) {
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                             onClick: ()=>setCurrentPage('worklog'),
-                            className: "w-full bg-teal-600 text-white py-3 rounded-lg font-semibold",
+                            className: "w-full bg-teal-600 text-white py-2.5 rounded-lg font-semibold",
                             children: "근무일지"
                         }, void 0, false, {
                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -1031,7 +1031,7 @@ function StorePage(param) {
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                             onClick: ()=>setCurrentPage('sales'),
-                            className: "w-full border-2 border-teal-600 text-teal-600 py-3 rounded-lg font-semibold",
+                            className: "w-full border-2 border-teal-600 text-teal-600 py-2.5 rounded-lg font-semibold",
                             children: "판매관리"
                         }, void 0, false, {
                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -1040,7 +1040,7 @@ function StorePage(param) {
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                             onClick: handleLogout,
-                            className: "w-full border-2 border-gray-300 py-3 rounded-lg font-semibold",
+                            className: "w-full border-2 border-gray-300 py-2.5 rounded-lg font-semibold",
                             children: "나가기"
                         }, void 0, false, {
                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -1170,7 +1170,7 @@ function WorkLogPage(param) {
                             className: "space-y-2",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex gap-2",
+                                    className: "flex gap-1.5",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "text-xs w-12 pt-1.5",
@@ -1213,7 +1213,7 @@ function WorkLogPage(param) {
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex gap-2",
+                                    className: "flex gap-1.5",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                             className: "text-xs w-12 pt-1.5",
@@ -1469,7 +1469,7 @@ function WorkLogPage(param) {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-2",
+                            className: "flex gap-1.5",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                     onClick: handleSubmit,
@@ -1725,7 +1725,7 @@ function SalesPage(param) {
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex gap-4 mb-3",
+                                    className: "flex gap-1.5 mb-3",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
                                             className: "flex items-center cursor-pointer",
@@ -1796,7 +1796,7 @@ function SalesPage(param) {
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "grid grid-cols-3 gap-2",
+                                    className: "grid grid-cols-3 gap-1.5",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                             children: [
@@ -1932,7 +1932,7 @@ function SalesPage(param) {
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "flex gap-2",
+                            className: "flex gap-1.5",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                     onClick: handleSubmit,
@@ -2030,12 +2030,12 @@ function AdminPage(param) {
         }
     };
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-        className: "min-h-screen bg-white p-4",
+        className: "min-h-screen bg-white p-2",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
             className: "max-w-6xl mx-auto",
             children: [
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "flex justify-between items-center mb-6",
+                    className: "flex justify-between items-center mb-4",
                     children: [
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
                             className: "text-3xl font-bold text-teal-700",
@@ -2070,7 +2070,7 @@ function AdminPage(param) {
                                     className: "bg-teal-600 text-white",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "지점명"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2078,7 +2078,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "이름"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2086,7 +2086,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "전화"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2094,7 +2094,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "구분"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2102,7 +2102,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "이메일"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2110,7 +2110,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "승인"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2118,7 +2118,7 @@ function AdminPage(param) {
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
-                                            className: "border border-teal-700 px-4 py-3",
+                                            className: "border border-teal-700 px-4 py-2.5",
                                             children: "관리"
                                         }, void 0, false, {
                                             fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2141,7 +2141,7 @@ function AdminPage(param) {
                                         className: "hover:bg-teal-50",
                                         children: [
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3",
+                                                className: "border px-4 py-2.5",
                                                 children: user.store_name
                                             }, void 0, false, {
                                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2149,7 +2149,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3",
+                                                className: "border px-4 py-2.5",
                                                 children: user.name
                                             }, void 0, false, {
                                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2157,7 +2157,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3",
+                                                className: "border px-4 py-2.5",
                                                 children: user.phone
                                             }, void 0, false, {
                                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2165,7 +2165,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3",
+                                                className: "border px-4 py-2.5",
                                                 children: user.user_type
                                             }, void 0, false, {
                                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2173,7 +2173,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3",
+                                                className: "border px-4 py-2.5",
                                                 children: user.email
                                             }, void 0, false, {
                                                 fileName: "[project]/las-mgmt/app/page.tsx",
@@ -2181,7 +2181,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3 text-center",
+                                                className: "border px-4 py-2.5 text-center",
                                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                     className: "px-3 py-1 rounded-full text-sm font-semibold ".concat(user.approved ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'),
                                                     children: user.approved ? '승인' : '대기'
@@ -2196,7 +2196,7 @@ function AdminPage(param) {
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                className: "border px-4 py-3 text-center",
+                                                className: "border px-4 py-2.5 text-center",
                                                 children: [
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$las$2d$mgmt$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
                                                         onClick: ()=>handleApprove(user.id, user.approved),

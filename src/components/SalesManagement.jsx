@@ -71,29 +71,31 @@ export default function SalesManagement({ user, onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div className="min-h-screen bg-gray-50 p-2">
+      
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
+      <p className="text-center mb-4 font-bold text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
+          LAS Book을 신청합니다.
+      </p>
         {/* 헤더 - 중앙정렬 */}
-        <div className="flex flex-col items-center justify-center mb-6">
-          <div className="flex items-center gap-4 mb-2">
+        <div className="flex flex-col items-center justify-center mb-4">
+          <div className="flex items-center gap-1.5 mb-2">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 
-              className="w-16 h-16"
+              className="w-10 h-10 object-cover"
               onError={(e) => e.target.style.display = 'none'}
             />
-            <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               LAS Book Store
             </h1>
           </div>
         </div>
 
-        <p className="text-center mb-6" style={{ color: '#249689', fontSize: '15px' }}>
-          LAS Book을 신청합니다.
-        </p>
+
 
         {/* 사용자 정보 */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-1.5 mb-4">
           <div>
             <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               지점명
@@ -120,13 +122,13 @@ export default function SalesManagement({ user, onNavigate }) {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {/* 구매자 기본정보 - 그룹화 */}
           <div className="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
             <h3 className="font-bold mb-4 text-lg" style={{ color: '#249689', fontSize: '18px' }}>
               구매자 기본정보
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   이름
@@ -210,10 +212,10 @@ export default function SalesManagement({ user, onNavigate }) {
             <h3 className="font-bold mb-4 text-lg" style={{ color: '#249689', fontSize: '18px' }}>
               결제정보
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* 결제방법 */}
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
+              <div className="flex gap-4">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -224,7 +226,7 @@ export default function SalesManagement({ user, onNavigate }) {
                   />
                   <span style={{ color: '#000000', fontSize: '15px', fontWeight: 'bold' }}>카드</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -238,7 +240,7 @@ export default function SalesManagement({ user, onNavigate }) {
               </div>
 
               {/* 판매수량/입금자명/입금기관명 - 1 row */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-1.5">
                 {/* 판매수량 */}
                 <div>
                   <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
@@ -306,17 +308,17 @@ export default function SalesManagement({ user, onNavigate }) {
               value={formData.orderDetails}
               onChange={handleChange}
               placeholder="주문상품명과 수량을 적어주세요"
-              rows={4}
+              rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
             />
           </div>
 
           {/* 버튼들 */}
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button
               type="submit"
-              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               확인
@@ -324,7 +326,7 @@ export default function SalesManagement({ user, onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate('dashboard')}
-              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               취소

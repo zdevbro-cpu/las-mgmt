@@ -143,9 +143,9 @@ export default function SignupForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-cyan-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-800 to-cyan-700 flex items-center justify-center p-2">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+        <div className="text-center mb-4">
           <div className="w-20 h-20 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl mx-auto mb-3 flex items-center justify-center shadow-lg">
             <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -156,12 +156,12 @@ export default function SignupForm() {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2.5 rounded mb-4 text-sm">
             {error}
           </div>
         )}
         {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4 text-sm">
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2.5 rounded mb-4 text-sm">
             {success}
           </div>
         )}
@@ -260,7 +260,7 @@ export default function SignupForm() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               구분
             </label>
-            <div className="flex gap-4">
+            <div className="flex gap-1.5">
               <label className="flex items-center cursor-pointer">
                 <input
                   type="radio"
@@ -286,11 +286,11 @@ export default function SignupForm() {
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             <button
               onClick={handleSignup}
               disabled={loading}
-              className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '처리중...' : '회원가입'}
             </button>
@@ -308,7 +308,7 @@ export default function SignupForm() {
                 setError('');
                 setSuccess('');
               }}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 rounded-lg transition"
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2.5 rounded-lg transition"
             >
               취소
             </button>

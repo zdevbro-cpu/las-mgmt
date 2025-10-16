@@ -109,15 +109,15 @@ export default function Signup({ onNavigate }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-2">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
         {/* 안내 텍스트 */}
         <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS 매장관리 시스템에 오신것을 환영합니다.
         </p>
 
         {/* 로고 + 타이틀 */}
-        <div className="flex items-center justify-center gap-4 mb-6">
+        <div className="flex items-center justify-center gap-1.5 mb-4">
           <img 
             src="/images/logo.png" 
             alt="LAS Logo" 
@@ -140,7 +140,7 @@ export default function Signup({ onNavigate }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 이메일 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Mail size={18} />
               이메일
             </label>
@@ -157,7 +157,7 @@ export default function Signup({ onNavigate }) {
 
           {/* 비밀번호 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Lock size={18} />
               비밀번호
             </label>
@@ -174,7 +174,7 @@ export default function Signup({ onNavigate }) {
 
           {/* 비밀번호 확인 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Lock size={18} />
               비밀번호 확인
             </label>
@@ -223,7 +223,7 @@ export default function Signup({ onNavigate }) {
 
           {/* 핸드폰 */}
           <div>
-            <label className="flex items-center gap-2 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Phone size={18} />
               핸드폰 번호를 입력하세요
             </label>
@@ -243,8 +243,8 @@ export default function Signup({ onNavigate }) {
             <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               구분
             </label>
-            <div className="flex gap-6">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="radio"
                   name="userType"
@@ -255,7 +255,7 @@ export default function Signup({ onNavigate }) {
                 />
                 <span style={{ color: '#000000', fontSize: '15px' }}>점주</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-1.5 cursor-pointer">
                 <input
                   type="radio"
                   name="userType"
@@ -270,10 +270,10 @@ export default function Signup({ onNavigate }) {
           </div>
 
           {/* 버튼들 */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-2 pt-4">
             <button
               type="submit"
-              className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               회원가입
@@ -281,7 +281,7 @@ export default function Signup({ onNavigate }) {
             <button
               type="button"
               onClick={() => onNavigate('hero')}
-              className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               취소

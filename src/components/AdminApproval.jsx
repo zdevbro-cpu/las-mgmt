@@ -246,24 +246,24 @@ export default function AdminApproval({ user, onLogout }) {
       {/* 헤더 */}
       <div className="bg-white shadow-md p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 
-              className="w-12 h-12"
+              className="w-10 h-10 object-cover"
               onError={(e) => e.target.style.display = 'none'}
             />
-            <h1 className="font-bold" style={{ color: '#249689', fontSize: '48px' }}>
+            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               회원관리 및 구매자 정보관리
             </h1>
           </div>
           <button
             onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg hover:bg-gray-100"
             style={{ color: '#000000', border: '2px solid #7f95eb' }}
           >
             <LogOut size={20} />
-            <span className="font-medium">나가기</span>
+            <span className="font-medium"></span>
           </button>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function AdminApproval({ user, onLogout }) {
           </div>
 
           {/* 검색바 */}
-          <div className="p-4 border-b flex items-center gap-4">
+          <div className="p-2 border-b flex items-center gap-1.5">
             <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               이메일
             </label>
@@ -301,25 +301,25 @@ export default function AdminApproval({ user, onLogout }) {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     지점명
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     이름
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     전화번호
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     구분
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     이메일
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     가입확인
                   </th>
-                  <th className="px-4 py-3 text-center font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-center font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     관리
                   </th>
                 </tr>
@@ -327,14 +327,14 @@ export default function AdminApproval({ user, onLogout }) {
               <tbody>
                 {filteredUsers.map((targetUser) => (
                   <tr key={targetUser.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.branch}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.name}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.phone}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.user_type}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.email}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{targetUser.branch}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{targetUser.name}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{targetUser.phone}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{targetUser.user_type}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{targetUser.email}</td>
+                    <td className="px-4 py-2.5">
                       {targetUser.status === 'pending' ? (
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           <button
                             onClick={() => handleApprove(targetUser.id)}
                             className="p-1 bg-green-100 hover:bg-green-200 rounded"
@@ -362,8 +362,8 @@ export default function AdminApproval({ user, onLogout }) {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 justify-center">
+                    <td className="px-4 py-2.5">
+                      <div className="flex gap-1.5 justify-center">
                         <button
                           onClick={() => handleEditUser(targetUser)}
                           className="p-2 hover:bg-gray-100 rounded"
@@ -394,7 +394,7 @@ export default function AdminApproval({ user, onLogout }) {
           </div>
 
           {/* 검색바 */}
-          <div className="p-4 border-b flex items-center gap-4">
+          <div className="p-2 border-b flex items-center gap-1.5">
             <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               검색
             </label>
@@ -419,28 +419,28 @@ export default function AdminApproval({ user, onLogout }) {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     이름
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     생년월일
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     이메일
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     전화번호
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     주소
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     결제방법
                   </th>
-                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     판매수량
                   </th>
-                  <th className="px-4 py-3 text-center font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  <th className="px-4 py-2.5 text-center font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     관리
                   </th>
                 </tr>
@@ -448,15 +448,15 @@ export default function AdminApproval({ user, onLogout }) {
               <tbody>
                 {filteredSales.map((sale) => (
                   <tr key={sale.id} className="border-t hover:bg-gray-50">
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.customer_name}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.birth_date || '-'}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.email}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.phone}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.address}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.payment_method}</td>
-                    <td className="px-4 py-3" style={{ fontSize: '15px' }}>{sale.quantity || '-'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2 justify-center">
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.customer_name}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.birth_date || '-'}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.email}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.phone}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.address}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.payment_method}</td>
+                    <td className="px-4 py-2.5" style={{ fontSize: '15px' }}>{sale.quantity || '-'}</td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex gap-1.5 justify-center">
                         <button
                           onClick={() => handleEditSale(sale)}
                           className="p-2 hover:bg-gray-100 rounded"
@@ -483,7 +483,7 @@ export default function AdminApproval({ user, onLogout }) {
 
       {/* 회원 수정 모달 */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>
               회원 정보 수정
@@ -534,7 +534,7 @@ export default function AdminApproval({ user, onLogout }) {
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 mt-6">
               <button
                 onClick={handleSaveUserEdit}
                 className="flex-1 py-2 text-white font-bold rounded-lg"
@@ -556,7 +556,7 @@ export default function AdminApproval({ user, onLogout }) {
 
       {/* 구매자 수정 모달 */}
       {editingSale && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>
               구매자 정보 수정
@@ -618,7 +618,7 @@ export default function AdminApproval({ user, onLogout }) {
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 mt-6">
               <button
                 onClick={handleSaveSaleEdit}
                 className="flex-1 py-2 text-white font-bold rounded-lg"

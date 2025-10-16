@@ -610,7 +610,7 @@
     margin-bottom: calc(var(--spacing) * 4);
   }
 
-  .mb-6 {
+  .mb-4 {
     margin-bottom: calc(var(--spacing) * 6);
   }
 
@@ -714,11 +714,11 @@
     justify-content: center;
   }
 
-  .gap-2 {
+  .gap-1.5 {
     gap: calc(var(--spacing) * 2);
   }
 
-  .gap-4 {
+  .gap-1.5 {
     gap: calc(var(--spacing) * 4);
   }
 
@@ -856,7 +856,7 @@
     padding: calc(var(--spacing) * 3);
   }
 
-  .p-4 {
+  .p-2 {
     padding: calc(var(--spacing) * 4);
   }
 
@@ -868,7 +868,7 @@
     padding: calc(var(--spacing) * 6);
   }
 
-  .p-8 {
+  .p-6 {
     padding: calc(var(--spacing) * 8);
   }
 
@@ -904,7 +904,7 @@
     padding-block: calc(var(--spacing) * 2.5);
   }
 
-  .py-3 {
+  .py-2.5 {
     padding-block: calc(var(--spacing) * 3);
   }
 
