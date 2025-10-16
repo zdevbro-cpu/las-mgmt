@@ -117,7 +117,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-3xl mx-auto p-6">
+      <div className="mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
@@ -183,22 +183,22 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6' }}>
-                  <th className="px-2 py-3 text-center font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689', width: '50px' }}>
+                  <th className="px-2 py-3 text-center font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '50px' }}>
                     상세
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     이름
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     전화번호
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     이메일
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     주문정보
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     구매일
                   </th>
                 </tr>
@@ -206,7 +206,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center" style={{ fontSize: '14px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center" style={{ fontSize: '16px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -215,7 +215,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
                   </tr>
                 ) : purchases.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '14px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '16px' }}>
                       <div>
                         <p className="mb-2">등록된 판매 내역이 없습니다</p>
                         <p className="text-sm">판매관리에서 판매 데이터를 추가하세요</p>
@@ -247,28 +247,28 @@ export default function PurchaseHistory({ user, onNavigate }) {
                       </td>
                       <td 
                         className="px-3 py-3 cursor-pointer" 
-                        style={{ fontSize: '14px' }}
+                        style={{ fontSize: '16px' }}
                         onClick={() => handleRowClick(purchase)}
                       >
                         {purchase.customer_phone}
                       </td>
                       <td 
                         className="px-3 py-3 cursor-pointer" 
-                        style={{ fontSize: '14px' }}
+                        style={{ fontSize: '16px' }}
                         onClick={() => handleRowClick(purchase)}
                       >
                         {purchase.customer_email}
                       </td>
                       <td 
                         className="px-3 py-3 cursor-pointer" 
-                        style={{ fontSize: '14px' }}
+                        style={{ fontSize: '16px' }}
                         onClick={() => handleRowClick(purchase)}
                       >
                         {purchase.order_info?.substring(0, 20)}{purchase.order_info?.length > 20 ? '...' : ''}
                       </td>
                       <td 
                         className="px-3 py-3 cursor-pointer" 
-                        style={{ fontSize: '14px' }}
+                        style={{ fontSize: '16px' }}
                         onClick={() => handleRowClick(purchase)}
                       >
                         {formatDate(purchase.created_at)}
@@ -315,7 +315,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
             <div className="space-y-3">
               {/* 구매자 정보 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '13px' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '16px' }}>
                   👤 구매자 정보
                 </h4>
                 <div className="space-y-1.5">
@@ -342,7 +342,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
 
               {/* 구매내역 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
-                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '13px' }}>
+                <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
                   📦 구매내역
                 </h4>
                 <textarea
@@ -361,7 +361,7 @@ export default function PurchaseHistory({ user, onNavigate }) {
               {/* 결제 정보 (있는 경우) */}
               {(selectedPurchase.payment_method || selectedPurchase.payment_amount || selectedPurchase.quantity) && (
                 <div className="border-2 rounded-lg p-3" style={{ borderColor: '#e5e7eb', backgroundColor: '#f9fafb' }}>
-                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '13px' }}>
+                  <h4 className="font-bold mb-2" style={{ color: '#6b7280', fontSize: '14px' }}>
                     💳 결제 정보
                   </h4>
                   <div className="space-y-1.5">
