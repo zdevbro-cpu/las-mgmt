@@ -158,14 +158,6 @@ export default function WorkDiary({ user: propUser, onNavigate }) {
             </h1>
           </div>
         </div>
-            <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center">
-              <span className="text-white font-bold text-xl">L</span>
-            </div>
-            <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              {user?.userType === '점주' ? '점주 근무일지' : 'SM점장 근무일지'}
-            </h1>
-          </div>
-        </div>
 
         {/* 사용자 정보 */}
         <div className="grid grid-cols-2 gap-1.5 mb-4">
