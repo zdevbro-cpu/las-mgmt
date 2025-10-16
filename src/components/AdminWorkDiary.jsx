@@ -7,16 +7,6 @@ export default function AdminWorkDiary({ user, onNavigate }) {
   const [selectedDiary, setSelectedDiary] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // TODO List
-  const todoList = [
-    '✅ 1. AdminApproval.jsx 톤앤매너 동일 유지',
-    '✅ 2. 근무일지 내용을 목록으로 표시',
-    '✅ 3. 좌측 목록별 상세 이모지 사용',
-    '✅ 4. 목록 선택시 우측에 상세 내용 표시',
-    '✅ 5. 테이블 형식으로 데이터 표시',
-    '✅ 6. 삭제 기능 구현'
-  ]
-
   useEffect(() => {
     loadDiaries()
   }, [])
@@ -84,16 +74,25 @@ export default function AdminWorkDiary({ user, onNavigate }) {
 
   const formatTime = (timeString) => {
     if (!timeString) return '-'
-    // HH:MM 형식이면 그대로 반환
-    if (timeString.includes(':') && timeString.length <= 5) {
-      return timeString
-    }
-    // ISO 날짜 형식이면 시간만 추출
-    const date = new Date(timeString)
-    return date.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    return timeString
+  }
+
+  const calculateWorkHours = (startTime, endTime) => {
+    if (!startTime || !endTime) return '-'
+    
+    const [startHour, startMin] = startTime.split(':').map(Number)
+    const [endHour, endMin] = endTime.split(':').map(Number)
+    
+    const startMinutes = startHour * 60 + startMin
+    const endMinutes = endHour * 60 + endMin
+    
+    let diffMinutes = endMinutes - startMinutes
+    if (diffMinutes < 0) diffMinutes += 24 * 60 // 다음날로 넘어간 경우
+    
+    const hours = Math.floor(diffMinutes / 60)
+    const minutes = diffMinutes % 60
+    
+    return `${hours}시간 ${minutes}분`
   }
 
   // 근무일지 목록별 이모지
@@ -103,7 +102,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     const isToday = createdDate.toDateString() === now.toDateString()
     
     if (isToday) return '📝'
-    if (diary.special_notes) return '⭐'
+    if (diary.memorable) return '⭐'
     return '📄'
   }
 
@@ -170,10 +169,13 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                         <span className="text-2xl">{getStatusEmoji(diary)}</span>
                         <div className="flex-1 min-w-0">
                           <div className="font-bold truncate" style={{ fontSize: '14px' }}>
-                            {diary.user_name} ({diary.branch_name})
+                            {diary.user_name}
                           </div>
-                          <div className="text-sm text-gray-600 mt-1">
-                            📅 {formatDate(diary.created_at)}
+                          <div className="text-xs text-gray-600 mt-0.5">
+                            📍 {diary.user_branch} · {diary.user_type}
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1.5">
+                            📅 {formatDate(diary.start_date || diary.created_at)}
                           </div>
                           {diary.start_time && diary.end_time && (
                             <div className="text-xs text-gray-500 mt-1">
@@ -216,7 +218,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                       <tbody>
                         <tr className="border-b">
                           <td className="py-3 px-4 font-bold bg-gray-50" style={{ width: '150px', fontSize: '15px' }}>
-                            작성자
+                            이름
                           </td>
                           <td className="py-3 px-4" style={{ fontSize: '15px' }}>
                             {selectedDiary.user_name}
@@ -227,7 +229,15 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                             지점명
                           </td>
                           <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                            {selectedDiary.branch_name}
+                            {selectedDiary.user_branch}
+                          </td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
+                            직원구분
+                          </td>
+                          <td className="py-3 px-4" style={{ fontSize: '15px' }}>
+                            {selectedDiary.user_type}
                           </td>
                         </tr>
                         <tr className="border-b">
@@ -235,25 +245,15 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                             작성일
                           </td>
                           <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                            {formatDate(selectedDiary.created_at)}
+                            {formatDate(selectedDiary.start_date || selectedDiary.created_at)}
                           </td>
                         </tr>
-                        {selectedDiary.start_time && selectedDiary.end_time && (
-                          <tr className="border-b">
-                            <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
-                              근무시간
-                            </td>
-                            <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                              {formatTime(selectedDiary.start_time)} ~ {formatTime(selectedDiary.end_time)}
-                            </td>
-                          </tr>
-                        )}
                       </tbody>
                     </table>
                   </div>
 
-                  {/* 근무 시간 선택 */}
-                  {selectedDiary.schedule && (
+                  {/* 근무 시간 정보 */}
+                  {(selectedDiary.start_time || selectedDiary.end_time) && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
                         🕐 근무 시간
@@ -262,10 +262,26 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                         <tbody>
                           <tr className="border-b">
                             <td className="py-3 px-4 font-bold bg-gray-50" style={{ width: '150px', fontSize: '15px' }}>
-                              시간대
+                              출근시간
                             </td>
                             <td className="py-3 px-4" style={{ fontSize: '15px' }}>
-                              {selectedDiary.schedule}
+                              {formatTime(selectedDiary.start_time)}
+                            </td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
+                              퇴근시간
+                            </td>
+                            <td className="py-3 px-4" style={{ fontSize: '15px' }}>
+                              {formatTime(selectedDiary.end_time)}
+                            </td>
+                          </tr>
+                          <tr className="border-b">
+                            <td className="py-3 px-4 font-bold bg-gray-50" style={{ fontSize: '15px' }}>
+                              총 근무시간
+                            </td>
+                            <td className="py-3 px-4 font-bold" style={{ fontSize: '15px', color: '#249689' }}>
+                              {calculateWorkHours(selectedDiary.start_time, selectedDiary.end_time)}
                             </td>
                           </tr>
                         </tbody>
@@ -273,57 +289,86 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                     </div>
                   )}
 
-                  {/* 일일 확인 목록 */}
-                  {selectedDiary.checklist && (
+                  {/* 일일 체크사항 */}
+                  {(selectedDiary.daily_check1 || selectedDiary.daily_check2 || selectedDiary.daily_check3) && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
-                        ✅ 일일 확인 목록
+                        ✅ 일일 체크사항
                       </h3>
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <pre className="whitespace-pre-wrap" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                          {selectedDiary.checklist}
-                        </pre>
+                      <div className="space-y-2">
+                        {selectedDiary.daily_check1 && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                            <span className="text-green-600">✓</span>
+                            <span style={{ fontSize: '14px' }}>매장 청결 검수</span>
+                          </div>
+                        )}
+                        {selectedDiary.daily_check2 && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                            <span className="text-green-600">✓</span>
+                            <span style={{ fontSize: '14px' }}>직원 업무교육</span>
+                          </div>
+                        )}
+                        {selectedDiary.daily_check3 && (
+                          <div className="flex items-center gap-2 p-2 bg-green-50 rounded">
+                            <span className="text-green-600">✓</span>
+                            <span style={{ fontSize: '14px' }}>직원 체크리스트 점검</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
                   {/* 외근 시 내용 */}
-                  {selectedDiary.outside_work && (
+                  {selectedDiary.out_content && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
                         🚗 외근 시 내용
                       </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <pre className="whitespace-pre-wrap" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                          {selectedDiary.outside_work}
+                          {selectedDiary.out_content}
                         </pre>
                       </div>
                     </div>
                   )}
 
-                  {/* 주인 모닝 내용 */}
-                  {selectedDiary.weekly_notes && (
+                  {/* 주인형 모집 내용 */}
+                  {selectedDiary.exemplary && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
-                        📋 주인 모닝 내용
+                        👥 주인형 모집 내용
                       </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <pre className="whitespace-pre-wrap" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                          {selectedDiary.weekly_notes}
+                          {selectedDiary.exemplary}
                         </pre>
                       </div>
                     </div>
                   )}
 
-                  {/* 오늘도 수고하셨습니다 */}
-                  {selectedDiary.special_notes && (
+                  {/* 인상깊은 고객에 대한 내용 */}
+                  {selectedDiary.memorable && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
-                        ⭐ 오늘도 수고하셨습니다
+                        ⭐ 인상깊은 고객에 대한 내용
                       </h3>
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <pre className="whitespace-pre-wrap" style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                          {selectedDiary.special_notes}
+                          {selectedDiary.memorable}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 건의사항 내용 */}
+                  {selectedDiary.suggestions && (
+                    <div className="mb-6">
+                      <h3 className="font-bold mb-3 pb-2 border-b-2" style={{ color: '#249689', fontSize: '16px' }}>
+                        💡 건의사항 내용
+                      </h3>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <pre className="whitespace-pre-wrap" style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                          {selectedDiary.suggestions}
                         </pre>
                       </div>
                     </div>
