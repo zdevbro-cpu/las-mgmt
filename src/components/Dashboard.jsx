@@ -1,223 +1,14 @@
-import { useState } from 'react'
-import { LogOut, User, Lock, MessageCircle, Info } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { LogOut, FileText, Users, User, Building2 } from 'lucide-react'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
-  const [showProfileModal, setShowProfileModal] = useState(false)
-  const [showChangeRequestModal, setShowChangeRequestModal] = useState(false)
-  const [changeRequestType, setChangeRequestType] = useState(null)
-  const [changeRequestForm, setChangeRequestForm] = useState({
-    requestedValue: '',
-    reason: ''
-  })
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
-    phone: user?.phone || '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  })
-  const [changePassword, setChangePassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-
-  const handleProfileChange = (e) => {
-    setProfileForm({
-      ...profileForm,
-      [e.target.name]: e.target.value
-    })
-  }
-
-  const handleOpenProfile = () => {
-    setProfileForm({
-      name: user?.name || '',
-      phone: user?.phone || '',
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    })
-    setChangePassword(false)
-    setShowProfileModal(true)
-  }
-
-  const handleCloseProfile = () => {
-    setShowProfileModal(false)
-    setChangePassword(false)
-    setProfileForm({
-      name: user?.name || '',
-      phone: user?.phone || '',
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: ''
-    })
-  }
-
-  const handleSaveProfile = async () => {
-    if (!profileForm.name.trim()) {
-      alert('이름을 입력해주세요.')
-      return
-    }
-
-    if (!profileForm.phone.trim()) {
-      alert('전화번호를 입력해주세요.')
-      return
-    }
-
-    if (changePassword) {
-      if (!profileForm.currentPassword) {
-        alert('현재 비밀번호를 입력해주세요.')
-        return
-      }
-
-      if (!profileForm.newPassword) {
-        alert('새 비밀번호를 입력해주세요.')
-        return
-      }
-
-      if (profileForm.newPassword.length < 6) {
-        alert('새 비밀번호는 최소 6자 이상이어야 합니다.')
-        return
-      }
-
-      if (profileForm.newPassword !== profileForm.confirmPassword) {
-        alert('새 비밀번호가 일치하지 않습니다.')
-        return
-      }
-    }
-
-    setLoading(true)
-
-    try {
-      // 1. 이름과 전화번호 업데이트
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          name: profileForm.name,
-          phone: profileForm.phone
-        })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
-
-      // 2. 비밀번호 변경이 체크되어 있으면 비밀번호도 업데이트
-      if (changePassword) {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: profileForm.newPassword
-        })
-
-        if (passwordError) throw passwordError
-      }
-      
-      alert('정보가 성공적으로 수정되었습니다.')
-      handleCloseProfile()
-      
-    } catch (err) {
-      console.error('정보 수정 오류:', err)
-      alert('정보 수정 중 오류가 발생했습니다: ' + err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleRequestChange = (fieldType) => {
-    setChangeRequestType(fieldType)
-    setChangeRequestForm({
-      requestedValue: '',
-      reason: ''
-    })
-    setShowChangeRequestModal(true)
-  }
-
-  const handleCloseChangeRequest = () => {
-    setShowChangeRequestModal(false)
-    setChangeRequestType(null)
-    setChangeRequestForm({
-      requestedValue: '',
-      reason: ''
-    })
-  }
-
-  const handleSubmitChangeRequest = async () => {
-    if (!changeRequestForm.requestedValue.trim()) {
-      alert('변경하고자 하는 값을 입력해주세요.')
-      return
-    }
-
-    if (!changeRequestForm.reason.trim()) {
-      alert('변경 사유를 입력해주세요.')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      // 디버깅: user.id 확인
-      console.log('User ID:', user.id, 'Type:', typeof user.id)
-      
-      if (!user.id) {
-        throw new Error('사용자 ID를 찾을 수 없습니다.')
-      }
-
-      const currentValue = changeRequestType === 'branch' 
-        ? user.branch 
-        : (user.user_type || user.userType)
-
-      const insertData = {
-        user_id: String(user.id),  // 명시적으로 문자열로 변환
-        request_type: changeRequestType,
-        current_value: currentValue,
-        requested_value: changeRequestForm.requestedValue,
-        reason: changeRequestForm.reason,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      }
-
-      console.log('Insert data:', insertData)
-
-      const { data, error } = await supabase
-        .from('change_requests')
-        .insert(insertData)
-        .select()
-
-      if (error) {
-        console.error('Insert error details:', error)
-        throw error
-      }
-
-      console.log('Insert success:', data)
-      alert('변경 요청이 접수되었습니다.\n관리자 검토 후 연락드리겠습니다.')
-      handleCloseChangeRequest()
-
-    } catch (err) {
-      console.error('변경 요청 오류:', err)
-      alert('변경 요청 중 오류가 발생했습니다: ' + err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getChangeRequestLabels = () => {
-    if (changeRequestType === 'branch') {
-      return {
-        title: '지점 변경 요청',
-        fieldLabel: '변경할 지점명',
-        placeholder: '새로운 지점명을 입력하세요 (예: 서울지점)',
-        currentValue: user?.branch
-      }
-    } else if (changeRequestType === 'user_type') {
-      return {
-        title: '권한 변경 요청',
-        fieldLabel: '변경할 권한',
-        placeholder: '새로운 권한을 입력하세요 (예: 정직원, 대리점)',
-        currentValue: user?.user_type || user?.userType
-      }
-    }
-    return {}
-  }
+  // 지점관리자 여부 확인
+  const isBranchManager = user?.user_type === '지점관리자'
 
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* 페이지 타이틀 */}
           <div className="flex items-center justify-center gap-1.5 mb-8">
             <img 
               src="/images/logo.png" 
@@ -226,10 +17,11 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               onError={(e) => e.target.style.display = 'none'}
             />
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              LAS 매장관리
+              매장관리
             </h2>
           </div>
           
+          {/* 사용자 정보 */}
           <div className="grid grid-cols-2 gap-1.5 mb-8">
             <div>
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
@@ -237,7 +29,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </label>
               <input
                 type="text"
-                value={user?.branch || ''}
+                value={user?.branch || '-'}
                 readOnly
                 className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                 style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -249,7 +41,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </label>
               <input
                 type="text"
-                value={user?.name || ''}
+                value={user?.name || '-'}
                 readOnly
                 className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                 style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -257,47 +49,58 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </div>
           </div>
 
+          {/* 권한 표시 */}
+          {isBranchManager && (
+            <div className="mb-6 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
+                🛡️ 지점관리자 권한
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                해당 지점의 모든 데이터를 관리할 수 있습니다
+              </p>
+            </div>
+          )}
+
+          {/* 버튼들 */}
           <div className="space-y-4">
             <button
-              onClick={() => onNavigate('workDiary')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              onClick={() => {
+                console.log('근무일지 버튼 클릭')
+                onNavigate('workDiary')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
+              <FileText size={20} />
               근무일지
             </button>
             <button
-              onClick={() => onNavigate('sales')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              onClick={() => {
+                console.log('판매고객관리 버튼 클릭')
+                onNavigate('customerManagement')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              판매관리
+              <Users size={20} />
+              판매고객관리
             </button>
             <button
-              onClick={() => onNavigate('shippingList')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              onClick={() => {
+                console.log('내 정보관리 버튼 클릭')
+                onNavigate('profile')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              송장출력
-            </button>
-            <button
-              onClick={() => onNavigate('purchaseHistory')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              구매이력조회
-            </button>
-            
-            <button
-              onClick={handleOpenProfile}
-              className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-              style={{ color: '#249689', border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               <User size={20} />
-              내정보관리
+              내 정보관리
             </button>
-
             <button
-              onClick={onLogout}
+              onClick={() => {
+                console.log('로그아웃 버튼 클릭')
+                onLogout()
+              }}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -307,284 +110,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
           </div>
         </div>
       </div>
-
-      {/* 내정보관리 모달 */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md overflow-y-auto" style={{ borderRadius: '10px', maxHeight: '90vh' }}>
-            <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: '#249689' }}>
-              내정보관리
-            </h2>
-            
-            <div className="mb-6 p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: '#f0fdfa', border: '1px solid #99f6e4' }}>
-              <Info size={20} className="flex-shrink-0 mt-0.5" style={{ color: '#0d9488' }} />
-              <p style={{ fontSize: '13px', color: '#0f766e', lineHeight: '1.5' }}>
-                이메일, 지점명, 구분은 보안 및 정책상 관리자를 통해서만 변경 가능합니다.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
-                  <Lock size={16} style={{ color: '#6b7280' }} />
-                  📧 이메일
-                </label>
-                <input
-                  type="email"
-                  value={user?.email || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
-                />
-                <p className="mt-1.5 flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
-                  <Lock size={12} />
-                  보안을 위해 이메일은 변경할 수 없습니다
-                </p>
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  👤 이름 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={profileForm.name}
-                  onChange={handleProfileChange}
-                  placeholder="이름을 입력하세요"
-                  className="w-full px-4 py-2 border border-gray-300"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  📱 전화번호 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={profileForm.phone}
-                  onChange={handleProfileChange}
-                  placeholder="전화번호를 입력하세요"
-                  className="w-full px-4 py-2 border border-gray-300"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
-                  <MessageCircle size={16} style={{ color: '#6b7280' }} />
-                  🏢 지점명
-                </label>
-                <input
-                  type="text"
-                  value={user?.branch || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
-                />
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
-                    <MessageCircle size={12} />
-                    지점 변경은 관리자 승인이 필요합니다
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleRequestChange('branch')}
-                    className="px-3 py-1 rounded hover:opacity-80 transition-opacity text-xs font-medium"
-                    style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
-                  >
-                    변경 요청
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
-                  <MessageCircle size={16} style={{ color: '#6b7280' }} />
-                  📋 구분
-                </label>
-                <input
-                  type="text"
-                  value={user?.user_type || user?.userType || ''}
-                  readOnly
-                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-                  style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
-                />
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
-                    <MessageCircle size={12} />
-                    권한 변경은 관리자 승인이 필요합니다
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => handleRequestChange('user_type')}
-                    className="px-3 py-1 rounded hover:opacity-80 transition-opacity text-xs font-medium"
-                    style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
-                  >
-                    변경 요청
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t-2 border-gray-200">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={changePassword}
-                    onChange={(e) => setChangePassword(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                  <span className="font-bold" style={{ color: '#249689', fontSize: '15px' }}>
-                    🔒 비밀번호 변경
-                  </span>
-                </label>
-              </div>
-
-              {changePassword && (
-                <div className="space-y-4 p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '2px solid #e5e7eb' }}>
-                  <div>
-                    <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                      🔑 현재 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="password"
-                      name="currentPassword"
-                      value={profileForm.currentPassword}
-                      onChange={handleProfileChange}
-                      placeholder="현재 비밀번호를 입력하세요"
-                      className="w-full px-4 py-2 border border-gray-300"
-                      style={{ borderRadius: '10px', fontSize: '15px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                      🔐 새 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="password"
-                      name="newPassword"
-                      value={profileForm.newPassword}
-                      onChange={handleProfileChange}
-                      placeholder="새 비밀번호를 입력하세요 (최소 6자)"
-                      className="w-full px-4 py-2 border border-gray-300"
-                      style={{ borderRadius: '10px', fontSize: '15px' }}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                      ✅ 새 비밀번호 확인 <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={profileForm.confirmPassword}
-                      onChange={handleProfileChange}
-                      placeholder="새 비밀번호를 다시 입력하세요"
-                      className="w-full px-4 py-2 border border-gray-300"
-                      style={{ borderRadius: '10px', fontSize: '15px' }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={handleSaveProfile}
-                disabled={loading}
-                className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                {loading ? '저장 중...' : '저장'}
-              </button>
-              <button
-                onClick={handleCloseProfile}
-                disabled={loading}
-                className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 변경 요청 모달 */}
-      {showChangeRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" style={{ borderRadius: '10px' }}>
-            <h2 className="text-xl font-bold mb-4 text-center" style={{ color: '#249689' }}>
-              {getChangeRequestLabels().title}
-            </h2>
-
-            <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#f0fdfa', border: '1px solid #99f6e4' }}>
-              <p className="text-sm" style={{ color: '#0f766e' }}>
-                현재: <span className="font-bold">{getChangeRequestLabels().currentValue}</span>
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  {getChangeRequestLabels().fieldLabel} <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  value={changeRequestForm.requestedValue}
-                  onChange={(e) => setChangeRequestForm({...changeRequestForm, requestedValue: e.target.value})}
-                  placeholder={getChangeRequestLabels().placeholder}
-                  className="w-full px-4 py-2 border border-gray-300"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  변경 사유 <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <textarea
-                  value={changeRequestForm.reason}
-                  onChange={(e) => setChangeRequestForm({...changeRequestForm, reason: e.target.value})}
-                  placeholder="변경이 필요한 사유를 상세히 입력해주세요"
-                  rows="4"
-                  className="w-full px-4 py-2 border border-gray-300"
-                  style={{ borderRadius: '10px', fontSize: '15px' }}
-                />
-              </div>
-
-              <div className="p-3 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a' }}>
-                <p className="text-xs" style={{ color: '#78350f' }}>
-                  ⚠️ 관리자 승인 후 변경이 적용됩니다. 승인까지 1-2일 정도 소요될 수 있습니다.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-6">
-              <button
-                onClick={handleSubmitChangeRequest}
-                disabled={loading}
-                className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                {loading ? '요청 중...' : '요청하기'}
-              </button>
-              <button
-                onClick={handleCloseChangeRequest}
-                disabled={loading}
-                className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
