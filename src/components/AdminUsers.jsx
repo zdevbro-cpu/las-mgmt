@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Edit2, Trash2, Check, X, ArrowLeft, Key, AlertCircle } from 'lucide-react'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../lib/supabaseClient'
 
 export default function AdminUsers({ user, onNavigate }) {
   const [users, setUsers] = useState([])
