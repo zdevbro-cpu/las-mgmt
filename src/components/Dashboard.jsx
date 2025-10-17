@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { LogOut, User, Lock, MessageCircle, Info } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [showChangeRequestModal, setShowChangeRequestModal] = useState(false)
+  const [changeRequestType, setChangeRequestType] = useState(null)
+  const [changeRequestForm, setChangeRequestForm] = useState({
+    requestedValue: '',
+    reason: ''
+  })
   const [profileForm, setProfileForm] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -80,28 +87,114 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
     setLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 1. 이름과 전화번호 업데이트
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          name: profileForm.name,
+          phone: profileForm.phone
+        })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      // 2. 비밀번호 변경이 체크되어 있으면 비밀번호도 업데이트
+      if (changePassword) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: profileForm.newPassword
+        })
+
+        if (passwordError) throw passwordError
+      }
       
       alert('정보가 성공적으로 수정되었습니다.')
       handleCloseProfile()
       
     } catch (err) {
       console.error('정보 수정 오류:', err)
-      alert('정보 수정 중 오류가 발생했습니다.')
+      alert('정보 수정 중 오류가 발생했습니다: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
   const handleRequestChange = (fieldType) => {
-    const messages = {
-      branch: '지점 변경을 요청하시겠습니까?\n\n요청 내용이 관리자에게 전달됩니다.',
-      userType: '권한 변경을 요청하시겠습니까?\n\n요청 내용이 관리자에게 전달됩니다.'
+    setChangeRequestType(fieldType)
+    setChangeRequestForm({
+      requestedValue: '',
+      reason: ''
+    })
+    setShowChangeRequestModal(true)
+  }
+
+  const handleCloseChangeRequest = () => {
+    setShowChangeRequestModal(false)
+    setChangeRequestType(null)
+    setChangeRequestForm({
+      requestedValue: '',
+      reason: ''
+    })
+  }
+
+  const handleSubmitChangeRequest = async () => {
+    if (!changeRequestForm.requestedValue.trim()) {
+      alert('변경하고자 하는 값을 입력해주세요.')
+      return
     }
-    
-    if (window.confirm(messages[fieldType])) {
+
+    if (!changeRequestForm.reason.trim()) {
+      alert('변경 사유를 입력해주세요.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const currentValue = changeRequestType === 'branch' 
+        ? user.branch 
+        : (user.user_type || user.userType)
+
+      const { error } = await supabase
+        .from('change_requests')
+        .insert({
+          user_id: user.id,
+          request_type: changeRequestType,
+          current_value: currentValue,
+          requested_value: changeRequestForm.requestedValue,
+          reason: changeRequestForm.reason,
+          status: 'pending'
+        })
+
+      if (error) throw error
+
       alert('변경 요청이 접수되었습니다.\n관리자 검토 후 연락드리겠습니다.')
+      handleCloseChangeRequest()
+
+    } catch (err) {
+      console.error('변경 요청 오류:', err)
+      alert('변경 요청 중 오류가 발생했습니다: ' + err.message)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const getChangeRequestLabels = () => {
+    if (changeRequestType === 'branch') {
+      return {
+        title: '지점 변경 요청',
+        fieldLabel: '변경할 지점명',
+        placeholder: '새로운 지점명을 입력하세요 (예: 서울지점)',
+        currentValue: user?.branch
+      }
+    } else if (changeRequestType === 'user_type') {
+      return {
+        title: '권한 변경 요청',
+        fieldLabel: '변경할 권한',
+        placeholder: '새로운 권한을 입력하세요 (예: 정직원, 대리점)',
+        currentValue: user?.user_type || user?.userType
+      }
+    }
+    return {}
   }
 
   return (
@@ -195,6 +288,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
         </div>
       </div>
 
+      {/* 내정보관리 모달 */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md overflow-y-auto" style={{ borderRadius: '10px', maxHeight: '90vh' }}>
@@ -305,7 +399,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   </p>
                   <button
                     type="button"
-                    onClick={() => handleRequestChange('userType')}
+                    onClick={() => handleRequestChange('user_type')}
                     className="px-3 py-1 rounded hover:opacity-80 transition-opacity text-xs font-medium"
                     style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
                   >
@@ -389,6 +483,78 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </button>
               <button
                 onClick={handleCloseProfile}
+                disabled={loading}
+                className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 변경 요청 모달 */}
+      {showChangeRequestModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" style={{ borderRadius: '10px' }}>
+            <h2 className="text-xl font-bold mb-4 text-center" style={{ color: '#249689' }}>
+              {getChangeRequestLabels().title}
+            </h2>
+
+            <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#f0fdfa', border: '1px solid #99f6e4' }}>
+              <p className="text-sm" style={{ color: '#0f766e' }}>
+                현재: <span className="font-bold">{getChangeRequestLabels().currentValue}</span>
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  {getChangeRequestLabels().fieldLabel} <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={changeRequestForm.requestedValue}
+                  onChange={(e) => setChangeRequestForm({...changeRequestForm, requestedValue: e.target.value})}
+                  placeholder={getChangeRequestLabels().placeholder}
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+
+              <div>
+                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                  변경 사유 <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  value={changeRequestForm.reason}
+                  onChange={(e) => setChangeRequestForm({...changeRequestForm, reason: e.target.value})}
+                  placeholder="변경이 필요한 사유를 상세히 입력해주세요"
+                  rows="4"
+                  className="w-full px-4 py-2 border border-gray-300"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+              </div>
+
+              <div className="p-3 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a' }}>
+                <p className="text-xs" style={{ color: '#78350f' }}>
+                  ⚠️ 관리자 승인 후 변경이 적용됩니다. 승인까지 1-2일 정도 소요될 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-6">
+              <button
+                onClick={handleSubmitChangeRequest}
+                disabled={loading}
+                className="flex-1 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              >
+                {loading ? '요청 중...' : '요청하기'}
+              </button>
+              <button
+                onClick={handleCloseChangeRequest}
                 disabled={loading}
                 className="flex-1 py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
