@@ -150,23 +150,40 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
     setLoading(true)
 
     try {
+      // 디버깅: user.id 확인
+      console.log('User ID:', user.id, 'Type:', typeof user.id)
+      
+      if (!user.id) {
+        throw new Error('사용자 ID를 찾을 수 없습니다.')
+      }
+
       const currentValue = changeRequestType === 'branch' 
         ? user.branch 
         : (user.user_type || user.userType)
 
-      const { error } = await supabase
+      const insertData = {
+        user_id: String(user.id),  // 명시적으로 문자열로 변환
+        request_type: changeRequestType,
+        current_value: currentValue,
+        requested_value: changeRequestForm.requestedValue,
+        reason: changeRequestForm.reason,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      }
+
+      console.log('Insert data:', insertData)
+
+      const { data, error } = await supabase
         .from('change_requests')
-        .insert({
-          user_id: user.id,
-          request_type: changeRequestType,
-          current_value: currentValue,
-          requested_value: changeRequestForm.requestedValue,
-          reason: changeRequestForm.reason,
-          status: 'pending'
-        })
+        .insert(insertData)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Insert error details:', error)
+        throw error
+      }
 
+      console.log('Insert success:', data)
       alert('변경 요청이 접수되었습니다.\n관리자 검토 후 연락드리겠습니다.')
       handleCloseChangeRequest()
 
