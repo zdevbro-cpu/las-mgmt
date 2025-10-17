@@ -165,7 +165,7 @@ export default function SalesManagement() {
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
-                  placeholder="구매자 주소를 적어주세요"
+                  placeholder="배송지 주소를 정확하게 적어주세요"
                   required
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
