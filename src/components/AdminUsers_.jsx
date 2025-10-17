@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Edit2, Trash2, Check, X, ArrowLeft, Key } from 'lucide-react'
+import { Edit2, Trash2, Check, X, ArrowLeft } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function AdminUsers({ user, onNavigate }) {
@@ -8,8 +8,6 @@ export default function AdminUsers({ user, onNavigate }) {
   const [editForm, setEditForm] = useState({})
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [resetPasswordModal, setResetPasswordModal] = useState(null)
-  const [tempPassword, setTempPassword] = useState('')
 
   useEffect(() => {
     loadUsers()
@@ -146,79 +144,6 @@ export default function AdminUsers({ user, onNavigate }) {
     }
   }
 
-  // 임시 비밀번호 생성 함수
-  const generateTempPassword = () => {
-    const upperCase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-    const lowerCase = 'abcdefghijklmnopqrstuvwxyz'
-    const numbers = '0123456789'
-    const special = '!@#$%'
-    
-    // 최소 1개씩 포함
-    let password = ''
-    password += upperCase[Math.floor(Math.random() * upperCase.length)]
-    password += lowerCase[Math.floor(Math.random() * lowerCase.length)]
-    password += numbers[Math.floor(Math.random() * numbers.length)]
-    password += special[Math.floor(Math.random() * special.length)]
-    
-    // 나머지 4자리 랜덤 생성
-    const allChars = upperCase + lowerCase + numbers + special
-    for (let i = 0; i < 4; i++) {
-      password += allChars[Math.floor(Math.random() * allChars.length)]
-    }
-    
-    // 문자열 섞기
-    return password.split('').sort(() => Math.random() - 0.5).join('')
-  }
-
-  // 비밀번호 초기화 확인
-  const handleResetPasswordConfirm = (targetUser) => {
-    if (!confirm(`${targetUser.name}(${targetUser.email})님의 비밀번호를 초기화하시겠습니까?`)) return
-    
-    handleResetPassword(targetUser)
-  }
-
-  // 비밀번호 초기화 실행
-  const handleResetPassword = async (targetUser) => {
-    try {
-      // 임시 비밀번호 생성
-      const newTempPassword = generateTempPassword()
-      
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          password: newTempPassword,
-          password_changed_at: new Date().toISOString()
-        })
-        .eq('id', targetUser.id)
-
-      if (error) {
-        console.error('비밀번호 초기화 오류:', error)
-        alert('비밀번호 초기화 중 오류가 발생했습니다.')
-        return
-      }
-
-      // 성공 모달 표시
-      setTempPassword(newTempPassword)
-      setResetPasswordModal(targetUser)
-    } catch (err) {
-      console.error('비밀번호 초기화 오류:', err)
-      alert('비밀번호 초기화 중 오류가 발생했습니다.')
-    }
-  }
-
-  // 비밀번호 복사
-  const handleCopyPassword = () => {
-    navigator.clipboard.writeText(tempPassword)
-    alert('임시 비밀번호가 클립보드에 복사되었습니다.')
-  }
-
-  // 모달 닫기
-  const handleCloseResetModal = () => {
-    setResetPasswordModal(null)
-    setTempPassword('')
-    loadUsers()
-  }
-
   const filteredUsers = users.filter(u => 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -350,13 +275,6 @@ export default function AdminUsers({ user, onNavigate }) {
                           <Edit2 size={18} style={{ color: '#249689' }} />
                         </button>
                         <button
-                          onClick={() => handleResetPasswordConfirm(targetUser)}
-                          className="p-2 hover:bg-gray-100 rounded"
-                          title="비밀번호 초기화"
-                        >
-                          <Key size={18} style={{ color: '#f59e0b' }} />
-                        </button>
-                        <button
                           onClick={() => handleDeleteUser(targetUser.id)}
                           className="p-2 hover:bg-gray-100 rounded"
                           title="삭제"
@@ -442,68 +360,6 @@ export default function AdminUsers({ user, onNavigate }) {
                 취소
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 비밀번호 초기화 결과 모달 */}
-      {resetPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <div className="text-center mb-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Key size={32} style={{ color: '#10b981' }} />
-              </div>
-              <h2 className="text-xl font-bold mb-2" style={{ color: '#249689' }}>
-                비밀번호 초기화 완료
-              </h2>
-              <p className="text-gray-600 text-sm">
-                {resetPasswordModal.name}({resetPasswordModal.email})님의<br/>
-                비밀번호가 초기화되었습니다.
-              </p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 border-2 border-gray-200">
-              <label className="block mb-2 font-bold text-sm" style={{ color: '#000000' }}>
-                임시 비밀번호
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={tempPassword}
-                  readOnly
-                  className="flex-1 px-4 py-3 border-2 border-gray-300 bg-white font-mono text-lg font-bold text-center"
-                  style={{ borderRadius: '10px', color: '#249689', letterSpacing: '2px' }}
-                />
-                <button
-                  onClick={handleCopyPassword}
-                  className="px-4 py-3 font-bold rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: '#249689', color: 'white', fontSize: '14px' }}
-                  title="복사"
-                >
-                  📋 복사
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <p className="text-sm font-bold mb-2" style={{ color: '#f59e0b' }}>
-                ⚠️ 중요 안내사항
-              </p>
-              <ul className="text-xs text-gray-700 space-y-1 list-disc list-inside">
-                <li>위 임시 비밀번호를 사용자에게 전달해주세요</li>
-                <li>사용자는 로그인 후 반드시 비밀번호를 변경해야 합니다</li>
-                <li>임시 비밀번호는 이 화면을 닫으면 다시 확인할 수 없습니다</li>
-              </ul>
-            </div>
-
-            <button
-              onClick={handleCloseResetModal}
-              className="w-full py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#249689', fontSize: '15px' }}
-            >
-              확인
-            </button>
           </div>
         </div>
       )}
