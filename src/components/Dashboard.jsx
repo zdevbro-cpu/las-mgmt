@@ -77,6 +77,18 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             
             <button
               onClick={() => {
+                console.log('판매고객관리 버튼 클릭')
+                onNavigate('customerManagement')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Users size={20} />
+              판매고객관리
+            </button>
+            
+            <button
+              onClick={() => {
                 console.log('송장출력 버튼 클릭')
                 onNavigate('shippingList')
               }}
@@ -97,18 +109,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             >
               <Search size={20} />
               구매자정보조회
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log('판매고객관리 버튼 클릭')
-                onNavigate('customerManagement')
-              }}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Users size={20} />
-              판매고객관리
             </button>
             
             <button
