@@ -12,58 +12,102 @@ export default function PurchaseHistory({ user, onNavigate }) {
   useEffect(() => {
     fetchAllPurchases()
   }, [])
-  
-// fetchAllPurchases 함수에 추가
-const fetchAllPurchases = async () => {
-  setLoading(true)
-  try {
-    let query = supabase
-      .from('sales')
-      .select('*')
-      .order('created_at', { ascending: false })
 
-    // 🔥 이 부분 추가
-    if (user?.user_type === '지점관리자' && user?.branch) {
-      query = query.eq('branch_name', user.branch)
+  const fetchAllPurchases = async () => {
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('sales')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      // 지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type === '지점관리자' && user?.branch) {
+        query = query.eq('branch_name', user.branch)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        console.error('전체 목록 조회 오류:', error)
+        alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
+        return
+      }
+      
+      console.log('조회된 데이터:', data)
+      setPurchases(data || [])
+      
+      if (!data || data.length === 0) {
+        console.log('데이터가 없습니다. 판매관리에서 판매 데이터를 추가하세요.')
+      }
+    } catch (error) {
+      console.error('데이터 조회 오류:', error)
+      alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = async () => {
+    if (!searchValue.trim()) {
+      fetchAllPurchases()
+      return
     }
 
-    const { data, error } = await query
-    // ... 나머지 코드 그대로
-  }
-}
+    setLoading(true)
+    try {
+      let query = supabase
+        .from('sales')
+        .select('*')
+        .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+        .order('created_at', { ascending: false })
 
-// handleSearch 함수에도 동일하게 추가
-const handleSearch = async () => {
-  setLoading(true)
-  try {
-    let query = supabase
-      .from('sales')
-      .select('*')
-      .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
-      .order('created_at', { ascending: false })
+      // 지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type === '지점관리자' && user?.branch) {
+        query = query.eq('branch_name', user.branch)
+      }
 
-    // 🔥 이 부분 추가  
-    if (user?.user_type === '지점관리자' && user?.branch) {
-      query = query.eq('branch_name', user.branch)
+      const { data, error } = await query
+
+      if (error) {
+        console.error('Supabase 검색 오류:', error)
+        alert('검색 중 오류가 발생했습니다: ' + error.message)
+        return
+      }
+      
+      console.log('검색 결과:', data)
+      setPurchases(data || [])
+      
+      if (!data || data.length === 0) {
+        alert('검색 결과가 없습니다')
+      }
+    } catch (error) {
+      console.error('검색 오류:', error)
+      alert('검색 중 오류가 발생했습니다: ' + error.message)
+    } finally {
+      setLoading(false)
     }
-
-    const { data, error } = await query
-    // ... 나머지 코드 그대로
   }
-}
+
   const handleReset = () => {
     setSearchValue('')
     fetchAllPurchases()
   }
 
-  // 동일인의 모든 구매이력 조회
   const fetchSamePersonHistory = async (purchase) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('sales')
         .select('*')
         .or(`customer_name.eq.${purchase.customer_name},customer_phone.eq.${purchase.customer_phone}`)
         .order('created_at', { ascending: false })
+
+      // 지점관리자는 자신의 지점만
+      if (user?.user_type === '지점관리자' && user?.branch) {
+        query = query.eq('branch_name', user.branch)
+      }
+
+      const { data, error } = await query
 
       if (error) {
         console.error('동일인 구매이력 조회 오류:', error)
@@ -82,7 +126,6 @@ const handleSearch = async () => {
     setSelectedPurchase(purchase)
     setShowModal(true)
     
-    // 동일인의 모든 구매이력 조회
     const history = await fetchSamePersonHistory(purchase)
     setAllPurchaseHistory(history)
   }
@@ -107,7 +150,6 @@ const handleSearch = async () => {
     })
   }
 
-  // 개별 구매 항목 포맷팅
   const formatSinglePurchase = (purchase, index) => {
     const date = formatDateTime(purchase.created_at)
     const orderInfo = purchase.order_info || '주문 정보 없음'
@@ -124,7 +166,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
 `
   }
 
-  // 전체 구매이력 통합 포맷팅
   const formatAllPurchaseHistory = () => {
     if (!allPurchaseHistory || allPurchaseHistory.length === 0) {
       return '구매이력이 없습니다.'
@@ -144,7 +185,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
     <div className="min-h-screen bg-white">
       <div className="max-w-5xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => onNavigate('dashboard')}
@@ -168,7 +208,15 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
             <div style={{ width: '100px' }}></div>
           </div>
 
-          {/* 통합 검색 영역 */}
+          {/* 지점관리자 안내 */}
+          {user?.user_type === '지점관리자' && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm" style={{ color: '#8b5cf6' }}>
+                🛡️ <strong>{user.branch}</strong> 지점의 데이터만 표시됩니다
+              </p>
+            </div>
+          )}
+
           <div className="mb-6">
             <div className="flex gap-2 mb-2">
               <input
@@ -203,7 +251,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
             </p>
           </div>
 
-          {/* 구매 목록 테이블 */}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
@@ -305,7 +352,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
             </table>
           </div>
 
-          {/* 총 개수 표시 */}
           {purchases.length > 0 && (
             <div className="mt-4 text-right text-gray-600" style={{ fontSize: '13px' }}>
               총 <strong style={{ color: '#249689' }}>{purchases.length}</strong>건
@@ -314,7 +360,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
         </div>
       </div>
 
-      {/* 상세 정보 모달 - 동일인의 모든 구매이력 표시 */}
       {showModal && selectedPurchase && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -338,7 +383,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
             </div>
 
             <div className="space-y-3">
-              {/* 구매자 정보 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
                 <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '16px' }}>
                   👤 구매자 정보
@@ -371,7 +415,6 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
                 </div>
               </div>
 
-              {/* 전체 구매이력 그룹 */}
               <div className="border-2 rounded-lg p-3" style={{ borderColor: '#249689', backgroundColor: '#f0fffe' }}>
                 <h4 className="font-bold mb-2" style={{ color: '#249689', fontSize: '14px' }}>
                   📦 전체 구매이력
