@@ -1,4 +1,4 @@
-import { LogOut, FileText, Users, User, Building2 } from 'lucide-react'
+import { LogOut, FileText, Users, User, Building2, Package, Search } from 'lucide-react'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   // 지점관리자 여부 확인
@@ -74,6 +74,31 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               <FileText size={20} />
               근무일지
             </button>
+            
+            <button
+              onClick={() => {
+                console.log('송장출력 버튼 클릭')
+                onNavigate('shippingList')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Package size={20} />
+              송장출력
+            </button>
+            
+            <button
+              onClick={() => {
+                console.log('구매자정보조회 버튼 클릭')
+                onNavigate('purchaseHistory')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Search size={20} />
+              구매자정보조회
+            </button>
+            
             <button
               onClick={() => {
                 console.log('판매고객관리 버튼 클릭')
@@ -85,6 +110,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               <Users size={20} />
               판매고객관리
             </button>
+            
             <button
               onClick={() => {
                 console.log('내 정보관리 버튼 클릭')
@@ -96,6 +122,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               <User size={20} />
               내 정보관리
             </button>
+            
             <button
               onClick={() => {
                 console.log('로그아웃 버튼 클릭')

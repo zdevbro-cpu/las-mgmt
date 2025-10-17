@@ -10,6 +10,9 @@ import AdminWorkDiary from './components/AdminWorkDiary'
 import AdminCustomers from './components/AdminCustomers'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
+import ShippingList from './components/ShippingList'
+import PurchaseHistory from './components/PurchaseHistory'
+import Profile from './components/Profile'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('hero')
@@ -119,6 +122,20 @@ function App() {
           return null
         }
         return <SalesManagement user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+      
+      case 'shippingList':
+        if (!user) {
+          setCurrentPage('login')
+          return null
+        }
+        return <ShippingList user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+      
+      case 'purchaseHistory':
+        if (!user) {
+          setCurrentPage('login')
+          return null
+        }
+        return <PurchaseHistory user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
       
       case 'profile':
         if (!user) {
