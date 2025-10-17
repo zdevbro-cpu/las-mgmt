@@ -8,11 +8,16 @@ import AdminDashboard from './components/AdminDashboard'
 import AdminUsers from './components/AdminUsers'
 import AdminWorkDiary from './components/AdminWorkDiary'
 import AdminCustomers from './components/AdminCustomers'
-// ... 다른 컴포넌트 import
 
 function App() {
   const [currentPage, setCurrentPage] = useState('hero')
   const [user, setUser] = useState(null)
+
+  // 디버깅: 상태 변경 추적
+  useEffect(() => {
+    console.log('Current Page:', currentPage)
+    console.log('Current User:', user)
+  }, [currentPage, user])
 
   // 자동 로그인 핸들러
   const handleAutoLogin = (userData) => {
