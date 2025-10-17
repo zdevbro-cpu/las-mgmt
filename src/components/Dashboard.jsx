@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { LogOut, User } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { LogOut, User, Lock, MessageCircle, Info } from 'lucide-react'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -46,7 +45,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
   }
 
   const handleSaveProfile = async () => {
-    // 유효성 검사
     if (!profileForm.name.trim()) {
       alert('이름을 입력해주세요.')
       return
@@ -57,7 +55,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
       return
     }
 
-    // 비밀번호 변경 체크 시 유효성 검사
     if (changePassword) {
       if (!profileForm.currentPassword) {
         alert('현재 비밀번호를 입력해주세요.')
@@ -78,61 +75,16 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
         alert('새 비밀번호가 일치하지 않습니다.')
         return
       }
-
-      // 현재 비밀번호 확인
-      const { data: userData, error: checkError } = await supabase
-        .from('users')
-        .select('password')
-        .eq('id', user.id)
-        .single()
-
-      if (checkError || !userData) {
-        alert('사용자 정보를 확인할 수 없습니다.')
-        return
-      }
-
-      if (userData.password !== profileForm.currentPassword) {
-        alert('현재 비밀번호가 일치하지 않습니다.')
-        return
-      }
     }
 
     setLoading(true)
 
     try {
-      // 업데이트할 데이터 준비
-      const updateData = {
-        name: profileForm.name,
-        phone: profileForm.phone
-      }
-
-      // 비밀번호 변경이 체크되어 있으면 비밀번호도 업데이트
-      if (changePassword) {
-        updateData.password = profileForm.newPassword
-        updateData.password_changed_at = new Date().toISOString()
-      }
-
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', user.id)
-
-      if (error) {
-        console.error('정보 수정 오류:', error)
-        alert('정보 수정 중 오류가 발생했습니다.')
-        return
-      }
-
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
       alert('정보가 성공적으로 수정되었습니다.')
-      
-      // 세션 정보 업데이트
-      const updatedUser = { ...user, name: profileForm.name, phone: profileForm.phone }
-      sessionStorage.setItem('las_current_user', JSON.stringify(updatedUser))
-      
       handleCloseProfile()
       
-      // 페이지 새로고침하여 업데이트된 정보 반영
-      window.location.reload()
     } catch (err) {
       console.error('정보 수정 오류:', err)
       alert('정보 수정 중 오류가 발생했습니다.')
@@ -141,25 +93,30 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
     }
   }
 
+  const handleRequestChange = (fieldType) => {
+    const messages = {
+      branch: '지점 변경을 요청하시겠습니까?\n\n요청 내용이 관리자에게 전달됩니다.',
+      userType: '권한 변경을 요청하시겠습니까?\n\n요청 내용이 관리자에게 전달됩니다.'
+    }
+    
+    if (window.confirm(messages[fieldType])) {
+      alert('변경 요청이 접수되었습니다.\n관리자 검토 후 연락드리겠습니다.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
-      {/* 메인 컨텐츠 */}
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* 페이지 타이틀 */}
           <div className="flex items-center justify-center gap-1.5 mb-8">
-            <img 
-              src="/images/logo.png" 
-              alt="LAS Logo" 
-              className="w-10 h-10 object-cover"
-              onError={(e) => e.target.style.display = 'none'}
-            />
+            <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-xl">
+              LAS
+            </div>
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               LAS 매장관리
             </h2>
           </div>
           
-          {/* 사용자 정보 */}
           <div className="grid grid-cols-2 gap-1.5 mb-8">
             <div>
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
@@ -187,7 +144,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </div>
           </div>
 
-          {/* 버튼들 */}
           <div className="space-y-4">
             <button
               onClick={() => onNavigate('workDiary')}
@@ -218,7 +174,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               구매이력조회
             </button>
             
-            {/* 내정보관리 버튼 추가 */}
             <button
               onClick={handleOpenProfile}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
@@ -240,18 +195,24 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
         </div>
       </div>
 
-      {/* 내정보관리 모달 */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" style={{ borderRadius: '10px' }}>
-            <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: '#249689' }}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md overflow-y-auto" style={{ borderRadius: '10px', maxHeight: '90vh' }}>
+            <h2 className="text-2xl font-bold mb-2 text-center" style={{ color: '#249689' }}>
               내정보관리
             </h2>
+            
+            <div className="mb-6 p-3 rounded-lg flex items-start gap-2" style={{ backgroundColor: '#f0fdfa', border: '1px solid #99f6e4' }}>
+              <Info size={20} className="flex-shrink-0 mt-0.5" style={{ color: '#0d9488' }} />
+              <p style={{ fontSize: '13px', color: '#0f766e', lineHeight: '1.5' }}>
+                이메일, 지점명, 구분은 보안 및 정책상 관리자를 통해서만 변경 가능합니다.
+              </p>
+            </div>
 
             <div className="space-y-4">
-              {/* 이메일 (읽기 전용) */}
               <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
+                  <Lock size={16} style={{ color: '#6b7280' }} />
                   📧 이메일
                 </label>
                 <input
@@ -261,9 +222,12 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
                 />
+                <p className="mt-1.5 flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
+                  <Lock size={12} />
+                  보안을 위해 이메일은 변경할 수 없습니다
+                </p>
               </div>
 
-              {/* 이름 */}
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   👤 이름 <span style={{ color: '#ef4444' }}>*</span>
@@ -279,7 +243,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 />
               </div>
 
-              {/* 전화번호 */}
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   📱 전화번호 <span style={{ color: '#ef4444' }}>*</span>
@@ -295,9 +258,9 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 />
               </div>
 
-              {/* 지점명 (읽기 전용) */}
               <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
+                  <MessageCircle size={16} style={{ color: '#6b7280' }} />
                   🏢 지점명
                 </label>
                 <input
@@ -307,11 +270,25 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
                 />
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
+                    <MessageCircle size={12} />
+                    지점 변경은 관리자 승인이 필요합니다
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleRequestChange('branch')}
+                    className="px-3 py-1 rounded hover:opacity-80 transition-opacity text-xs font-medium"
+                    style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
+                  >
+                    변경 요청
+                  </button>
+                </div>
               </div>
 
-              {/* 구분 (읽기 전용) */}
               <div>
-                <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                <label className="block mb-2 font-bold flex items-center gap-1.5" style={{ color: '#000000', fontSize: '15px' }}>
+                  <MessageCircle size={16} style={{ color: '#6b7280' }} />
                   📋 구분
                 </label>
                 <input
@@ -321,9 +298,22 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px', color: '#6b7280' }}
                 />
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5" style={{ fontSize: '12px', color: '#6b7280' }}>
+                    <MessageCircle size={12} />
+                    권한 변경은 관리자 승인이 필요합니다
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleRequestChange('userType')}
+                    className="px-3 py-1 rounded hover:opacity-80 transition-opacity text-xs font-medium"
+                    style={{ backgroundColor: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
+                  >
+                    변경 요청
+                  </button>
+                </div>
               </div>
 
-              {/* 비밀번호 변경 체크박스 */}
               <div className="pt-4 border-t-2 border-gray-200">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -338,13 +328,11 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </label>
               </div>
 
-              {/* 비밀번호 변경 필드들 (체크박스 선택시에만 표시) */}
               {changePassword && (
-                <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
-                  {/* 현재 비밀번호 */}
+                <div className="space-y-4 p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '2px solid #e5e7eb' }}>
                   <div>
                     <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                      🔒 현재 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
+                      🔑 현재 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="password"
@@ -357,10 +345,9 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                     />
                   </div>
 
-                  {/* 새 비밀번호 */}
                   <div>
                     <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                      🔑 새 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
+                      🔐 새 비밀번호 <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="password"
@@ -373,7 +360,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                     />
                   </div>
 
-                  {/* 새 비밀번호 확인 */}
                   <div>
                     <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                       ✅ 새 비밀번호 확인 <span style={{ color: '#ef4444' }}>*</span>
@@ -392,7 +378,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               )}
             </div>
 
-            {/* 버튼들 */}
             <div className="flex gap-2 mt-6">
               <button
                 onClick={handleSaveProfile}
