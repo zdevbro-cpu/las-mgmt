@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { LogOut, Building2, Edit2, Trash2, Plus, X, Shield } from 'lucide-react'
+import { LogOut, Building2, Edit2, Trash2, Plus, X, Shield, Users, FileText, Package } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function AdminDashboard({ user, onNavigate, onLogout }) {
@@ -75,7 +75,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
   }
 
   const handleSaveBranch = async () => {
-    // 필수 입력 검증
     if (!branchForm.name.trim()) {
       alert('지점명을 입력해주세요.')
       return
@@ -87,7 +86,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
 
     try {
       if (editingBranch) {
-        // 수정
         const updateData = {
           name: branchForm.name.trim(),
           manager_name: branchForm.manager_name.trim()
@@ -109,7 +107,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
         }
         alert('지점 정보가 수정되었습니다.')
       } else {
-        // 신규 등록
         const insertData = {
           name: branchForm.name.trim(),
           manager_name: branchForm.manager_name.trim(),
@@ -132,7 +129,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
           return
         }
 
-        // 점장 이메일이 있으면 해당 사용자를 지점관리자로 권한 부여
         if (branchForm.email.trim()) {
           const { error: updateUserError } = await supabase
             .from('users')
@@ -234,23 +230,26 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
             </button>
             <button
               onClick={() => onNavigate('adminUsers')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
+              <Users size={20} />
               회원관리
             </button>
             <button
               onClick={() => onNavigate('adminWorkDiary')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
+              <FileText size={20} />
               근무일지관리
             </button>
             <button
               onClick={() => onNavigate('adminCustomers')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
+              <Package size={20} />
               구매자정보관리
             </button>
             <button

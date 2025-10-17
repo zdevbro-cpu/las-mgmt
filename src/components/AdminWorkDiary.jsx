@@ -32,30 +32,53 @@ export default function AdminWorkDiary({ user, onNavigate }) {
   const loadWorkDiaries = async () => {
     setLoading(true)
     try {
-      let query = supabase
+      console.log('📊 근무일지 로딩 시작...')
+      console.log('👤 현재 사용자:', user)
+      
+      // ✅ 먼저 기본 쿼리로 데이터 가져오기
+      const { data, error } = await supabase
         .from('work_diaries')
-        .select(`
-          *,
-          users:user_id (
-            name,
-            branch,
-            user_type
-          )
-        `)
+        .select('*')
         .order('work_date', { ascending: false })
       
-      // 지점관리자는 자신의 지점만 볼 수 있음
-      if (user?.user_type === '지점관리자') {
-        query = query.eq('users.branch', user.branch)
+      if (error) {
+        console.error('❌ Supabase 오류:', error)
+        throw error
       }
       
-      const { data, error } = await query
+      console.log('✅ 근무일지 데이터:', data)
       
-      if (error) throw error
+      // ✅ 사용자 정보를 별도로 가져와서 매칭
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(d => d.user_id))]
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, branch, user_type')
+          .in('id', userIds)
+        
+        if (usersError) {
+          console.warn('⚠️ 사용자 정보 로드 실패:', usersError)
+        } else {
+          // 데이터에 사용자 정보 추가
+          const enrichedData = data.map(diary => {
+            const userInfo = usersData.find(u => u.id === diary.user_id)
+            return {
+              ...diary,
+              users: userInfo || null
+            }
+          })
+          
+          setWorkDiaries(enrichedData)
+          console.log('✅ 사용자 정보가 포함된 근무일지:', enrichedData)
+          return
+        }
+      }
+      
       setWorkDiaries(data || [])
+      
     } catch (err) {
-      console.error('근무일지 로드 오류:', err)
-      alert('근무일지를 불러오는데 실패했습니다.')
+      console.error('❌ 근무일지 로드 오류:', err)
+      alert(`근무일지를 불러오는데 실패했습니다.\n오류: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -64,6 +87,12 @@ export default function AdminWorkDiary({ user, onNavigate }) {
   const filteredDiaries = workDiaries.filter(diary => {
     const matchesSearch = diary.users?.name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesBranch = !filterBranch || diary.users?.branch === filterBranch
+    
+    // 지점관리자는 자신의 지점만 볼 수 있음
+    if (user?.user_type === '지점관리자') {
+      return matchesSearch && matchesBranch && diary.users?.branch === user.branch
+    }
+    
     return matchesSearch && matchesBranch
   })
 
@@ -112,7 +141,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
               />
             </div>
             
-            {user?.user_type === '상위관리자' && (
+            {(user?.user_type === '시스템관리자' || user?.user_type === '관리자') && (
               <div className="flex items-center gap-2">
                 <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   <Building2 size={18} className="inline mr-1" />
@@ -137,6 +166,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
             <button 
               onClick={loadWorkDiaries}
               className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              title="새로고침"
             >
               🔄
             </button>
