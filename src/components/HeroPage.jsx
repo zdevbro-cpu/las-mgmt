@@ -19,15 +19,6 @@ export default function HeroPage({ onNavigate }) {
             </h1>
           </div>
           
-          <button
-            onClick={() => window.close()} 
-            className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg hover:bg-gray-100 transition-colors"
-            // 버튼 패딩, 텍스트 크기 조정 
-            style={{ color: '#000000', border: '2px solid #7f95eb' }}
-          >
-            <LogOut size={16} /> {/* 아이콘 크기 조정 */}
-            <span className="font-medium"></span> {/* 버튼 텍스트 추가 */}
-          </button>
         </div>
 
         {/* 중앙 컨텐츠 */}
