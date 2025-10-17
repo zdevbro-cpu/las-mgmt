@@ -27,8 +27,11 @@ function App() {
     console.log('Auto login with user:', userData)
     setUser(userData)
     
-    if (userData.user_type === '상위관리자') {
+    // ✅ 사용자 유형에 따라 분기
+    if (userData.user_type === '시스템관리자') {
       setCurrentPage('adminDashboard')
+    } else if (userData.user_type === '점장') {
+      setCurrentPage('dashboard') // 점장도 dashboard 사용 (또는 별도 페이지)
     } else {
       setCurrentPage('dashboard')
     }
@@ -54,8 +57,12 @@ function App() {
   const handleLogin = (userData) => {
     console.log('Login with user:', userData)
     setUser(userData)
-    if (userData.user_type === '상위관리자') {
+    
+    // ✅ 사용자 유형에 따라 분기
+    if (userData.user_type === '시스템관리자') {
       setCurrentPage('adminDashboard')
+    } else if (userData.user_type === '점장') {
+      setCurrentPage('dashboard') // 점장도 dashboard 사용 (또는 별도 페이지)
     } else {
       setCurrentPage('dashboard')
     }
@@ -86,11 +93,23 @@ function App() {
           setCurrentPage('login')
           return null
         }
+        // ✅ 시스템관리자만 접근 가능
+        if (user.user_type !== '시스템관리자') {
+          alert('접근 권한이 없습니다.')
+          setCurrentPage('dashboard')
+          return null
+        }
         return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
       
       case 'adminUsers':
         if (!user) {
           setCurrentPage('login')
+          return null
+        }
+        // ✅ 시스템관리자만 접근 가능
+        if (user.user_type !== '시스템관리자') {
+          alert('접근 권한이 없습니다.')
+          setCurrentPage('dashboard')
           return null
         }
         return <AdminUsers user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
@@ -100,11 +119,23 @@ function App() {
           setCurrentPage('login')
           return null
         }
+        // ✅ 시스템관리자만 접근 가능
+        if (user.user_type !== '시스템관리자') {
+          alert('접근 권한이 없습니다.')
+          setCurrentPage('dashboard')
+          return null
+        }
         return <AdminWorkDiary user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
       
       case 'adminCustomers':
         if (!user) {
           setCurrentPage('login')
+          return null
+        }
+        // ✅ 시스템관리자만 접근 가능
+        if (user.user_type !== '시스템관리자') {
+          alert('접근 권한이 없습니다.')
+          setCurrentPage('dashboard')
           return null
         }
         return <AdminCustomers user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
@@ -156,7 +187,14 @@ function App() {
               </div>
               <p className="text-gray-500 text-sm mb-4">상세 프로필 페이지는 준비중입니다.</p>
               <button
-                onClick={() => handleNavigate('dashboard')}
+                onClick={() => {
+                  // ✅ 사용자 유형에 따라 돌아갈 곳 결정
+                  if (user.user_type === '시스템관리자') {
+                    handleNavigate('adminDashboard')
+                  } else {
+                    handleNavigate('dashboard')
+                  }
+                }}
                 className="w-full py-2 text-white font-bold rounded-lg"
                 style={{ backgroundColor: '#249689' }}
               >
@@ -168,7 +206,8 @@ function App() {
       
       default:
         if (user) {
-          if (user.user_type === '상위관리자') {
+          // ✅ 사용자 유형에 따라 기본 페이지 결정
+          if (user.user_type === '시스템관리자') {
             return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
           } else {
             return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />

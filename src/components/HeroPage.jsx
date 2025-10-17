@@ -35,11 +35,13 @@ export default function HeroPage({ onNavigate, onAutoLogin }) {
         }
 
         if (userData && userData.status === 'approved') {
-          // 승인된 사용자면 자동 로그인
+          // ✅ 승인된 사용자면 자동 로그인 (user_type 체크는 App.jsx에서 처리)
+          console.log('자동 로그인:', userData.name, '/', userData.user_type)
           if (onAutoLogin) {
             onAutoLogin(userData)
           }
         } else {
+          console.log('승인 대기 중인 사용자:', userData?.name)
           setIsChecking(false)
         }
       } else {
