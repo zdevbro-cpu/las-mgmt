@@ -29,56 +29,40 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     }
   }
 
-  const loadWorkDiaries = async () => {
+    const loadWorkDiaries = async () => {
     setLoading(true)
     try {
       console.log('📊 근무일지 로딩 시작...')
-      console.log('👤 현재 사용자:', user)
       
-      // ✅ 먼저 기본 쿼리로 데이터 가져오기
+      // ✅ 테이블이 없는 경우 처리
       const { data, error } = await supabase
         .from('work_diaries')
         .select('*')
         .order('work_date', { ascending: false })
       
       if (error) {
-        console.error('❌ Supabase 오류:', error)
+        // 테이블이 없는 경우
+        if (error.code === 'PGRST200' || error.message.includes('does not exist')) {
+          console.warn('⚠️ work_diaries 테이블이 없습니다. 빈 배열 반환.')
+          setWorkDiaries([])
+          return
+        }
         throw error
       }
       
       console.log('✅ 근무일지 데이터:', data)
       
-      // ✅ 사용자 정보를 별도로 가져와서 매칭
-      if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(d => d.user_id))]
-        const { data: usersData, error: usersError } = await supabase
-          .from('users')
-          .select('id, name, branch, user_type')
-          .in('id', userIds)
-        
-        if (usersError) {
-          console.warn('⚠️ 사용자 정보 로드 실패:', usersError)
-        } else {
-          // 데이터에 사용자 정보 추가
-          const enrichedData = data.map(diary => {
-            const userInfo = usersData.find(u => u.id === diary.user_id)
-            return {
-              ...diary,
-              users: userInfo || null
-            }
-          })
-          
-          setWorkDiaries(enrichedData)
-          console.log('✅ 사용자 정보가 포함된 근무일지:', enrichedData)
-          return
-        }
-      }
-      
-      setWorkDiaries(data || [])
+      // 사용자 정보 추가...
       
     } catch (err) {
       console.error('❌ 근무일지 로드 오류:', err)
-      alert(`근무일지를 불러오는데 실패했습니다.\n오류: ${err.message}`)
+      // ✅ 사용자에게 친절한 메시지
+      if (err.message?.includes('does not exist') || err.message?.includes('schema cache')) {
+        alert('근무일지 테이블이 아직 생성되지 않았습니다.\n관리자에게 문의하세요.')
+      } else {
+        alert(`근무일지를 불러오는데 실패했습니다.\n오류: ${err.message}`)
+      }
+      setWorkDiaries([])
     } finally {
       setLoading(false)
     }
