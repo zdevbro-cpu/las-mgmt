@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabase'
 
-export default function SalesManagement() {
+export default function SalesManagement({ user, onNavigate }) {
   const [formData, setFormData] = useState({
     customerName: '',
     age: '',
@@ -11,28 +12,23 @@ export default function SalesManagement() {
     quantity: '',
     depositor: '',
     depositBank: '',
-    orderDetails: ''
+    orderDetails: '',
+    needsShipping: false  // 배송 여부
   })
   const [loading, setLoading] = useState(false)
 
-  // 데모 사용자 정보
-  const user = {
-    branch: '강남지점',
-    name: '홍길동'
-  }
-
   const handleChange = (e) => {
-    const { name, value } = e.target
+    const { name, value, type, checked } = e.target
     setFormData({
       ...formData,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     })
   }
 
-  const handleSubmit = () => {
-    // 필수 필드 검증
-    if (!formData.customerName || !formData.address || !formData.phone || !formData.quantity) {
-      alert('필수 항목을 모두 입력해주세요.')
+  const handleSubmit = async () => {
+    // 결제 정보 검증
+    if (!formData.quantity) {
+      alert('판매수량을 입력해주세요.')
       return
     }
 
@@ -41,29 +37,44 @@ export default function SalesManagement() {
       return
     }
 
+    // 배송 선택 시 필수 정보 검증
+    if (formData.needsShipping) {
+      if (!formData.customerName || !formData.phone || !formData.address) {
+        alert('배송을 선택하셨습니다. 이름, 연락처, 주소를 모두 입력해주세요.')
+        return
+      }
+    }
+
     setLoading(true)
     
-    setTimeout(() => {
+    try {
       const saleEntry = {
-        id: Date.now().toString(),
-        user_id: 'demo-user',
-        user_name: user.name,
-        user_branch: user.branch,
-        customer_name: formData.customerName,
+        user_id: user?.id || 'demo-user',
+        user_name: user?.name || '홍길동',
+        user_branch: user?.branch || '강남지점',
+        customer_name: formData.customerName || null,
         age: parseInt(formData.age) || null,
-        address: formData.address,
-        customer_phone: formData.phone,
-        customer_email: formData.email,
+        address: formData.address || null,
+        customer_phone: formData.phone || null,
+        customer_email: formData.email || null,
         payment_method: formData.paymentMethod,
-        quantity: parseInt(formData.quantity) || null,
+        quantity: parseInt(formData.quantity),
         depositor: formData.depositor || null,
         deposit_bank: formData.depositBank || null,
         order_info: formData.orderDetails || null,
-        branch_name: user.branch,
+        branch_name: user?.branch || '강남지점',
+        needs_shipping: formData.needsShipping,
         created_at: new Date().toISOString()
       }
 
-      console.log('판매 정보 저장:', saleEntry)
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([saleEntry])
+        .select()
+
+      if (error) throw error
+
+      console.log('판매 정보 저장:', data)
       alert('판매 정보가 저장되었습니다!')
       
       // 폼 초기화
@@ -77,15 +88,15 @@ export default function SalesManagement() {
         quantity: '',
         depositor: '',
         depositBank: '',
-        orderDetails: ''
+        orderDetails: '',
+        needsShipping: false
       })
-      
+    } catch (err) {
+      console.error('저장 오류:', err)
+      alert('저장 중 오류가 발생했습니다: ' + err.message)
+    } finally {
       setLoading(false)
-    }, 500)
-  }
-
-  const handleGoToDashboard = () => {
-    window.location.href = '/dashboard'
+    }
   }
 
   return (
@@ -97,9 +108,12 @@ export default function SalesManagement() {
         
         <div className="flex flex-col items-center justify-center mb-4">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-xl">
-              LAS
-            </div>
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-10 h-10 object-cover"
+              onError={(e) => e.target.style.display = 'none'}
+            />
             <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               LAS Book Store
             </h1>
@@ -113,7 +127,7 @@ export default function SalesManagement() {
             </label>
             <input
               type="text"
-              value={user.branch}
+              value={user?.branch || '강남지점'}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -125,7 +139,7 @@ export default function SalesManagement() {
             </label>
             <input
               type="text"
-              value={user.name}
+              value={user?.name || '홍길동'}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -134,6 +148,28 @@ export default function SalesManagement() {
         </div>
 
         <div className="space-y-3">
+          {/* 배송 여부 선택 */}
+          <div className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                name="needsShipping"
+                checked={formData.needsShipping}
+                onChange={handleChange}
+                className="w-5 h-5"
+              />
+              <span className="font-bold" style={{ color: '#249689', fontSize: '16px' }}>
+                📦 배송이 필요합니다
+              </span>
+            </label>
+            <p className="text-xs text-gray-600 mt-2 ml-7">
+              {formData.needsShipping 
+                ? '✓ 배송 선택: 이름, 연락처, 주소가 필수입니다' 
+                : '배송을 선택하지 않으면 구매자 정보는 선택사항입니다'}
+            </p>
+          </div>
+
+          {/* 구매자 기본정보 */}
           <div className="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
             <h3 className="font-bold mb-4 text-lg" style={{ color: '#249689', fontSize: '18px' }}>
               구매자 기본정보
@@ -141,7 +177,7 @@ export default function SalesManagement() {
             <div className="space-y-3">
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  이름 <span style={{ color: '#ef4444' }}>*</span>
+                  이름 {formData.needsShipping && <span style={{ color: '#ef4444' }}>*</span>}
                 </label>
                 <input
                   type="text"
@@ -171,7 +207,7 @@ export default function SalesManagement() {
               </div>
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  주소 <span style={{ color: '#ef4444' }}>*</span>
+                  주소 {formData.needsShipping && <span style={{ color: '#ef4444' }}>*</span>}
                 </label>
                 <input
                   type="text"
@@ -185,7 +221,7 @@ export default function SalesManagement() {
               </div>
               <div>
                 <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                  연락처 <span style={{ color: '#ef4444' }}>*</span>
+                  연락처 {formData.needsShipping && <span style={{ color: '#ef4444' }}>*</span>}
                 </label>
                 <input
                   type="tel"
@@ -214,6 +250,7 @@ export default function SalesManagement() {
             </div>
           </div>
 
+          {/* 결제정보 */}
           <div className="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
             <h3 className="font-bold mb-4 text-lg" style={{ color: '#249689', fontSize: '18px' }}>
               결제정보
@@ -296,6 +333,7 @@ export default function SalesManagement() {
             </div>
           </div>
 
+          {/* 주문정보 */}
           <div className="border-2 border-gray-200 rounded-lg p-6 bg-gray-50">
             <h3 className="font-bold mb-4 text-lg" style={{ color: '#249689', fontSize: '18px' }}>
               주문정보
@@ -321,7 +359,7 @@ export default function SalesManagement() {
               {loading ? '저장 중...' : '저장'}
             </button>
             <button
-              onClick={handleGoToDashboard}
+              onClick={() => onNavigate('dashboard')}
               disabled={loading}
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}

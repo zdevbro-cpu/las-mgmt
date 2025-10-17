@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mail, Lock, Phone } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -12,8 +12,32 @@ export default function Signup({ onNavigate }) {
     phone: '',
     userType: '점주'
   })
+  const [branches, setBranches] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingBranches, setLoadingBranches] = useState(true)
+
+  useEffect(() => {
+    loadBranches()
+  }, [])
+
+  const loadBranches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      setBranches(data || [])
+    } catch (err) {
+      console.error('지점 목록 로드 오류:', err)
+      setError('지점 목록을 불러오는데 실패했습니다.')
+    } finally {
+      setLoadingBranches(false)
+    }
+  }
 
   const handleChange = (e) => {
     setFormData({
@@ -72,7 +96,7 @@ export default function Signup({ onNavigate }) {
         branch,
         phone,
         user_type: userType,
-        status: 'pending', // 승인 대기
+        status: 'pending',
         created_at: new Date().toISOString(),
         approved_at: null
       }
@@ -96,6 +120,7 @@ export default function Signup({ onNavigate }) {
         `관리자 승인 후 로그인이 가능합니다.\n` +
         `승인 요청이 관리자에게 전송되었습니다.\n\n` +
         `이메일: ${email}\n` +
+        `지점: ${branch}\n` +
         `구분: ${userType}`
       )
       
@@ -109,15 +134,12 @@ export default function Signup({ onNavigate }) {
   }
 
   return (
-
     <div className="flex items-start justify-center min-h-screen bg-gray-50 p-2">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mt-10">
-        {/* 안내 텍스트 */}
         <p className="text-center mb-2" style={{ color: '#249689', fontSize: '15px' }}>
           LAS 매장관리 시스템에 오신것을 환영합니다.
         </p>
 
-        {/* 로고 + 타이틀 */}
         <div className="flex items-center justify-center gap-1.5 mb-4">
           <img 
             src="/images/logo.png" 
@@ -130,16 +152,13 @@ export default function Signup({ onNavigate }) {
           </h1>
         </div>
 
-        {/* 에러 메시지 */}
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        {/* 회원가입 폼 */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 이메일 */}
           <div>
             <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Mail size={18} />
@@ -156,7 +175,6 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 비밀번호 */}
           <div>
             <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Lock size={18} />
@@ -173,7 +191,6 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 비밀번호 확인 */}
           <div>
             <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Lock size={18} />
@@ -190,7 +207,6 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 이름 */}
           <div>
             <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               이름
@@ -206,27 +222,40 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 지점명 */}
           <div>
             <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               지점명
             </label>
-            <input
-              type="text"
-              name="branch"
-              value={formData.branch}
-              onChange={handleChange}
-              placeholder="지점명을 입력하세요"
-              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
-              style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
-            />
+            {loadingBranches ? (
+              <div className="w-full px-4 py-2 border border-gray-300 bg-gray-50 text-gray-400" style={{ borderRadius: '10px', fontSize: '15px' }}>
+                지점 목록 불러오는 중...
+              </div>
+            ) : branches.length === 0 ? (
+              <div className="w-full px-4 py-2 border border-red-300 bg-red-50 text-red-600" style={{ borderRadius: '10px', fontSize: '14px' }}>
+                등록된 지점이 없습니다. 관리자에게 문의하세요.
+              </div>
+            ) : (
+              <select
+                name="branch"
+                value={formData.branch}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+                style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
+              >
+                <option value="">지점을 선택하세요</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.name}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {/* 핸드폰 */}
           <div>
             <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
               <Phone size={18} />
-              핸드폰 번호를 입력하세요
+              핸드폰 번호
             </label>
             <input
               type="tel"
@@ -239,7 +268,6 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 구분 */}
           <div>
             <label className="mb-2 font-bold block" style={{ color: '#000000', fontSize: '15px' }}>
               구분
@@ -270,14 +298,14 @@ export default function Signup({ onNavigate }) {
             </div>
           </div>
 
-          {/* 버튼들 */}
           <div className="flex gap-2 pt-4">
             <button
               type="submit"
-              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              disabled={loading || loadingBranches || branches.length === 0}
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              회원가입
+              {loading ? '처리 중...' : '회원가입'}
             </button>
             <button
               type="button"
@@ -290,7 +318,6 @@ export default function Signup({ onNavigate }) {
           </div>
         </form>
 
-        {/* 로그인 링크 */}
         <div className="mt-6 text-center">
           <p style={{ color: '#000000', fontSize: '15px' }}>
             회원 가입하셨나요?{' '}
