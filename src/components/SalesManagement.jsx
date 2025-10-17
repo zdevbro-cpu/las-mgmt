@@ -26,76 +26,65 @@ export default function SalesManagement({ user, onNavigate }) {
   }
 
   const handleSubmit = async () => {
-    // 결제 정보 검증
-    if (!formData.quantity) {
-      alert('판매수량을 입력해주세요.')
-      return
-    }
-
-    if (formData.paymentMethod === '입금' && (!formData.depositor || !formData.depositBank)) {
-      alert('입금 결제 시 입금자명과 입금기관명을 입력해주세요.')
-      return
-    }
-
-    // 배송 선택 시 필수 정보 검증
-    if (formData.needsShipping) {
-      if (!formData.customerName || !formData.phone || !formData.address) {
-        alert('배송을 선택하셨습니다. 이름, 연락처, 주소를 모두 입력해주세요.')
-        return
-      }
-    }
-
-    setLoading(true)
+    console.log('=== 저장 시작 ===')
+    console.log('User:', user)
+    console.log('FormData:', formData)
     
     try {
-      const saleEntry = {
-        user_id: user?.id || 'demo-user',
-        user_name: user?.name || '홍길동',
-        user_branch: user?.branch || '강남지점',
-        customer_name: formData.customerName || null,
-        age: parseInt(formData.age) || null,
+      const insertData = {
+        user_id: user?.id || null,
+        branch_name: user?.branch || null,
+        user_name: user?.name || null,
+        user_branch: user?.branch || null,
+        customer_name: formData.customer_name || null,
+        customer_phone: formData.customer_phone || null,
+        customer_email: formData.customer_email || null,
         address: formData.address || null,
-        customer_phone: formData.phone || null,
-        customer_email: formData.email || null,
-        payment_method: formData.paymentMethod,
-        quantity: parseInt(formData.quantity),
+        phone: formData.phone || null,
+        email: formData.email || null,
+        payment_method: formData.payment_method || null,
+        quantity: formData.quantity || null,
         depositor: formData.depositor || null,
-        deposit_bank: formData.depositBank || null,
-        order_info: formData.orderDetails || null,
-        branch_name: user?.branch || '강남지점',
-        needs_shipping: formData.needsShipping,
-        created_at: new Date().toISOString()
+        deposit_bank: formData.deposit_bank || null,
+        order_details: formData.order_details || null,
+        order_info: formData.order_info || null,
+        age: formData.age || null,
+        needs_shipping: formData.needs_shipping || false
       }
-
+      
+      console.log('Insert Data:', insertData)
+      
       const { data, error } = await supabase
         .from('sales')
-        .insert([saleEntry])
+        .insert([insertData])
         .select()
-
-      if (error) throw error
-
-      console.log('판매 정보 저장:', data)
-      alert('판매 정보가 저장되었습니다!')
+      
+      if (error) {
+        console.error('Supabase Error:', error)
+        throw error
+      }
+      
+      console.log('저장 성공:', data)
+      alert('저장되었습니다')
       
       // 폼 초기화
       setFormData({
-        customerName: '',
-        age: '',
+        customer_name: '',
+        customer_phone: '',
+        customer_email: '',
         address: '',
-        phone: '',
-        email: '',
-        paymentMethod: '카드',
+        order_info: '',
         quantity: '',
-        depositor: '',
-        depositBank: '',
-        orderDetails: '',
-        needsShipping: false
+        payment_method: '',
+        // ... 나머지 필드 초기화
       })
+      
     } catch (err) {
-      console.error('저장 오류:', err)
+      console.error('=== 저장 오류 상세 ===')
+      console.error('Error:', err)
+      console.error('Error message:', err.message)
+      console.error('Error details:', err.details)
       alert('저장 중 오류가 발생했습니다: ' + err.message)
-    } finally {
-      setLoading(false)
     }
   }
 
