@@ -32,23 +32,32 @@ export default function AdminCustomers({ user, onNavigate }) {
   const loadCustomers = async () => {
     setLoading(true)
     try {
+      console.log('📊 구매자 정보 로딩 시작...')
+      
+      // ✅ sales 테이블에서 데이터 가져오기
       let query = supabase
-        .from('customers')
+        .from('sales')
         .select('*')
         .order('created_at', { ascending: false })
       
       // 지점관리자는 자신의 지점만 볼 수 있음
       if (user?.user_type === '지점관리자') {
-        query = query.eq('branch', user.branch)
+        query = query.eq('branch_name', user.branch)
       }
       
       const { data, error } = await query
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Supabase 오류:', error)
+        throw error
+      }
+      
+      console.log('✅ 구매자 데이터:', data)
       setCustomers(data || [])
+      
     } catch (err) {
-      console.error('구매자 정보 로드 오류:', err)
-      alert('구매자 정보를 불러오는데 실패했습니다.')
+      console.error('❌ 구매자 정보 로드 오류:', err)
+      alert(`구매자 정보를 불러오는데 실패했습니다.\n오류: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -56,10 +65,14 @@ export default function AdminCustomers({ user, onNavigate }) {
 
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
-      customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone?.includes(searchTerm) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesBranch = !filterBranch || customer.branch === filterBranch
+      customer.customer_phone?.includes(searchTerm) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.customer_email?.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesBranch = !filterBranch || customer.branch_name === filterBranch
+    
     return matchesSearch && matchesBranch
   })
 
@@ -108,7 +121,7 @@ export default function AdminCustomers({ user, onNavigate }) {
               />
             </div>
             
-            {user?.user_type === '상위관리자' && (
+            {(user?.user_type === '시스템관리자' || user?.user_type === '관리자') && (
               <div className="flex items-center gap-2">
                 <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   <Building2 size={18} className="inline mr-1" />
@@ -133,6 +146,7 @@ export default function AdminCustomers({ user, onNavigate }) {
             <button 
               onClick={loadCustomers}
               className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+              title="새로고침"
             >
               🔄
             </button>
@@ -158,6 +172,12 @@ export default function AdminCustomers({ user, onNavigate }) {
                     주소
                   </th>
                   <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                    결제방법
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                    수량
+                  </th>
+                  <th className="px-4 py-3 text-left font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     등록일
                   </th>
                 </tr>
@@ -165,13 +185,13 @@ export default function AdminCustomers({ user, onNavigate }) {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
                       로딩 중...
                     </td>
                   </tr>
                 ) : filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-8 text-gray-500">
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
                       구매자 정보가 없습니다.
                     </td>
                   </tr>
@@ -179,19 +199,25 @@ export default function AdminCustomers({ user, onNavigate }) {
                   filteredCustomers.map((customer) => (
                     <tr key={customer.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {customer.branch || '-'}
+                        {customer.branch_name || customer.user_branch || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {customer.name || '-'}
+                        {customer.customer_name || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {customer.phone || '-'}
+                        {customer.phone || customer.customer_phone || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {customer.email || '-'}
+                        {customer.email || customer.customer_email || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {customer.address || '-'}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                        {customer.payment_method || '-'}
+                      </td>
+                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>
+                        {customer.quantity || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         {customer.created_at ? new Date(customer.created_at).toLocaleDateString('ko-KR') : '-'}
