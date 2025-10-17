@@ -112,12 +112,55 @@ export default function AdminUsers({ user, onNavigate }) {
     try {
       // 실제 구현시:
       // 1. change_requests 테이블의 status를 'approved'로 변경
+      // await supabase.from('change_requests').update({ 
+      //   status: 'approved',
+      //   processed_at: new Date().toISOString(),
+      //   processed_by: user.id
+      // }).eq('id', request.id)
+      
       // 2. users 테이블의 해당 필드 업데이트
-      // 3. processed_at, processed_by 업데이트
+      // const updateData = {}
+      // if (request.request_type === 'branch') {
+      //   updateData.branch = request.requested_value
+      // } else if (request.request_type === 'user_type') {
+      //   updateData.user_type = request.requested_value
+      // }
+      // await supabase.from('users').update(updateData).eq('id', request.user_id)
+      
+      // 3. users 목록에서 해당 사용자 정보 업데이트 (데모용)
+      setUsers(prevUsers => 
+        prevUsers.map(u => {
+          if (u.id === request.user_id) {
+            if (request.request_type === 'branch') {
+              return { ...u, branch: request.requested_value }
+            } else if (request.request_type === 'user_type') {
+              return { ...u, user_type: request.requested_value }
+            }
+          }
+          return u
+        })
+      )
+      
+      // 4. changeRequests에서 해당 요청 제거
+      setChangeRequests(prevRequests => 
+        prevRequests.filter(r => r.id !== request.id)
+      )
       
       alert(`${getRequestInfo(request.request_type).label} 요청이 승인되었습니다.`)
-      loadChangeRequests()
-      setSelectedRequestsModal(null)
+      
+      // 모달 내 남은 요청 확인
+      const remainingRequests = changeRequests.filter(
+        r => r.user_id === request.user_id && r.id !== request.id && r.status === 'pending'
+      )
+      
+      if (remainingRequests.length === 0) {
+        setSelectedRequestsModal(null)
+      } else {
+        setSelectedRequestsModal(prev => ({
+          ...prev,
+          requests: remainingRequests
+        }))
+      }
     } catch (err) {
       console.error('요청 승인 오류:', err)
       alert('요청 승인 중 오류가 발생했습니다.')
@@ -131,12 +174,33 @@ export default function AdminUsers({ user, onNavigate }) {
     try {
       // 실제 구현시:
       // 1. change_requests 테이블의 status를 'rejected'로 변경
-      // 2. reject_reason 필드에 사유 저장
-      // 3. processed_at, processed_by 업데이트
+      // await supabase.from('change_requests').update({ 
+      //   status: 'rejected',
+      //   reject_reason: reason,
+      //   processed_at: new Date().toISOString(),
+      //   processed_by: user.id
+      // }).eq('id', request.id)
+      
+      // 2. changeRequests에서 해당 요청 제거 (데모용)
+      setChangeRequests(prevRequests => 
+        prevRequests.filter(r => r.id !== request.id)
+      )
       
       alert(`${getRequestInfo(request.request_type).label} 요청이 거부되었습니다.`)
-      loadChangeRequests()
-      setSelectedRequestsModal(null)
+      
+      // 모달 내 남은 요청 확인
+      const remainingRequests = changeRequests.filter(
+        r => r.user_id === request.user_id && r.id !== request.id && r.status === 'pending'
+      )
+      
+      if (remainingRequests.length === 0) {
+        setSelectedRequestsModal(null)
+      } else {
+        setSelectedRequestsModal(prev => ({
+          ...prev,
+          requests: remainingRequests
+        }))
+      }
     } catch (err) {
       console.error('요청 거부 오류:', err)
       alert('요청 거부 중 오류가 발생했습니다.')
