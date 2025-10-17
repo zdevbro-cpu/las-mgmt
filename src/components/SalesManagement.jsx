@@ -29,8 +29,18 @@ export default function SalesManagement() {
     })
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = () => {
+    // 필수 필드 검증
+    if (!formData.customerName || !formData.address || !formData.phone || !formData.quantity) {
+      alert('필수 항목을 모두 입력해주세요.')
+      return
+    }
+
+    if (formData.paymentMethod === '입금' && (!formData.depositor || !formData.depositBank)) {
+      alert('입금 결제 시 입금자명과 입금기관명을 입력해주세요.')
+      return
+    }
+
     setLoading(true)
     
     setTimeout(() => {
@@ -72,6 +82,10 @@ export default function SalesManagement() {
       
       setLoading(false)
     }, 500)
+  }
+
+  const handleGoToDashboard = () => {
+    window.location.href = '/dashboard'
   }
 
   return (
@@ -135,7 +149,6 @@ export default function SalesManagement() {
                   value={formData.customerName}
                   onChange={handleChange}
                   placeholder="구매자 성함을 적어주세요"
-                  required
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
@@ -166,7 +179,6 @@ export default function SalesManagement() {
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="배송지 주소를 정확하게 적어주세요"
-                  required
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
@@ -181,7 +193,6 @@ export default function SalesManagement() {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="구매자 연락처를 적어주세요"
-                  required
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
@@ -244,7 +255,6 @@ export default function SalesManagement() {
                     value={formData.quantity}
                     onChange={handleChange}
                     placeholder="수량"
-                    required
                     min="1"
                     className="w-full px-4 py-2 border border-gray-300"
                     style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -262,7 +272,6 @@ export default function SalesManagement() {
                     onChange={handleChange}
                     placeholder="입금자명"
                     disabled={formData.paymentMethod === '카드'}
-                    required={formData.paymentMethod === '입금'}
                     className="w-full px-4 py-2 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
                     style={{ borderRadius: '10px', fontSize: '15px' }}
                   />
@@ -279,7 +288,6 @@ export default function SalesManagement() {
                     onChange={handleChange}
                     placeholder="입금기관명"
                     disabled={formData.paymentMethod === '카드'}
-                    required={formData.paymentMethod === '입금'}
                     className="w-full px-4 py-2 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
                     style={{ borderRadius: '10px', fontSize: '15px' }}
                   />
@@ -313,7 +321,7 @@ export default function SalesManagement() {
               {loading ? '저장 중...' : '저장'}
             </button>
             <button
-              onClick={() => alert('대시보드로 이동')}
+              onClick={handleGoToDashboard}
               disabled={loading}
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
