@@ -44,7 +44,7 @@ export default function HeroPage({ onNavigate }) {
           </div>
 
           {/* 로그인/회원가입 버튼 */}
-          <div className="flex flex-col gap-2 w-full px-10"> {/* 버튼을 세로로 정렬하고 너비를 꽉 채우도록 변경 */}
+          <div className="flex flex-col gap-2 w-full px-6"> {/* 버튼을 세로로 정렬하고 너비를 꽉 채우도록 변경 */}
             <button
               onClick={() => onNavigate('login')}
               className="px-8 py-2.5 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-opacity w-full" 
