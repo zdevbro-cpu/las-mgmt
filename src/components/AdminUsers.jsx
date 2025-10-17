@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Edit2, Trash2, Check, X, ArrowLeft, Key, AlertCircle } from 'lucide-react'
+import { supabase } from '../supabaseClient'
 
 export default function AdminUsers({ user, onNavigate }) {
   const [users, setUsers] = useState([])
@@ -20,18 +21,16 @@ export default function AdminUsers({ user, onNavigate }) {
   const loadUsers = async () => {
     setLoading(true)
     try {
-      // 실제 구현시 supabase 사용
-      // const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
       
-      // 데모 데이터
-      const demoUsers = [
-        { id: 1, name: '홍길동', email: 'hong@example.com', branch: '강남지점', phone: '010-1234-5678', user_type: '대리점', status: 'approved', created_at: '2025-10-15T10:00:00' },
-        { id: 2, name: '김철수', email: 'kim@example.com', branch: '서울지점', phone: '010-2345-6789', user_type: '정점', status: 'approved', created_at: '2025-10-16T11:00:00' },
-        { id: 3, name: '이영희', email: 'lee@example.com', branch: '부산지점', phone: '010-3456-7890', user_type: '대리점', status: 'pending', created_at: '2025-10-17T09:00:00' },
-      ]
-      setUsers(demoUsers)
+      if (error) throw error
+      setUsers(data || [])
     } catch (err) {
       console.error('사용자 목록 로드 오류:', err)
+      alert('사용자 목록을 불러오는데 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -39,43 +38,14 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const loadChangeRequests = async () => {
     try {
-      // 실제 구현시 supabase 사용
-      // const { data, error } = await supabase.from('change_requests').select('*').eq('status', 'pending')
+      const { data, error } = await supabase
+        .from('change_requests')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
       
-      // 데모 데이터
-      const demoRequests = [
-        {
-          id: 1,
-          user_id: 1,
-          request_type: 'branch',
-          current_value: '강남지점',
-          requested_value: '부산지점',
-          reason: '부산으로 발령받았습니다',
-          status: 'pending',
-          created_at: '2025-10-17T10:30:00'
-        },
-        {
-          id: 2,
-          user_id: 1,
-          request_type: 'user_type',
-          current_value: '대리점',
-          requested_value: '정점',
-          reason: '승진하여 매니저가 되었습니다',
-          status: 'pending',
-          created_at: '2025-10-17T10:35:00'
-        },
-        {
-          id: 3,
-          user_id: 3,
-          request_type: 'branch',
-          current_value: '부산지점',
-          requested_value: '서울지점',
-          reason: '서울로 이동합니다',
-          status: 'pending',
-          created_at: '2025-10-16T14:20:00'
-        }
-      ]
-      setChangeRequests(demoRequests)
+      if (error) throw error
+      setChangeRequests(data || [])
     } catch (err) {
       console.error('변경 요청 로드 오류:', err)
     }
@@ -110,43 +80,38 @@ export default function AdminUsers({ user, onNavigate }) {
     if (!window.confirm('이 변경 요청을 승인하시겠습니까?')) return
 
     try {
-      // 실제 구현시:
       // 1. change_requests 테이블의 status를 'approved'로 변경
-      // await supabase.from('change_requests').update({ 
-      //   status: 'approved',
-      //   processed_at: new Date().toISOString(),
-      //   processed_by: user.id
-      // }).eq('id', request.id)
-      
-      // 2. users 테이블의 해당 필드 업데이트
-      // const updateData = {}
-      // if (request.request_type === 'branch') {
-      //   updateData.branch = request.requested_value
-      // } else if (request.request_type === 'user_type') {
-      //   updateData.user_type = request.requested_value
-      // }
-      // await supabase.from('users').update(updateData).eq('id', request.user_id)
-      
-      // 3. users 목록에서 해당 사용자 정보 업데이트 (데모용)
-      setUsers(prevUsers => 
-        prevUsers.map(u => {
-          if (u.id === request.user_id) {
-            if (request.request_type === 'branch') {
-              return { ...u, branch: request.requested_value }
-            } else if (request.request_type === 'user_type') {
-              return { ...u, user_type: request.requested_value }
-            }
-          }
-          return u
+      const { error: updateRequestError } = await supabase
+        .from('change_requests')
+        .update({ 
+          status: 'approved',
+          processed_at: new Date().toISOString(),
+          processed_by: user.id
         })
-      )
+        .eq('id', request.id)
       
-      // 4. changeRequests에서 해당 요청 제거
-      setChangeRequests(prevRequests => 
-        prevRequests.filter(r => r.id !== request.id)
-      )
+      if (updateRequestError) throw updateRequestError
+
+      // 2. users 테이블의 해당 필드 업데이트
+      const updateData = {}
+      if (request.request_type === 'branch') {
+        updateData.branch = request.requested_value
+      } else if (request.request_type === 'user_type') {
+        updateData.user_type = request.requested_value
+      }
       
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', request.user_id)
+      
+      if (updateUserError) throw updateUserError
+
       alert(`${getRequestInfo(request.request_type).label} 요청이 승인되었습니다.`)
+      
+      // 데이터 새로고침
+      await loadUsers()
+      await loadChangeRequests()
       
       // 모달 내 남은 요청 확인
       const remainingRequests = changeRequests.filter(
@@ -172,21 +137,22 @@ export default function AdminUsers({ user, onNavigate }) {
     if (!reason) return
 
     try {
-      // 실제 구현시:
-      // 1. change_requests 테이블의 status를 'rejected'로 변경
-      // await supabase.from('change_requests').update({ 
-      //   status: 'rejected',
-      //   reject_reason: reason,
-      //   processed_at: new Date().toISOString(),
-      //   processed_by: user.id
-      // }).eq('id', request.id)
+      const { error } = await supabase
+        .from('change_requests')
+        .update({ 
+          status: 'rejected',
+          reject_reason: reason,
+          processed_at: new Date().toISOString(),
+          processed_by: user.id
+        })
+        .eq('id', request.id)
       
-      // 2. changeRequests에서 해당 요청 제거 (데모용)
-      setChangeRequests(prevRequests => 
-        prevRequests.filter(r => r.id !== request.id)
-      )
-      
+      if (error) throw error
+
       alert(`${getRequestInfo(request.request_type).label} 요청이 거부되었습니다.`)
+      
+      // 데이터 새로고침
+      await loadChangeRequests()
       
       // 모달 내 남은 요청 확인
       const remainingRequests = changeRequests.filter(
@@ -209,6 +175,13 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const handleApprove = async (userId) => {
     try {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'approved' })
+        .eq('id', userId)
+      
+      if (error) throw error
+      
       alert('사용자가 승인되었습니다.')
       loadUsers()
     } catch (err) {
@@ -221,6 +194,13 @@ export default function AdminUsers({ user, onNavigate }) {
     if (!window.confirm('정말 거부하시겠습니까?')) return
     
     try {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: 'rejected' })
+        .eq('id', userId)
+      
+      if (error) throw error
+      
       alert('사용자 가입이 거부되었습니다.')
       loadUsers()
     } catch (err) {
@@ -243,6 +223,18 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const handleSaveUserEdit = async () => {
     try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: editForm.name,
+          branch: editForm.branch,
+          phone: editForm.phone,
+          email: editForm.email
+        })
+        .eq('id', editForm.id)
+      
+      if (error) throw error
+      
       alert('사용자 정보가 수정되었습니다.')
       setEditingUser(null)
       loadUsers()
@@ -256,6 +248,13 @@ export default function AdminUsers({ user, onNavigate }) {
     if (!window.confirm('정말 삭제하시겠습니까?')) return
     
     try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId)
+      
+      if (error) throw error
+      
       alert('사용자가 삭제되었습니다.')
       loadUsers()
     } catch (err) {
@@ -292,6 +291,15 @@ export default function AdminUsers({ user, onNavigate }) {
   const handleResetPassword = async (targetUser) => {
     try {
       const newTempPassword = generateTempPassword()
+      
+      // Supabase Auth를 통한 비밀번호 재설정
+      const { error } = await supabase.auth.admin.updateUserById(
+        targetUser.id,
+        { password: newTempPassword }
+      )
+      
+      if (error) throw error
+      
       setTempPassword(newTempPassword)
       setResetPasswordModal(targetUser)
     } catch (err) {
@@ -414,94 +422,108 @@ export default function AdminUsers({ user, onNavigate }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((targetUser) => {
-                  const requestCount = getPendingRequestsCount(targetUser.id)
-                  const userRequests = getUserRequests(targetUser.id)
-                  
-                  return (
-                    <tr key={targetUser.id} className="border-t hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        {requestCount > 0 ? (
-                          <button
-                            onClick={() => handleViewRequests(targetUser)}
-                            className="flex items-center gap-1 px-2 py-1 rounded-lg hover:opacity-80 transition-opacity"
-                            style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a' }}
-                            title="변경 요청 보기"
-                          >
-                            <span style={{ fontSize: '16px' }}>
-                              {userRequests.map(req => getRequestInfo(req.request_type).icon).join('')}
-                            </span>
-                            <span className="font-bold" style={{ color: '#92400e', fontSize: '12px' }}>
-                              {requestCount}
-                            </span>
-                          </button>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.branch}</td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.name}</td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.phone}</td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.user_type}</td>
-                      <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.email}</td>
-                      <td className="px-4 py-3">
-                        {targetUser.status === 'pending' ? (
-                          <div className="flex gap-2">
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
+                      로딩 중...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="text-center py-8 text-gray-500">
+                      사용자가 없습니다.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((targetUser) => {
+                    const requestCount = getPendingRequestsCount(targetUser.id)
+                    const userRequests = getUserRequests(targetUser.id)
+                    
+                    return (
+                      <tr key={targetUser.id} className="border-t hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          {requestCount > 0 ? (
                             <button
-                              onClick={() => handleApprove(targetUser.id)}
-                              className="p-1 bg-green-100 hover:bg-green-200 rounded"
-                              title="승인"
+                              onClick={() => handleViewRequests(targetUser)}
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg hover:opacity-80 transition-opacity"
+                              style={{ backgroundColor: '#fef3c7', border: '1px solid #fde68a' }}
+                              title="변경 요청 보기"
                             >
-                              <Check size={16} className="text-green-600" />
+                              <span style={{ fontSize: '16px' }}>
+                                {userRequests.map(req => getRequestInfo(req.request_type).icon).join('')}
+                              </span>
+                              <span className="font-bold" style={{ color: '#92400e', fontSize: '12px' }}>
+                                {requestCount}
+                              </span>
+                            </button>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.branch}</td>
+                        <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.name}</td>
+                        <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.phone}</td>
+                        <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.user_type}</td>
+                        <td className="px-4 py-3" style={{ fontSize: '15px' }}>{targetUser.email}</td>
+                        <td className="px-4 py-3">
+                          {targetUser.status === 'pending' ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleApprove(targetUser.id)}
+                                className="p-1 bg-green-100 hover:bg-green-200 rounded"
+                                title="승인"
+                              >
+                                <Check size={16} className="text-green-600" />
+                              </button>
+                              <button
+                                onClick={() => handleReject(targetUser.id)}
+                                className="p-1 bg-red-100 hover:bg-red-200 rounded"
+                                title="거부"
+                              >
+                                <X size={16} className="text-red-600" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span 
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                targetUser.status === 'approved' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {targetUser.status === 'approved' ? '승인완료' : '거부됨'}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2 justify-center">
+                            <button
+                              onClick={() => handleEditUser(targetUser)}
+                              className="p-2 hover:bg-gray-100 rounded"
+                              title="수정"
+                            >
+                              <Edit2 size={18} style={{ color: '#249689' }} />
                             </button>
                             <button
-                              onClick={() => handleReject(targetUser.id)}
-                              className="p-1 bg-red-100 hover:bg-red-200 rounded"
-                              title="거부"
+                              onClick={() => handleResetPasswordConfirm(targetUser)}
+                              className="p-2 hover:bg-gray-100 rounded"
+                              title="비밀번호 초기화"
                             >
-                              <X size={16} className="text-red-600" />
+                              <Key size={18} style={{ color: '#f59e0b' }} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(targetUser.id)}
+                              className="p-2 hover:bg-gray-100 rounded"
+                              title="삭제"
+                            >
+                              <Trash2 size={18} style={{ color: '#dc2626' }} />
                             </button>
                           </div>
-                        ) : (
-                          <span 
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              targetUser.status === 'approved' 
-                                ? 'bg-green-100 text-green-700' 
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {targetUser.status === 'approved' ? '승인완료' : '거부됨'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={() => handleEditUser(targetUser)}
-                            className="p-2 hover:bg-gray-100 rounded"
-                            title="수정"
-                          >
-                            <Edit2 size={18} style={{ color: '#249689' }} />
-                          </button>
-                          <button
-                            onClick={() => handleResetPasswordConfirm(targetUser)}
-                            className="p-2 hover:bg-gray-100 rounded"
-                            title="비밀번호 초기화"
-                          >
-                            <Key size={18} style={{ color: '#f59e0b' }} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(targetUser.id)}
-                            className="p-2 hover:bg-gray-100 rounded"
-                            title="삭제"
-                          >
-                            <Trash2 size={18} style={{ color: '#dc2626' }} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -607,7 +629,7 @@ export default function AdminUsers({ user, onNavigate }) {
         </div>
       )}
 
-      {/* 회원 수정 모달 - 원본 그대로 */}
+      {/* 회원 수정 모달 */}
       {editingUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
@@ -680,7 +702,7 @@ export default function AdminUsers({ user, onNavigate }) {
         </div>
       )}
 
-      {/* 비밀번호 초기화 결과 모달 - 원본 그대로 */}
+      {/* 비밀번호 초기화 결과 모달 */}
       {resetPasswordModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
