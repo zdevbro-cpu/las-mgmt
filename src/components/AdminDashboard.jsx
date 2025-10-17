@@ -88,38 +88,49 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
     try {
       if (editingBranch) {
         // 수정
+        const updateData = {
+          name: branchForm.name.trim(),
+          manager_name: branchForm.manager_name.trim()
+        }
+        
+        if (branchForm.address.trim()) updateData.address = branchForm.address.trim()
+        if (branchForm.phone.trim()) updateData.phone = branchForm.phone.trim()
+        if (branchForm.email.trim()) updateData.email = branchForm.email.trim()
+        if (branchForm.notes.trim()) updateData.notes = branchForm.notes.trim()
+
         const { error } = await supabase
           .from('branches')
-          .update({
-            name: branchForm.name.trim(),
-            manager_name: branchForm.manager_name.trim(),
-            address: branchForm.address.trim(),
-            phone: branchForm.phone.trim(),
-            email: branchForm.email.trim(),
-            notes: branchForm.notes.trim(),
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', editingBranch.id)
         
-        if (error) throw error
+        if (error) {
+          console.error('수정 오류 상세:', error)
+          throw error
+        }
         alert('지점 정보가 수정되었습니다.')
       } else {
         // 신규 등록
+        const insertData = {
+          name: branchForm.name.trim(),
+          manager_name: branchForm.manager_name.trim(),
+          is_active: true
+        }
+
+        if (branchForm.address.trim()) insertData.address = branchForm.address.trim()
+        if (branchForm.phone.trim()) insertData.phone = branchForm.phone.trim()
+        if (branchForm.email.trim()) insertData.email = branchForm.email.trim()
+        if (branchForm.notes.trim()) insertData.notes = branchForm.notes.trim()
+
         const { data: newBranch, error: insertError } = await supabase
           .from('branches')
-          .insert([{
-            name: branchForm.name.trim(),
-            manager_name: branchForm.manager_name.trim(),
-            address: branchForm.address.trim(),
-            phone: branchForm.phone.trim(),
-            email: branchForm.email.trim(),
-            notes: branchForm.notes.trim(),
-            is_active: true,
-            created_at: new Date().toISOString()
-          }])
+          .insert([insertData])
           .select()
         
-        if (insertError) throw insertError
+        if (insertError) {
+          console.error('등록 오류 상세:', insertError)
+          alert(`지점 등록 중 오류가 발생했습니다.\n오류 내용: ${insertError.message}`)
+          return
+        }
 
         // 점장 이메일이 있으면 해당 사용자를 지점관리자로 권한 부여
         if (branchForm.email.trim()) {
@@ -133,17 +144,20 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
           
           if (updateUserError) {
             console.warn('사용자 권한 업데이트 실패:', updateUserError)
+            alert('지점은 등록되었으나 사용자 권한 업데이트에 실패했습니다.\n회원관리에서 수동으로 권한을 변경해주세요.')
+          } else {
+            alert('새 지점이 등록되었고, 점장에게 지점관리자 권한이 부여되었습니다.')
           }
+        } else {
+          alert('새 지점이 등록되었습니다.')
         }
-
-        alert('새 지점이 등록되었습니다.')
       }
       
       setShowBranchModal(false)
       loadBranches()
     } catch (err) {
       console.error('지점 저장 오류:', err)
-      alert('지점 저장 중 오류가 발생했습니다.')
+      alert(`지점 저장 중 오류가 발생했습니다.\n오류 내용: ${err.message || '알 수 없는 오류'}`)
     }
   }
 

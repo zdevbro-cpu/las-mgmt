@@ -1,35 +1,93 @@
+import { useState, useEffect } from 'react'
 import { LogOut } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-export default function HeroPage({ onNavigate }) {
+export default function HeroPage({ onNavigate, onAutoLogin }) {
+  const [isChecking, setIsChecking] = useState(true)
+
+  useEffect(() => {
+    checkExistingSession()
+  }, [])
+
+  const checkExistingSession = async () => {
+    try {
+      // Supabase 세션 확인
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        console.error('세션 확인 오류:', error)
+        setIsChecking(false)
+        return
+      }
+
+      if (session && session.user) {
+        // 세션이 있으면 사용자 정보 가져오기
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (userError) {
+          console.error('사용자 정보 조회 오류:', userError)
+          setIsChecking(false)
+          return
+        }
+
+        if (userData && userData.status === 'approved') {
+          // 승인된 사용자면 자동 로그인
+          if (onAutoLogin) {
+            onAutoLogin(userData)
+          }
+        } else {
+          setIsChecking(false)
+        }
+      } else {
+        setIsChecking(false)
+      }
+    } catch (err) {
+      console.error('자동 로그인 체크 오류:', err)
+      setIsChecking(false)
+    }
+  }
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: '#249689' }}></div>
+          <p className="text-gray-600">로그인 확인 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-start pt-8 pb-8"> {/* 배경색 변경 및 중앙 정렬을 위한 스타일 추가 */}
-      <div className="bg-white flex flex-col w-full max-w-md rounded-lg shadow-lg overflow-hidden"> {/* 컨텐츠 영역의 최대 너비 설정 */}
+    <div className="min-h-screen bg-gray-100 flex justify-center items-start pt-8 pb-8">
+      <div className="bg-white flex flex-col w-full max-w-md rounded-lg shadow-lg overflow-hidden">
         {/* 상단 헤더 */}
-        <div className="flex items-center justify-between p-2 border-b"> {/* 패딩 조정 */}
-          <div className="flex items-center gap-1.5"> {/* 간격 조정 */}
+        <div className="flex items-center justify-between p-2 border-b">
+          <div className="flex items-center gap-1.5">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 
               className="w-10 h-10 object-cover"
-              // 로고 크기 조정 
               onError={(e) => e.target.style.display = 'none'}
             />
-            <h1 className="text-2xl font-bold" style={{ color: '#249689' }}> {/* 텍스트 크기 조정 */}
+            <h1 className="text-2xl font-bold" style={{ color: '#249689' }}>
               LAS 근무관리시스템
             </h1>
           </div>
-          
         </div>
 
         {/* 중앙 컨텐츠 */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6"> {/* 패딩 조정 */}
+        <div className="flex-1 flex flex-col items-center justify-center p-6">
           {/* 세포 이미지 */}
-          <div className="mb-4"> {/* 마진 조정 */}
+          <div className="mb-4">
             <img 
               src="/images/hero-cell.jpg" 
               alt="The Rise of Life Forms with a Nucleus" 
               className="w-full max-w-xs rounded-lg shadow-lg" 
-              // 이미지 크기 조정 (w-1/2 -> w-full, max-w-xl -> max-w-xs)
               onError={(e) => {
                 e.target.style.display = 'none'
                 e.target.nextElementSibling.style.display = 'block'
@@ -37,18 +95,16 @@ export default function HeroPage({ onNavigate }) {
             />
             <div 
               className="hidden w-full max-w-xs h-64 bg-gradient-to-br from-teal-400 to-blue-500 rounded-lg shadow-lg flex items-center justify-center"
-              // 백업 이미지 크기 조정
             >
-              <p className="text-white text-xl font-bold">The Rise of Life Forms with a Nucleus</p> {/* 텍스트 크기 조정 */}
+              <p className="text-white text-xl font-bold">The Rise of Life Forms with a Nucleus</p>
             </div>
           </div>
 
           {/* 로그인/회원가입 버튼 */}
-          <div className="flex flex-col gap-2 w-full px-10"> {/* 버튼을 세로로 정렬하고 너비를 꽉 채우도록 변경 */}
+          <div className="flex flex-col gap-2 w-full px-10">
             <button
               onClick={() => onNavigate('login')}
               className="px-8 py-2.5 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-opacity w-full" 
-              // 너비 꽉 채우기 
               style={{ backgroundColor: '#249689', fontSize: '15px' }}
             >
               로그인
@@ -56,7 +112,6 @@ export default function HeroPage({ onNavigate }) {
             <button
               onClick={() => onNavigate('signup')}
               className="px-8 py-2.5 font-bold rounded-lg shadow-md hover:bg-gray-50 transition-colors w-full" 
-              // 너비 꽉 채우기 
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', fontSize: '15px' }}
             >
               회원가입
