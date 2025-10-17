@@ -1,8 +1,47 @@
+import { useState } from 'react'
 import { LogOut, FileText, Users, User, Building2, Package, Search } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
-  // 지점관리자 여부 확인
   const isBranchManager = user?.user_type === '지점관리자'
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || '',
+    phone: user?.phone || ''
+  })
+
+  const handleProfileChange = (e) => {
+    setProfileForm({
+      ...profileForm,
+      [e.target.name]: e.target.value
+    })
+  }
+
+  const handleSaveProfile = async () => {
+    if (!profileForm.name.trim()) {
+      alert('이름을 입력해주세요.')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          name: profileForm.name.trim(),
+          phone: profileForm.phone.trim()
+        })
+        .eq('id', user.id)
+      
+      if (error) throw error
+      
+      alert('프로필이 수정되었습니다.')
+      setShowProfileModal(false)
+      window.location.reload()
+    } catch (err) {
+      console.error('프로필 수정 오류:', err)
+      alert('프로필 수정 중 오류가 발생했습니다.')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -77,14 +116,14 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             
             <button
               onClick={() => {
-                console.log('판매고객관리 버튼 클릭')
+                console.log('판매관리 버튼 클릭')
                 onNavigate('customerManagement')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Users size={20} />
-              판매고객관리
+              판매관리
             </button>
             
             <button

@@ -12,69 +12,45 @@ export default function PurchaseHistory({ user, onNavigate }) {
   useEffect(() => {
     fetchAllPurchases()
   }, [])
+  
+// fetchAllPurchases 함수에 추가
+const fetchAllPurchases = async () => {
+  setLoading(true)
+  try {
+    let query = supabase
+      .from('sales')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-  const fetchAllPurchases = async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('전체 목록 조회 오류:', error)
-        alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
-        return
-      }
-      
-      console.log('조회된 데이터:', data)
-      setPurchases(data || [])
-      
-      if (!data || data.length === 0) {
-        console.log('데이터가 없습니다. 판매관리에서 판매 데이터를 추가하세요.')
-      }
-    } catch (error) {
-      console.error('데이터 조회 오류:', error)
-      alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
-    } finally {
-      setLoading(false)
+    // 🔥 이 부분 추가
+    if (user?.user_type === '지점관리자' && user?.branch) {
+      query = query.eq('branch_name', user.branch)
     }
+
+    const { data, error } = await query
+    // ... 나머지 코드 그대로
   }
+}
 
-  const handleSearch = async () => {
-    if (!searchValue.trim()) {
-      fetchAllPurchases()
-      return
+// handleSearch 함수에도 동일하게 추가
+const handleSearch = async () => {
+  setLoading(true)
+  try {
+    let query = supabase
+      .from('sales')
+      .select('*')
+      .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+      .order('created_at', { ascending: false })
+
+    // 🔥 이 부분 추가  
+    if (user?.user_type === '지점관리자' && user?.branch) {
+      query = query.eq('branch_name', user.branch)
     }
 
-    setLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Supabase 검색 오류:', error)
-        alert('검색 중 오류가 발생했습니다: ' + error.message)
-        return
-      }
-      
-      console.log('검색 결과:', data)
-      setPurchases(data || [])
-      
-      if (!data || data.length === 0) {
-        alert('검색 결과가 없습니다')
-      }
-    } catch (error) {
-      console.error('검색 오류:', error)
-      alert('검색 중 오류가 발생했습니다: ' + error.message)
-    } finally {
-      setLoading(false)
-    }
+    const { data, error } = await query
+    // ... 나머지 코드 그대로
   }
-
+}
   const handleReset = () => {
     setSearchValue('')
     fetchAllPurchases()

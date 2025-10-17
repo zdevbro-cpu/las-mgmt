@@ -22,6 +22,11 @@ export default function ShippingList({ user, onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false })
 
+      // 지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type === '지점관리자' && user?.branch) {
+        query = query.eq('branch_name', user.branch)
+      }
+
       const { data, error } = await query
 
       if (error) {
@@ -30,6 +35,7 @@ export default function ShippingList({ user, onNavigate }) {
         return
       }
       
+      console.log('조회된 데이터:', data)
       setPurchases(data || [])
     } catch (error) {
       console.error('데이터 조회 오류:', error)
@@ -47,6 +53,11 @@ export default function ShippingList({ user, onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false })
 
+      // 지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type === '지점관리자' && user?.branch) {
+        query = query.eq('branch_name', user.branch)
+      }
+
       if (searchValue.trim()) {
         query = query.or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
       }
@@ -62,6 +73,7 @@ export default function ShippingList({ user, onNavigate }) {
         endDateTime.setHours(23, 59, 59, 999)
         query = query.lte('created_at', endDateTime.toISOString())
       }
+
       const { data, error } = await query
 
       if (error) {
@@ -70,6 +82,7 @@ export default function ShippingList({ user, onNavigate }) {
         return
       }
       
+      console.log('검색 결과:', data)
       setPurchases(data || [])
       
       if (!data || data.length === 0) {
@@ -119,17 +132,6 @@ export default function ShippingList({ user, onNavigate }) {
     })
   }
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
   const handlePreview = () => {
     if (selectedItems.length === 0) {
       alert('출력할 항목을 선택해주세요')
@@ -152,128 +154,23 @@ export default function ShippingList({ user, onNavigate }) {
         <meta charset="UTF-8">
         <title>배송 송장</title>
         <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            padding: 0;
-            line-height: 1.4;
-          }
-          
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          
-          .page {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 5mm;
-            page-break-after: always;
-            padding: 5mm;
-          }
-          
-          .page:last-child {
-            page-break-after: auto;
-          }
-          
-          .invoice {
-            border: 2px solid #249689;
-            padding: 5mm;
-            background: white;
-            border-radius: 3mm;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-          }
-          
-          .invoice-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 3mm;
-            margin-bottom: 3mm;
-          }
-          
-          .invoice-header h1 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 1mm;
-          }
-          
-          .invoice-number {
-            font-size: 9pt;
-            color: #666;
-          }
-          
-          .section {
-            margin-bottom: 3mm;
-          }
-          
-          .section-title {
-            font-size: 10pt;
-            font-weight: bold;
-            background-color: #f0f0f0;
-            padding: 1.5mm;
-            margin-bottom: 1.5mm;
-            border-left: 3mm solid #249689;
-          }
-          
-          .field {
-            display: flex;
-            padding: 1mm 0;
-            font-size: 9pt;
-          }
-          
-          .field-label {
-            font-weight: bold;
-            width: 18mm;
-            flex-shrink: 0;
-          }
-          
-          .field-value {
-            flex: 1;
-            word-break: break-all;
-          }
-          
-          .order-box {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            background-color: #fafafa;
-            min-height: 15mm;
-            max-height: 25mm;
-            font-size: 8pt;
-            white-space: pre-wrap;
-            word-break: break-word;
-            overflow: hidden;
-          }
-          
-          .footer {
-            margin-top: auto;
-            padding-top: 2mm;
-            border-top: 1px dashed #ccc;
-            text-align: center;
-            font-size: 7pt;
-            color: #666;
-          }
-          
-          @media print {
-            body {
-              margin: 0;
-              padding: 0;
-            }
-            .page {
-              page-break-after: always;
-            }
-            .page:last-child {
-              page-break-after: auto;
-            }
-          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Malgun Gothic', sans-serif; padding: 0; line-height: 1.4; }
+          @page { size: A4; margin: 10mm; }
+          .page { width: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 5mm; page-break-after: always; padding: 5mm; }
+          .page:last-child { page-break-after: auto; }
+          .invoice { border: 2px solid #249689; padding: 5mm; background: white; border-radius: 3mm; display: flex; flex-direction: column; height: 100%; }
+          .invoice-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 3mm; margin-bottom: 3mm; }
+          .invoice-header h1 { font-size: 14pt; font-weight: bold; margin-bottom: 1mm; }
+          .invoice-number { font-size: 9pt; color: #666; }
+          .section { margin-bottom: 3mm; }
+          .section-title { font-size: 10pt; font-weight: bold; background-color: #f0f0f0; padding: 1.5mm; margin-bottom: 1.5mm; border-left: 3mm solid #249689; }
+          .field { display: flex; padding: 1mm 0; font-size: 9pt; }
+          .field-label { font-weight: bold; width: 18mm; flex-shrink: 0; }
+          .field-value { flex: 1; word-break: break-all; }
+          .order-box { border: 1px solid #ddd; padding: 2mm; background-color: #fafafa; min-height: 15mm; max-height: 25mm; font-size: 8pt; white-space: pre-wrap; word-break: break-word; overflow: hidden; }
+          .footer { margin-top: auto; padding-top: 2mm; border-top: 1px dashed #ccc; text-align: center; font-size: 7pt; color: #666; }
+          @media print { body { margin: 0; padding: 0; } .page { page-break-after: always; } .page:last-child { page-break-after: auto; } }
         </style>
       </head>
       <body>
@@ -289,43 +186,19 @@ export default function ShippingList({ user, onNavigate }) {
                     <h1>📦 배송 송장</h1>
                     <div class="invoice-number">No. ${String(j + 1).padStart(4, '0')}</div>
                   </div>
-                  
                   <div class="section">
                     <div class="section-title">📍 수취인 정보</div>
-                    <div class="field">
-                      <div class="field-label">성명</div>
-                      <div class="field-value">${item.customer_name || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">연락처</div>
-                      <div class="field-value">${item.customer_phone || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">주소</div>
-                      <div class="field-value">${item.address || '-'}</div>
-                    </div>
+                    <div class="field"><div class="field-label">성명</div><div class="field-value">${item.customer_name || '-'}</div></div>
+                    <div class="field"><div class="field-label">연락처</div><div class="field-value">${item.customer_phone || '-'}</div></div>
+                    <div class="field"><div class="field-label">주소</div><div class="field-value">${item.address || '-'}</div></div>
                   </div>
-                  
                   <div class="section">
                     <div class="section-title">📝 주문 정보</div>
-                    <div class="field">
-                      <div class="field-label">주문일</div>
-                      <div class="field-value">${formatDate(item.created_at)}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">수량</div>
-                      <div class="field-value">${item.quantity || '-'}개</div>
-                    </div>
-                    <div style="margin-top: 1.5mm;">
-                      <div class="field-label" style="margin-bottom: 1mm;">주문내역</div>
-                      <div class="order-box">${item.order_info || '주문 정보 없음'}</div>
-                    </div>
+                    <div class="field"><div class="field-label">주문일</div><div class="field-value">${formatDate(item.created_at)}</div></div>
+                    <div class="field"><div class="field-label">수량</div><div class="field-value">${item.quantity || '-'}개</div></div>
+                    <div style="margin-top: 1.5mm;"><div class="field-label" style="margin-bottom: 1mm;">주문내역</div><div class="order-box">${item.order_info || '주문 정보 없음'}</div></div>
                   </div>
-                  
-                  <div class="footer">
-                    LAS Book Store · 배송 송장<br/>
-                    발행일: ${new Date().toLocaleDateString('ko-KR')}
-                  </div>
+                  <div class="footer">LAS Book Store · 배송 송장<br/>발행일: ${new Date().toLocaleDateString('ko-KR')}</div>
                 </div>
               `
             }
@@ -333,47 +206,9 @@ export default function ShippingList({ user, onNavigate }) {
           }
           return html
         })()}
-        
         <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 500);
-          }
-
-          window.onafterprint = function() {
-            window.close();
-          };
-
-          if (window.matchMedia) {
-            var mediaQueryList = window.matchMedia('print');
-            mediaQueryList.addListener(function(mql) {
-              if (!mql.matches) {
-                setTimeout(function() {
-                  window.close();
-                }, 100);
-              }
-            });
-          }
-
-          window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-              window.close();
-            }
-          });
-
-          var printExecuted = false;
-          window.addEventListener('focus', function() {
-            if (printExecuted) {
-              setTimeout(function() {
-                window.close();
-              }, 500);
-            }
-          });
-
-          window.addEventListener('beforeprint', function() {
-            printExecuted = true;
-          });
+          window.onload = function() { setTimeout(function() { window.print(); }, 500); }
+          window.onafterprint = function() { window.close(); };
         </script>
       </body>
       </html>
@@ -464,6 +299,15 @@ export default function ShippingList({ user, onNavigate }) {
             </div>
             <div style={{ width: '100px' }}></div>
           </div>
+
+          {/* 지점관리자 안내 */}
+          {user?.user_type === '지점관리자' && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+              <p className="text-sm" style={{ color: '#8b5cf6' }}>
+                🛡️ <strong>{user.branch}</strong> 지점의 데이터만 표시됩니다
+              </p>
+            </div>
+          )}
 
           <div className="mb-6 space-y-3">
             <div className="flex gap-2 items-center">
@@ -662,80 +506,9 @@ export default function ShippingList({ user, onNavigate }) {
               <p className="text-center text-sm text-gray-600 mb-4">
                 총 {selectedItems.length}건의 송장이 생성됩니다 (A4 용지 1장당 4개)
               </p>
-              
-              <div className="space-y-4">
-                {(() => {
-                  const pages = []
-                  for (let i = 0; i < selectedItems.length; i += 4) {
-                    pages.push(
-                      <div key={`page-${i}`} className="border-2 border-gray-400 p-2 bg-white mx-auto" style={{ width: '100%', maxWidth: '700px', aspectRatio: '210/297' }}>
-                        <div className="h-full flex flex-col">
-                          <div className="flex-1 grid grid-cols-2 gap-2" style={{ gridTemplateRows: '1fr 1fr' }}>
-                            {selectedItems.slice(i, i + 4).map((item, index) => (
-                              <div key={item.id} className="bg-white border-2 rounded p-2 flex flex-col" style={{ borderColor: '#249689', fontSize: '11px' }}>
-                                <div className="text-center pb-1 mb-1 border-b-2 border-black">
-                                  <h4 className="font-bold" style={{ fontSize: '13px' }}>📦 배송 송장</h4>
-                                  <p style={{ fontSize: '9px', color: '#666' }}>No. {String(i + index + 1).padStart(4, '0')}</p>
-                                </div>
-
-                                <div className="mb-1 flex-shrink-0">
-                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
-                                    📍 수취인
-                                  </div>
-                                  <div className="space-y-0.5 px-1" style={{ fontSize: '9px' }}>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>성명</span>
-                                      <span className="flex-1 truncate">{item.customer_name || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>연락처</span>
-                                      <span className="flex-1 truncate">{item.customer_phone || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>주소</span>
-                                      <span className="flex-1" style={{ fontSize: '8px', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.address || '-'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="mb-1 flex-1 flex flex-col">
-                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
-                                    📝 주문
-                                  </div>
-                                  <div className="space-y-0.5 px-1 flex-shrink-0" style={{ fontSize: '9px' }}>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>주문일</span>
-                                      <span>{formatDate(item.created_at)}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>수량</span>
-                                      <span>{item.quantity || '-'}개</span>
-                                    </div>
-                                  </div>
-                                  <div className="px-1 mt-1 flex-1 flex flex-col">
-                                    <div className="font-bold mb-0.5" style={{ fontSize: '9px' }}>주문내역</div>
-                                    <div className="border border-gray-300 p-1 bg-gray-50 rounded flex-1 overflow-hidden" style={{ fontSize: '8px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                      {item.order_info || '주문 정보 없음'}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="text-center pt-1 border-t border-dashed border-gray-300 flex-shrink-0" style={{ fontSize: '8px', color: '#666' }}>
-                                  LAS Book Store · {new Date().toLocaleDateString('ko-KR')}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="text-center mt-1 flex-shrink-0" style={{ fontSize: '10px', color: '#666' }}>
-                            페이지 {Math.floor(i / 4) + 1} / {Math.ceil(selectedItems.length / 4)}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  }
-                  return pages
-                })()}
-              </div>
+              <p className="text-xs text-gray-500 text-center mb-4">
+                💡 실제 인쇄 시 더 선명하게 출력됩니다
+              </p>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -759,257 +532,4 @@ export default function ShippingList({ user, onNavigate }) {
       )}
     </div>
   )
-}// 송장 형태로 인쇄 - 수정된 버전
-  const handlePrintInvoice = () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) {
-      alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
-      return
-    }
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>배송 송장</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            padding: 0;
-            line-height: 1.4;
-          }
-          
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          
-          .page {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 5mm;
-            page-break-after: always;
-            padding: 5mm;
-          }
-          
-          .page:last-child {
-            page-break-after: auto;
-          }
-          
-          .invoice {
-            border: 2px solid #249689;
-            padding: 5mm;
-            background: white;
-            border-radius: 3mm;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-          }
-          
-          .invoice-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 3mm;
-            margin-bottom: 3mm;
-          }
-          
-          .invoice-header h1 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 1mm;
-          }
-          
-          .invoice-number {
-            font-size: 9pt;
-            color: #666;
-          }
-          
-          .section {
-            margin-bottom: 3mm;
-          }
-          
-          .section-title {
-            font-size: 10pt;
-            font-weight: bold;
-            background-color: #f0f0f0;
-            padding: 1.5mm;
-            margin-bottom: 1.5mm;
-            border-left: 3mm solid #249689;
-          }
-          
-          .field {
-            display: flex;
-            padding: 1mm 0;
-            font-size: 9pt;
-          }
-          
-          .field-label {
-            font-weight: bold;
-            width: 18mm;
-            flex-shrink: 0;
-          }
-          
-          .field-value {
-            flex: 1;
-            word-break: break-all;
-          }
-          
-          .order-box {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            background-color: #fafafa;
-            min-height: 15mm;
-            max-height: 25mm;
-            font-size: 8pt;
-            white-space: pre-wrap;
-            word-break: break-word;
-            overflow: hidden;
-          }
-          
-          .footer {
-            margin-top: auto;
-            padding-top: 2mm;
-            border-top: 1px dashed #ccc;
-            text-align: center;
-            font-size: 7pt;
-            color: #666;
-          }
-          
-          @media print {
-            body {
-              margin: 0;
-              padding: 0;
-            }
-            .page {
-              page-break-after: always;
-            }
-            .page:last-child {
-              page-break-after: auto;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${(() => {
-          let html = ''
-          for (let i = 0; i < selectedItems.length; i += 4) {
-            html += '<div class="page">'
-            for (let j = i; j < Math.min(i + 4, selectedItems.length); j++) {
-              const item = selectedItems[j]
-              html += `
-                <div class="invoice">
-                  <div class="invoice-header">
-                    <h1>📦 배송 송장</h1>
-                    <div class="invoice-number">No. ${String(j + 1).padStart(4, '0')}</div>
-                  </div>
-                  
-                  <div class="section">
-                    <div class="section-title">📍 수취인 정보</div>
-                    <div class="field">
-                      <div class="field-label">성명</div>
-                      <div class="field-value">${item.customer_name || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">연락처</div>
-                      <div class="field-value">${item.customer_phone || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">주소</div>
-                      <div class="field-value">${item.address || '-'}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="section">
-                    <div class="section-title">📝 주문 정보</div>
-                    <div class="field">
-                      <div class="field-label">주문일</div>
-                      <div class="field-value">${formatDate(item.created_at)}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">수량</div>
-                      <div class="field-value">${item.quantity || '-'}개</div>
-                    </div>
-                    <div style="margin-top: 1.5mm;">
-                      <div class="field-label" style="margin-bottom: 1mm;">주문내역</div>
-                      <div class="order-box">${item.order_info || '주문 정보 없음'}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="footer">
-                    LAS Book Store · 배송 송장<br/>
-                    발행일: ${new Date().toLocaleDateString('ko-KR')}
-                  </div>
-                </div>
-              `
-            }
-            html += '</div>'
-          }
-          return html
-        })()}
-        
-        <script>
-          // 인쇄 후 자동으로 창 닫기
-          window.onload = function() {
-            // 페이지 로드 후 잠시 대기 (렌더링 완료 대기)
-            setTimeout(function() {
-              window.print();
-            }, 500);
-          }
-
-          // 인쇄 다이얼로그가 닫힌 후 처리
-          window.onafterprint = function() {
-            window.close();
-          };
-
-          // 인쇄 취소 감지 (Safari, 구형 브라우저용)
-          if (window.matchMedia) {
-            var mediaQueryList = window.matchMedia('print');
-            mediaQueryList.addListener(function(mql) {
-              if (!mql.matches) {
-                // 인쇄 모드가 아니면 (인쇄 완료 또는 취소)
-                setTimeout(function() {
-                  window.close();
-                }, 100);
-              }
-            });
-          }
-
-          // 추가 안전장치: 사용자가 ESC나 취소를 눌렀을 때
-          window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-              window.close();
-            }
-          });
-
-          // 포커스가 다시 돌아왔을 때 (인쇄 완료 후)
-          var printExecuted = false;
-          window.addEventListener('focus', function() {
-            if (printExecuted) {
-              setTimeout(function() {
-                window.close();
-              }, 500);
-            }
-          });
-
-          // print() 실행 추적
-          window.addEventListener('beforeprint', function() {
-            printExecuted = true;
-          });
-        </script>
-      </body>
-      </html>
-    `
-
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
-    printWindow.focus()
-  }
+}
