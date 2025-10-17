@@ -226,7 +226,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Building2 size={20} />
-              지점관리
+              지점정보관리
             </button>
             <button
               onClick={() => onNavigate('adminUsers')}
@@ -242,7 +242,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
-              근무일지관리
+              근무일지조회
             </button>
             <button
               onClick={() => onNavigate('adminCustomers')}
@@ -250,7 +250,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Package size={20} />
-              구매자정보관리
+              구매자정보조회
             </button>
             <button
               onClick={onLogout}
