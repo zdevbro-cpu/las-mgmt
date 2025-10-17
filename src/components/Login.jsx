@@ -59,23 +59,27 @@ export default function Login({ onNavigate, onLogin }) {
         return
       }
 
-      // 로그인 성공
-      console.log('로그인 성공:', users)
+      // 로그인 성공 - 디버깅 로그 추가
+      console.log('✅ 로그인 성공!')
+      console.log('📋 전체 사용자 데이터:', users)
+      console.log('👤 사용자 이름:', users.name)
+      console.log('📧 이메일:', users.email)
+      console.log('🔑 사용자 구분(user_type):', users.user_type)
+      console.log('🔑 user_type의 타입:', typeof users.user_type)
+      console.log('🔑 user_type 길이:', users.user_type?.length)
+      console.log('🔑 user_type === "시스템관리자"?', users.user_type === '시스템관리자')
       
-      // user_type을 userType으로 변환 (기존 코드 호환성)
-      const user = {
-        ...users,
-        userType: users.user_type
-      }
+      // ✅ users 객체를 그대로 전달 (변환 없이)
+      onLogin(users)
       
-      onLogin(user)
     } catch (err) {
-      console.error('로그인 오류:', err)
+      console.error('❌ 로그인 오류:', err)
       setError('로그인 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }
+
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-start p-2 pt-12">
       <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
@@ -85,18 +89,17 @@ export default function Login({ onNavigate, onLogin }) {
         </p>
 
         {/* 로고 */}
-        <div className="flex items-center justify-center mb-4 gap-2"> {/* flex, items-center, justify-center, gap-2 추가 */}
+        <div className="flex items-center justify-center mb-4 gap-2">
           <img 
             src="/images/logo.png" 
             alt="LAS Logo" 
-            className="h-10 w-10 object-cover" // 로고 크기 조정 (원래 w-16 h-16에서 줄여서 타이틀과 균형을 맞춤)
+            className="h-10 w-10 object-cover"
             onError={(e) => e.target.style.display = 'none'}
           />
           <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
             로그인
           </h1>
         </div>
-
 
         {/* 에러 메시지 */}
         {error && (
@@ -145,10 +148,11 @@ export default function Login({ onNavigate, onLogin }) {
           <div className="flex gap-2 pt-4">
             <button
               type="submit"
-              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              disabled={loading}
+              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              로그인
+              {loading ? '로그인 중...' : '로그인'}
             </button>
             <button
               type="button"

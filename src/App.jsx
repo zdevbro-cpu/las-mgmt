@@ -19,57 +19,72 @@ function App() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    console.log('Current Page:', currentPage)
-    console.log('Current User:', user)
+    console.log('📍 Current Page:', currentPage)
+    console.log('👤 Current User:', user)
+    if (user) {
+      console.log('🔑 User Type:', user.user_type)
+    }
   }, [currentPage, user])
 
   const handleAutoLogin = (userData) => {
-    console.log('Auto login with user:', userData)
+    console.log('🔄 Auto login with user:', userData)
     setUser(userData)
     
-    // ✅ 사용자 유형에 따라 분기
-    if (userData.user_type === '시스템관리자') {
+    const userType = userData?.user_type?.trim()
+    console.log('🔑 User type from auto login:', userType)
+    
+    // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
+    if (userType === '시스템관리자' || userType === '관리자') {
+      console.log('✅ Navigating to AdminDashboard')
       setCurrentPage('adminDashboard')
-    } else if (userData.user_type === '점장') {
-      setCurrentPage('dashboard') // 점장도 dashboard 사용 (또는 별도 페이지)
+    } else if (userType === '점장') {
+      console.log('✅ Navigating to Dashboard (점장)')
+      setCurrentPage('dashboard')
     } else {
+      console.log('✅ Navigating to Dashboard (일반)')
       setCurrentPage('dashboard')
     }
   }
 
   const handleLogout = async () => {
     try {
-      console.log('Logging out...')
+      console.log('🚪 Logging out...')
       await supabase.auth.signOut()
       setUser(null)
       setCurrentPage('hero')
     } catch (err) {
-      console.error('로그아웃 오류:', err)
+      console.error('❌ 로그아웃 오류:', err)
       alert('로그아웃 중 오류가 발생했습니다.')
     }
   }
 
   const handleNavigate = (page) => {
-    console.log('Navigate to:', page, 'Current user:', user)
+    console.log('🧭 Navigate to:', page)
     setCurrentPage(page)
   }
 
   const handleLogin = (userData) => {
-    console.log('Login with user:', userData)
+    console.log('🔐 Login with user:', userData)
     setUser(userData)
     
-    // ✅ 사용자 유형에 따라 분기
-    if (userData.user_type === '시스템관리자') {
+    const userType = userData?.user_type?.trim()
+    console.log('🔑 User type from login:', userType)
+    
+    // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
+    if (userType === '시스템관리자' || userType === '관리자') {
+      console.log('✅ ➡️ AdminDashboard로 이동')
       setCurrentPage('adminDashboard')
-    } else if (userData.user_type === '점장') {
-      setCurrentPage('dashboard') // 점장도 dashboard 사용 (또는 별도 페이지)
+    } else if (userType === '점장') {
+      console.log('✅ ➡️ Dashboard로 이동 (점장)')
+      setCurrentPage('dashboard')
     } else {
+      console.log('✅ ➡️ Dashboard로 이동 (일반)')
       setCurrentPage('dashboard')
     }
   }
 
   const renderPage = () => {
-    console.log('Rendering page:', currentPage)
+    console.log('🎨 Rendering page:', currentPage)
     
     switch (currentPage) {
       case 'hero':
@@ -93,8 +108,8 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ 시스템관리자만 접근 가능
-        if (user.user_type !== '시스템관리자') {
+        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
+        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -106,8 +121,8 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ 시스템관리자만 접근 가능
-        if (user.user_type !== '시스템관리자') {
+        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
+        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -119,8 +134,8 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ 시스템관리자만 접근 가능
-        if (user.user_type !== '시스템관리자') {
+        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
+        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -132,8 +147,8 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ 시스템관리자만 접근 가능
-        if (user.user_type !== '시스템관리자') {
+        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
+        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -188,8 +203,8 @@ function App() {
               <p className="text-gray-500 text-sm mb-4">상세 프로필 페이지는 준비중입니다.</p>
               <button
                 onClick={() => {
-                  // ✅ 사용자 유형에 따라 돌아갈 곳 결정
-                  if (user.user_type === '시스템관리자') {
+                  // ✅ 관리자는 AdminDashboard로
+                  if (user.user_type === '시스템관리자' || user.user_type === '관리자') {
                     handleNavigate('adminDashboard')
                   } else {
                     handleNavigate('dashboard')
@@ -206,8 +221,9 @@ function App() {
       
       default:
         if (user) {
-          // ✅ 사용자 유형에 따라 기본 페이지 결정
-          if (user.user_type === '시스템관리자') {
+          const userType = user.user_type
+          // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
+          if (userType === '시스템관리자' || userType === '관리자') {
             return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
           } else {
             return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
