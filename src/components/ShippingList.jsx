@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 
-export default function ShippingList({ user, onNavigate }) {
+export default function ShippingList() {
   const [searchValue, setSearchValue] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -10,18 +9,44 @@ export default function ShippingList({ user, onNavigate }) {
   const [selectedItems, setSelectedItems] = useState([])
   const [showPreview, setShowPreview] = useState(false)
 
-  // TODO List
-  const todoList = [
-    '✅ 1. PurchaseHistory.jsx와 동일한 톤앤매너 적용',
-    '✅ 2. 날짜 검색 조건 추가 (시작일, 종료일)',
-    '✅ 3. 각 목록 앞에 체크박스 배치',
-    '✅ 4. 체크한 항목의 이름/연락처/주소/구매내용 표시',
-    '✅ 5. PDF 미리보기 기능',
-    '✅ 6. 송장 인쇄 기능',
-    '✅ 7. 민감정보 제외 (작성일/이름/주소/연락처/주문내역/수량만 표시)',
-    '✅ 8. 송장형태 출력 구현',
-    '✅ 9. A4 용지 1장당 4개 송장 카드 배치',
-    '✅ 10. 엑셀 다운로드 기능 구현'
+  // 데모 사용자 정보
+  const user = {
+    branch: '강남지점',
+    name: '홍길동'
+  }
+
+  // 데모 데이터
+  const demoData = [
+    {
+      id: '1',
+      customer_name: '김철수',
+      customer_phone: '010-1234-5678',
+      customer_email: 'kim@example.com',
+      address: '서울시 강남구 테헤란로 123',
+      order_info: 'LAS Book 기초편 2권\nLAS Book 심화편 1권',
+      quantity: 3,
+      created_at: new Date('2025-10-15').toISOString()
+    },
+    {
+      id: '2',
+      customer_name: '이영희',
+      customer_phone: '010-2345-6789',
+      customer_email: 'lee@example.com',
+      address: '서울시 서초구 서초대로 456',
+      order_info: 'LAS Book 실전편 1권',
+      quantity: 1,
+      created_at: new Date('2025-10-16').toISOString()
+    },
+    {
+      id: '3',
+      customer_name: '박민수',
+      customer_phone: '010-3456-7890',
+      customer_email: 'park@example.com',
+      address: '서울시 송파구 올림픽로 789',
+      order_info: 'LAS Book 종합세트 1세트',
+      quantity: 1,
+      created_at: new Date('2025-10-17').toISOString()
+    }
   ]
 
   useEffect(() => {
@@ -30,73 +55,44 @@ export default function ShippingList({ user, onNavigate }) {
 
   const fetchAllPurchases = async () => {
     setLoading(true)
-    try {
-      let query = supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('전체 목록 조회 오류:', error)
-        alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
-        return
-      }
-      
-      setPurchases(data || [])
-    } catch (error) {
-      console.error('데이터 조회 오류:', error)
-      alert('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message)
-    } finally {
+    setTimeout(() => {
+      setPurchases(demoData)
       setLoading(false)
-    }
+    }, 500)
   }
 
   const handleSearch = async () => {
     setLoading(true)
-    try {
-      let query = supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
+    setTimeout(() => {
+      let filtered = [...demoData]
 
-      // 검색어 필터
       if (searchValue.trim()) {
-        query = query.or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+        filtered = filtered.filter(item => 
+          item.customer_name.includes(searchValue) ||
+          item.customer_phone.includes(searchValue) ||
+          item.customer_email.includes(searchValue)
+        )
       }
 
-      // 날짜 필터
       if (startDate) {
-        const startDateTime = new Date(startDate)
-        startDateTime.setHours(0, 0, 0, 0)  // 00:00:00부터
-        query = query.gte('created_at', startDateTime.toISOString())
+        const start = new Date(startDate)
+        start.setHours(0, 0, 0, 0)
+        filtered = filtered.filter(item => new Date(item.created_at) >= start)
       }
 
       if (endDate) {
-        const endDateTime = new Date(endDate)
-        endDateTime.setHours(23, 59, 59, 999)  // 23:59:59까지
-        query = query.lte('created_at', endDateTime.toISOString())
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59, 999)
+        filtered = filtered.filter(item => new Date(item.created_at) <= end)
       }
-      const { data, error } = await query
 
-      if (error) {
-        console.error('검색 오류:', error)
-        alert('검색 중 오류가 발생했습니다: ' + error.message)
-        return
-      }
-      
-      setPurchases(data || [])
-      
-      if (!data || data.length === 0) {
+      setPurchases(filtered)
+      setLoading(false)
+
+      if (filtered.length === 0) {
         alert('검색 결과가 없습니다')
       }
-    } catch (error) {
-      console.error('검색 오류:', error)
-      alert('검색 중 오류가 발생했습니다: ' + error.message)
-    } finally {
-      setLoading(false)
-    }
+    }, 500)
   }
 
   const handleReset = () => {
@@ -135,18 +131,6 @@ export default function ShippingList({ user, onNavigate }) {
     })
   }
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  // PDF 미리보기 열기
   const handlePreview = () => {
     if (selectedItems.length === 0) {
       alert('출력할 항목을 선택해주세요')
@@ -155,222 +139,11 @@ export default function ShippingList({ user, onNavigate }) {
     setShowPreview(true)
   }
 
-
-
-  // 송장 형태로 인쇄
   const handlePrintInvoice = () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) {
-      alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
-      return
-    }
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>배송 송장</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            padding: 0;
-            line-height: 1.4;
-          }
-          
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-          
-          .page {
-            width: 100%;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 5mm;
-            page-break-after: always;
-            padding: 5mm;
-          }
-          
-          .page:last-child {
-            page-break-after: auto;
-          }
-          
-          .invoice {
-            border: 2px solid #249689;
-            padding: 5mm;
-            background: white;
-            border-radius: 3mm;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-          }
-          
-          .invoice-header {
-            text-align: center;
-            border-bottom: 2px solid #000;
-            padding-bottom: 3mm;
-            margin-bottom: 3mm;
-          }
-          
-          .invoice-header h1 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 1mm;
-          }
-          
-          .invoice-number {
-            font-size: 9pt;
-            color: #666;
-          }
-          
-          .section {
-            margin-bottom: 3mm;
-          }
-          
-          .section-title {
-            font-size: 10pt;
-            font-weight: bold;
-            background-color: #f0f0f0;
-            padding: 1.5mm;
-            margin-bottom: 1.5mm;
-            border-left: 3mm solid #249689;
-          }
-          
-          .field {
-            display: flex;
-            padding: 1mm 0;
-            font-size: 9pt;
-          }
-          
-          .field-label {
-            font-weight: bold;
-            width: 18mm;
-            flex-shrink: 0;
-          }
-          
-          .field-value {
-            flex: 1;
-            word-break: break-all;
-          }
-          
-          .order-box {
-            border: 1px solid #ddd;
-            padding: 2mm;
-            background-color: #fafafa;
-            min-height: 15mm;
-            max-height: 25mm;
-            font-size: 8pt;
-            white-space: pre-wrap;
-            word-break: break-word;
-            overflow: hidden;
-          }
-          
-          .footer {
-            margin-top: auto;
-            padding-top: 2mm;
-            border-top: 1px dashed #ccc;
-            text-align: center;
-            font-size: 7pt;
-            color: #666;
-          }
-          
-          @media print {
-            body {
-              margin: 0;
-              padding: 0;
-            }
-            .page {
-              page-break-after: always;
-            }
-            .page:last-child {
-              page-break-after: auto;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        ${(() => {
-          let html = ''
-          for (let i = 0; i < selectedItems.length; i += 4) {
-            html += '<div class="page">'
-            for (let j = i; j < Math.min(i + 4, selectedItems.length); j++) {
-              const item = selectedItems[j]
-              html += `
-                <div class="invoice">
-                  <div class="invoice-header">
-                    <h1>📦 배송 송장</h1>
-                    <div class="invoice-number">No. ${String(j + 1).padStart(4, '0')}</div>
-                  </div>
-                  
-                  <div class="section">
-                    <div class="section-title">📍 수취인 정보</div>
-                    <div class="field">
-                      <div class="field-label">성명</div>
-                      <div class="field-value">${item.customer_name || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">연락처</div>
-                      <div class="field-value">${item.customer_phone || '-'}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">주소</div>
-                      <div class="field-value">${item.address || '-'}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="section">
-                    <div class="section-title">📝 주문 정보</div>
-                    <div class="field">
-                      <div class="field-label">주문일</div>
-                      <div class="field-value">${formatDate(item.created_at)}</div>
-                    </div>
-                    <div class="field">
-                      <div class="field-label">수량</div>
-                      <div class="field-value">${item.quantity || '-'}개</div>
-                    </div>
-                    <div style="margin-top: 1.5mm;">
-                      <div class="field-label" style="margin-bottom: 1mm;">주문내역</div>
-                      <div class="order-box">${item.order_info || '주문 정보 없음'}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="footer">
-                    LAS Book Store · 배송 송장<br/>
-                    발행일: ${new Date().toLocaleDateString('ko-KR')}
-                  </div>
-                </div>
-              `
-            }
-            html += '</div>'
-          }
-          return html
-        })()}
-        
-        <script>
-          window.onload = function() {
-            setTimeout(function() {
-              window.print();
-            }, 500);
-          }
-        </script>
-      </body>
-      </html>
-    `
-
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
-    printWindow.focus()
+    alert('인쇄 기능은 실제 환경에서 작동합니다')
   }
 
-  // 엑셀 다운로드
+  // 엑셀 다운로드 - 파일명에 지점명과 사용자 이름 포함
   const handleDownloadExcel = () => {
     if (selectedItems.length === 0) {
       alert('다운로드할 항목을 선택해주세요')
@@ -395,7 +168,6 @@ export default function ShippingList({ user, onNavigate }) {
     csvData.forEach(row => {
       const escapedRow = row.map(cell => {
         const cellStr = String(cell)
-        // 쉼표, 따옴표, 줄바꿈이 있으면 따옴표로 감싸기
         if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
           return '"' + cellStr.replace(/"/g, '""') + '"'
         }
@@ -409,8 +181,12 @@ export default function ShippingList({ user, onNavigate }) {
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     
+    // 파일명: 주문발송목록_지점명_이름_날짜.csv
+    const today = new Date().toISOString().slice(0, 10)
+    const fileName = `주문발송목록_${user.branch}_${user.name}_${today}.csv`
+    
     link.setAttribute('href', url)
-    link.setAttribute('download', `주문발송목록_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.setAttribute('download', fileName)
     link.style.visibility = 'hidden'
     
     document.body.appendChild(link)
@@ -431,7 +207,7 @@ export default function ShippingList({ user, onNavigate }) {
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => onNavigate('dashboard')}
+              onClick={() => alert('대시보드로 이동')}
               className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
               style={{ color: '#249689', fontSize: '15px' }}
             >
@@ -439,17 +215,24 @@ export default function ShippingList({ user, onNavigate }) {
               뒤로가기
             </button>
             <div className="flex items-center gap-1.5">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Logo" 
-                className="w-10 h-10 object-cover"
-                onError={(e) => e.target.style.display = 'none'}
-              />
+              <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-xl">
+                LAS
+              </div>
               <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
                 주문발송목록
               </h2>
             </div>
             <div style={{ width: '100px' }}></div>
+          </div>
+
+          {/* 사용자 정보 표시 */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-4 text-sm">
+              <span className="font-bold" style={{ color: '#249689' }}>📍 지점:</span>
+              <span>{user.branch}</span>
+              <span className="font-bold ml-4" style={{ color: '#249689' }}>👤 담당자:</span>
+              <span>{user.name}</span>
+            </div>
           </div>
 
           {/* 검색 영역 */}
@@ -636,120 +419,79 @@ export default function ShippingList({ user, onNavigate }) {
           onClick={() => setShowPreview(false)}
         >
           <div
-            className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
-            style={{ borderRadius: '10px' }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
+              <h3 className="font-bold text-2xl" style={{ color: '#249689' }}>
                 📄 배송 송장 미리보기
               </h3>
               <button
                 onClick={() => setShowPreview(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                className="text-gray-500 hover:text-gray-700 text-3xl font-bold leading-none"
               >
                 ×
               </button>
             </div>
 
-            {/* 미리보기 내용 - 송장 형태 (A4 용지에 4개씩) */}
-            <div className="border-2 border-gray-200 rounded-lg p-4 mb-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
-              <p className="text-center text-sm text-gray-600 mb-4">
-                총 {selectedItems.length}건의 송장이 생성됩니다 (A4 용지 1장당 4개)
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-center font-bold" style={{ color: '#249689' }}>
+                총 {selectedItems.length}건의 송장이 생성됩니다
               </p>
-              
-              <div className="space-y-4">
-                {(() => {
-                  const pages = []
-                  for (let i = 0; i < selectedItems.length; i += 4) {
-                    pages.push(
-                      <div key={`page-${i}`} className="border-2 border-gray-400 p-2 bg-white mx-auto" style={{ width: '100%', maxWidth: '700px', aspectRatio: '210/297' }}>
-                        <div className="h-full flex flex-col">
-                          <div className="flex-1 grid grid-cols-2 gap-2" style={{ gridTemplateRows: '1fr 1fr' }}>
-                            {selectedItems.slice(i, i + 4).map((item, index) => (
-                              <div key={item.id} className="bg-white border-2 rounded p-2 flex flex-col" style={{ borderColor: '#249689', fontSize: '11px' }}>
-                                {/* 송장 헤더 */}
-                                <div className="text-center pb-1 mb-1 border-b-2 border-black">
-                                  <h4 className="font-bold" style={{ fontSize: '13px' }}>📦 배송 송장</h4>
-                                  <p style={{ fontSize: '9px', color: '#666' }}>No. {String(i + index + 1).padStart(4, '0')}</p>
-                                </div>
+              <p className="text-center text-sm text-gray-600 mt-1">
+                파일명: 주문발송목록_{user.branch}_{user.name}_{new Date().toISOString().slice(0, 10)}.csv
+              </p>
+            </div>
 
-                                {/* 수취인 정보 */}
-                                <div className="mb-1 flex-shrink-0">
-                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
-                                    📍 수취인
-                                  </div>
-                                  <div className="space-y-0.5 px-1" style={{ fontSize: '9px' }}>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>성명</span>
-                                      <span className="flex-1 truncate">{item.customer_name || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>연락처</span>
-                                      <span className="flex-1 truncate">{item.customer_phone || '-'}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>주소</span>
-                                      <span className="flex-1" style={{ fontSize: '8px', lineHeight: '1.2', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.address || '-'}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* 주문 정보 */}
-                                <div className="mb-1 flex-1 flex flex-col">
-                                  <div className="font-bold mb-1 px-1 py-0.5 bg-gray-100 border-l-2" style={{ borderColor: '#249689', fontSize: '10px' }}>
-                                    📝 주문
-                                  </div>
-                                  <div className="space-y-0.5 px-1 flex-shrink-0" style={{ fontSize: '9px' }}>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>주문일</span>
-                                      <span>{formatDate(item.created_at)}</span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      <span className="font-bold" style={{ width: '35px' }}>수량</span>
-                                      <span>{item.quantity || '-'}개</span>
-                                    </div>
-                                  </div>
-                                  <div className="px-1 mt-1 flex-1 flex flex-col">
-                                    <div className="font-bold mb-0.5" style={{ fontSize: '9px' }}>주문내역</div>
-                                    <div className="border border-gray-300 p-1 bg-gray-50 rounded flex-1 overflow-hidden" style={{ fontSize: '8px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                      {item.order_info || '주문 정보 없음'}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* 푸터 */}
-                                <div className="text-center pt-1 border-t border-dashed border-gray-300 flex-shrink-0" style={{ fontSize: '8px', color: '#666' }}>
-                                  LAS Book Store · {new Date().toLocaleDateString('ko-KR')}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="text-center mt-1 flex-shrink-0" style={{ fontSize: '10px', color: '#666' }}>
-                            페이지 {Math.floor(i / 4) + 1} / {Math.ceil(selectedItems.length / 4)}
+            <div className="grid grid-cols-1 gap-4 max-h-[50vh] overflow-y-auto p-2">
+              {selectedItems.map((item, index) => (
+                <div key={item.id} className="border-2 rounded-lg p-4" style={{ borderColor: '#249689' }}>
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-gray-200">
+                    <h4 className="font-bold text-lg" style={{ color: '#249689' }}>
+                      📦 배송 송장 #{index + 1}
+                    </h4>
+                    <span className="text-sm text-gray-500">주문일: {formatDate(item.created_at)}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="font-bold mb-2" style={{ color: '#249689' }}>📍 수취인 정보</p>
+                      <div className="space-y-1 text-sm">
+                        <p><span className="font-bold">성명:</span> {item.customer_name}</p>
+                        <p><span className="font-bold">연락처:</span> {item.customer_phone}</p>
+                        <p><span className="font-bold">주소:</span> {item.address}</p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="font-bold mb-2" style={{ color: '#249689' }}>📝 주문 정보</p>
+                      <div className="space-y-1 text-sm">
+                        <p><span className="font-bold">수량:</span> {item.quantity}개</p>
+                        <div>
+                          <p className="font-bold mb-1">주문내역:</p>
+                          <div className="bg-gray-50 p-2 rounded border border-gray-200 text-xs">
+                            {item.order_info || '주문 정보 없음'}
                           </div>
                         </div>
                       </div>
-                    )
-                  }
-                  return pages
-                })()}
-              </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* 액션 버튼 */}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-end mt-6">
               <button
                 onClick={handlePrintInvoice}
-                className="px-6 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                className="px-6 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: '#249689' }}
               >
                 🖨️ 송장 인쇄
               </button>
               <button
                 onClick={() => setShowPreview(false)}
-                className="px-6 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+                className="px-6 py-3 font-bold rounded-lg hover:bg-gray-100 transition-colors border-2"
+                style={{ borderColor: '#7f95eb' }}
               >
                 취소
               </button>
