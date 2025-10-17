@@ -1,96 +1,101 @@
 import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
 import HeroPage from './components/HeroPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import Dashboard from './components/Dashboard'
-import WorkDiary from './components/WorkDiary'
-import SalesManagement from './components/SalesManagement'
-import PurchaseHistory from './components/PurchaseHistory'
-import ShippingList from './components/ShippingList'
-
-// 관리자 페이지들
 import AdminDashboard from './components/AdminDashboard'
-import AdminUsers from './components/AdminUsers'
-import AdminWorkDiary from './components/AdminWorkDiary'
-import AdminCustomers from './components/AdminCustomers'
+// ... 다른 컴포넌트 import
 
 function App() {
   const [currentPage, setCurrentPage] = useState('hero')
-  const [currentUser, setCurrentUser] = useState(null)
+  const [user, setUser] = useState(null)
 
-  useEffect(() => {
-    // 로그인 상태 확인 (sessionStorage 사용)
-    const userStr = sessionStorage.getItem('las_current_user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        setCurrentUser(user)
-        if (user.userType === '관리자' || user.user_type === '관리자') {
-          setCurrentPage('adminDashboard')
-        } else {
-          setCurrentPage('dashboard')
-        }
-      } catch (err) {
-        console.error('사용자 정보 복원 오류:', err)
-        sessionStorage.removeItem('las_current_user')
-      }
-    }
-  }, [])
-
-  const handleLogin = (user) => {
-    setCurrentUser(user)
-    sessionStorage.setItem('las_current_user', JSON.stringify(user))
-    if (user.userType === '관리자' || user.user_type === '관리자') {
+  // 자동 로그인 핸들러
+  const handleAutoLogin = (userData) => {
+    setUser(userData)
+    
+    // 사용자 타입에 따라 대시보드 이동
+    if (userData.user_type === '상위관리자') {
       setCurrentPage('adminDashboard')
+    } else if (userData.user_type === '지점관리자') {
+      setCurrentPage('dashboard') // 또는 'branchAdminDashboard'
     } else {
       setCurrentPage('dashboard')
     }
   }
 
-  const handleLogout = () => {
-    setCurrentUser(null)
-    sessionStorage.removeItem('las_current_user')
-    setCurrentPage('hero')
+  // 로그아웃 핸들러
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      setCurrentPage('hero')
+    } catch (err) {
+      console.error('로그아웃 오류:', err)
+    }
   }
 
+  // 페이지 네비게이션
+  const handleNavigate = (page) => {
+    setCurrentPage(page)
+  }
+
+  // 페이지 렌더링
   const renderPage = () => {
     switch (currentPage) {
       case 'hero':
-        return <HeroPage onNavigate={setCurrentPage} />
+        return (
+          <HeroPage 
+            onNavigate={handleNavigate}
+            onAutoLogin={handleAutoLogin}
+          />
+        )
       case 'login':
-        return <Login onNavigate={setCurrentPage} onLogin={handleLogin} />
+        return (
+          <Login 
+            onNavigate={handleNavigate}
+            onLogin={(userData) => {
+              setUser(userData)
+              if (userData.user_type === '상위관리자') {
+                setCurrentPage('adminDashboard')
+              } else {
+                setCurrentPage('dashboard')
+              }
+            }}
+          />
+        )
       case 'signup':
-        return <Signup onNavigate={setCurrentPage} />
-      
-      // 일반 사용자 페이지
+        return <Signup onNavigate={handleNavigate} />
       case 'dashboard':
-        return <Dashboard user={currentUser} onNavigate={setCurrentPage} onLogout={handleLogout} />
-      case 'workDiary':
-        return <WorkDiary user={currentUser} onNavigate={setCurrentPage} />
-      case 'sales':
-        return <SalesManagement user={currentUser} onNavigate={setCurrentPage} />
-      case 'shippingList':
-        return <ShippingList user={currentUser} onNavigate={setCurrentPage} />
-      case 'purchaseHistory':
-        return <PurchaseHistory user={currentUser} onNavigate={setCurrentPage} />
-      
-      // 관리자 페이지
+        return (
+          <Dashboard 
+            user={user}
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        )
       case 'adminDashboard':
-        return <AdminDashboard user={currentUser} onNavigate={setCurrentPage} onLogout={handleLogout} />
-      case 'adminUsers':
-        return <AdminUsers user={currentUser} onNavigate={setCurrentPage} />
-      case 'adminWorkDiary':
-        return <AdminWorkDiary user={currentUser} onNavigate={setCurrentPage} />
-      case 'adminCustomers':
-        return <AdminCustomers user={currentUser} onNavigate={setCurrentPage} />
-      
+        return (
+          <AdminDashboard 
+            user={user}
+            onNavigate={handleNavigate}
+            onLogout={handleLogout}
+          />
+        )
+      // ... 다른 페이지들
       default:
-        return <HeroPage onNavigate={setCurrentPage} />
+        return (
+          <HeroPage 
+            onNavigate={handleNavigate}
+            onAutoLogin={handleAutoLogin}
+          />
+        )
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="App">
       {renderPage()}
     </div>
   )
