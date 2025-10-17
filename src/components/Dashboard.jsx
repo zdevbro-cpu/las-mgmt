@@ -219,9 +219,12 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-center gap-1.5 mb-8">
-            <div className="w-10 h-10 bg-teal-600 rounded flex items-center justify-center text-white font-bold text-xl">
-              LAS
-            </div>
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-10 h-10 object-cover"
+              onError={(e) => e.target.style.display = 'none'}
+            />
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
               LAS 매장관리
             </h2>
