@@ -36,20 +36,20 @@ export default function SalesManagement({ user, onNavigate }) {
         branch_name: user?.branch || null,
         user_name: user?.name || null,
         user_branch: user?.branch || null,
-        customer_name: formData.customer_name || null,
-        customer_phone: formData.customer_phone || null,
-        customer_email: formData.customer_email || null,
+        customer_name: formData.customerName || formData.customer_name || null,
+        customer_phone: formData.customerPhone || formData.customer_phone || null,
+        customer_email: formData.customerEmail || formData.customer_email || null,
         address: formData.address || null,
         phone: formData.phone || null,
         email: formData.email || null,
-        payment_method: formData.payment_method || null,
-        quantity: formData.quantity || null,
+        payment_method: formData.paymentMethod || formData.payment_method || null,
+        quantity: formData.quantity ? parseInt(formData.quantity) : null,
         depositor: formData.depositor || null,
-        deposit_bank: formData.deposit_bank || null,
-        order_details: formData.order_details || null,
-        order_info: formData.order_info || null,
-        age: formData.age || null,
-        needs_shipping: formData.needs_shipping || false
+        deposit_bank: formData.depositBank || formData.deposit_bank || null,
+        order_details: formData.orderDetails || formData.order_details || null,
+        order_info: formData.orderInfo || formData.order_info || null,
+        age: formData.age ? parseInt(formData.age) : null,
+        needs_shipping: formData.needsShipping || formData.needs_shipping || false
       }
       
       console.log('Insert Data:', insertData)
@@ -65,29 +65,18 @@ export default function SalesManagement({ user, onNavigate }) {
       }
       
       console.log('저장 성공:', data)
-      alert('저장되었습니다')
+      alert('저장되었습니다!')
       
       // 폼 초기화
-      setFormData({
-        customer_name: '',
-        customer_phone: '',
-        customer_email: '',
-        address: '',
-        order_info: '',
-        quantity: '',
-        payment_method: '',
-        // ... 나머지 필드 초기화
-      })
+      window.location.reload() // 또는 setFormData로 초기화
       
     } catch (err) {
       console.error('=== 저장 오류 상세 ===')
       console.error('Error:', err)
       console.error('Error message:', err.message)
-      console.error('Error details:', err.details)
       alert('저장 중 오류가 발생했습니다: ' + err.message)
     }
   }
-
   return (
     <div className="min-h-screen bg-gray-50 p-2">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
