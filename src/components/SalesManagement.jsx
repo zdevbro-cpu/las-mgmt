@@ -13,7 +13,7 @@ export default function SalesManagement({ user, onNavigate }) {
     depositor: '',
     depositBank: '',
     orderDetails: '',
-    needsShipping: false  // 배송 여부
+    needsShipping: false
   })
   const [loading, setLoading] = useState(false)
 
@@ -25,10 +25,53 @@ export default function SalesManagement({ user, onNavigate }) {
     })
   }
 
+  // 필수 입력 검증
+  const validateForm = () => {
+    // 판매수량은 항상 필수
+    if (!formData.quantity || formData.quantity < 1) {
+      alert('판매수량을 입력해주세요')
+      return false
+    }
+
+    // 배송이 필요한 경우 필수 입력 검증
+    if (formData.needsShipping) {
+      if (!formData.customerName?.trim()) {
+        alert('배송을 위해 구매자 이름을 입력해주세요')
+        return false
+      }
+      if (!formData.address?.trim()) {
+        alert('배송을 위해 주소를 입력해주세요')
+        return false
+      }
+      if (!formData.phone?.trim()) {
+        alert('배송을 위해 연락처를 입력해주세요')
+        return false
+      }
+    }
+
+    // 입금인 경우 입금자명과 입금기관명 필수
+    if (formData.paymentMethod === '입금') {
+      if (!formData.depositor?.trim()) {
+        alert('입금자명을 입력해주세요')
+        return false
+      }
+      if (!formData.depositBank?.trim()) {
+        alert('입금기관명을 입력해주세요')
+        return false
+      }
+    }
+
+    return true
+  }
+
   const handleSubmit = async () => {
+    // 검증
+    if (!validateForm()) {
+      return
+    }
+
+    setLoading(true)
     console.log('=== 저장 시작 ===')
-    console.log('User:', user)
-    console.log('FormData:', formData)
     
     try {
       const insertData = {
@@ -36,20 +79,17 @@ export default function SalesManagement({ user, onNavigate }) {
         branch_name: user?.branch || null,
         user_name: user?.name || null,
         user_branch: user?.branch || null,
-        customer_name: formData.customerName || formData.customer_name || null,
-        customer_phone: formData.customerPhone || formData.customer_phone || null,
-        customer_email: formData.customerEmail || formData.customer_email || null,
-        address: formData.address || null,
-        phone: formData.phone || null,
-        email: formData.email || null,
-        payment_method: formData.paymentMethod || formData.payment_method || null,
-        quantity: formData.quantity ? parseInt(formData.quantity) : null,
-        depositor: formData.depositor || null,
-        deposit_bank: formData.depositBank || formData.deposit_bank || null,
-        order_details: formData.orderDetails || formData.order_details || null,
-        order_info: formData.orderInfo || formData.order_info || null,
+        customer_name: formData.customerName?.trim() || null,
+        customer_phone: formData.phone?.trim() || null,
+        customer_email: formData.email?.trim() || null,
+        address: formData.address?.trim() || null,
+        payment_method: formData.paymentMethod || null,
+        quantity: parseInt(formData.quantity),
+        depositor: formData.depositor?.trim() || null,
+        deposit_bank: formData.depositBank?.trim() || null,
+        order_details: formData.orderDetails?.trim() || null,
         age: formData.age ? parseInt(formData.age) : null,
-        needs_shipping: formData.needsShipping || formData.needs_shipping || false
+        needs_shipping: formData.needsShipping
       }
       
       console.log('Insert Data:', insertData)
@@ -68,15 +108,29 @@ export default function SalesManagement({ user, onNavigate }) {
       alert('저장되었습니다!')
       
       // 폼 초기화
-      window.location.reload() // 또는 setFormData로 초기화
+      setFormData({
+        customerName: '',
+        age: '',
+        address: '',
+        phone: '',
+        email: '',
+        paymentMethod: '카드',
+        quantity: '',
+        depositor: '',
+        depositBank: '',
+        orderDetails: '',
+        needsShipping: false
+      })
       
     } catch (err) {
       console.error('=== 저장 오류 상세 ===')
       console.error('Error:', err)
-      console.error('Error message:', err.message)
       alert('저장 중 오류가 발생했습니다: ' + err.message)
+    } finally {
+      setLoading(false)
     }
   }
+
   return (
     <div className="min-h-screen bg-gray-50 p-2">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6">
@@ -105,7 +159,7 @@ export default function SalesManagement({ user, onNavigate }) {
             </label>
             <input
               type="text"
-              value={user?.branch || '강남지점'}
+              value={user?.branch || ''}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -117,7 +171,7 @@ export default function SalesManagement({ user, onNavigate }) {
             </label>
             <input
               type="text"
-              value={user?.name || '홍길동'}
+              value={user?.name || ''}
               readOnly
               className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -337,7 +391,7 @@ export default function SalesManagement({ user, onNavigate }) {
               {loading ? '저장 중...' : '저장'}
             </button>
             <button
-              onClick={() => onNavigate('dashboard')}
+              onClick={() => onNavigate?.('dashboard')}
               disabled={loading}
               className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
