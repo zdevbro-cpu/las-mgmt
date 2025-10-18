@@ -96,8 +96,8 @@ function App() {
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  }
 
-    
   const renderPage = () => {
     switch (currentPage) {
       case 'hero':
