@@ -8,25 +8,10 @@ export default function Login({ onNavigate, onLogin }) {
     email: '',
     password: ''
   })
-  const [loginMode, setLoginMode] = useState(LOGIN_MODES.STAFF)
   const [userInfo, setUserInfo] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  
-  const handleLogin = () => {
-    console.log('🔐 Login')
-    const user = users.find(u => u.email === email && u.password === password)
-    
-    if (user) {
-      console.log('✅ 로그인 성공:', user)
-      onLogin(user)
-    } else {
-      console.log('❌ 로그인 실패')
-      alert('이메일 또는 비밀번호가 올바르지 않습니다.')
-    }
-  }
-  
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -76,15 +61,15 @@ export default function Login({ onNavigate, onLogin }) {
 
       console.log('✅ 로그인 성공:', users)
       
-      // 점장이면 모드 선택 화면으로
-      if (users.is_branch_manager) {
+      // 점장 이상이면 모드 선택 화면으로
+      if (users.user_type === '점장' || users.user_type === '지점관리자' || users.user_type === '시스템관리자') {
         setUserInfo(users)
         setLoading(false)
         return
       }
       
-      // 일반 사용자는 바로 로그인
-      onLogin({ ...users, loginMode: LOGIN_MODES.STAFF })
+      // 점주는 바로 일반 업무로 로그인
+      onLogin({ ...users, loginMode: LOGIN_MODES.EMPLOYEE })
       
     } catch (err) {
       console.error('❌ 로그인 오류:', err)
@@ -93,14 +78,8 @@ export default function Login({ onNavigate, onLogin }) {
     }
   }
 
-  const handleModeSelect = () => {
-    if (userInfo) {
-      onLogin({ ...userInfo, loginMode })
-    }
-  }
-
-  // 점장 모드 선택 화면
-  if (userInfo && userInfo.is_branch_manager) {
+  // 모드 선택 화면 (점장/지점관리자/시스템관리자만)
+  if (userInfo && (userInfo.user_type === '점장' || userInfo.user_type === '지점관리자' || userInfo.user_type === '시스템관리자')) {
     return (
       <div className="min-h-screen bg-gray-50 flex justify-center items-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
@@ -116,77 +95,43 @@ export default function Login({ onNavigate, onLogin }) {
             </p>
           </div>
 
-          <div className="space-y-4">
-            {/* 일반 업무 모드 */}
+          <div className="space-y-3">
+            {/* 일반 업무 - 클릭 시 바로 이동 */}
             <button
-              onClick={() => setLoginMode(LOGIN_MODES.STAFF)}
-              className={`w-full p-6 border-2 rounded-lg transition-all ${
-                loginMode === LOGIN_MODES.STAFF 
-                  ? 'bg-teal-50' 
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              style={{ 
-                borderRadius: '10px',
-                borderColor: loginMode === LOGIN_MODES.STAFF ? '#249689' : undefined
-              }}
+              onClick={() => onLogin({ ...userInfo, loginMode: LOGIN_MODES.EMPLOYEE })}
+              className="w-full p-4 border-2 rounded-lg hover:bg-gray-50 transition-all text-left"
+              style={{ borderColor: '#249689', borderRadius: '10px' }}
             >
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center`}
-                  style={{ 
-                    borderColor: loginMode === LOGIN_MODES.STAFF ? '#249689' : '#d1d5db'
-                  }}
-                >
-                  {loginMode === LOGIN_MODES.STAFF && (
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#249689' }} />
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#249689' }}>
+                  <User size={24} style={{ color: 'white' }} />
                 </div>
-                <div className="text-left flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <User size={20} style={{ color: '#249689' }} />
-                    <h3 className="font-bold text-lg" style={{ color: '#000000' }}>
-                      일반 업무
-                    </h3>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    근무일지 작성, 판매 입력 등
+                <div className="flex-1">
+                  <p className="font-bold text-lg" style={{ color: '#249689' }}>
+                    👤 일반 업무
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    근무일지 작성, 판매 업무 등
                   </p>
                 </div>
               </div>
             </button>
 
-            {/* 관리자 모드 */}
+            {/* 지점 관리 - 클릭 시 바로 이동 */}
             <button
-              onClick={() => setLoginMode(LOGIN_MODES.MANAGER)}
-              className={`w-full p-6 border-2 rounded-lg transition-all ${
-                loginMode === LOGIN_MODES.MANAGER 
-                  ? 'bg-purple-50' 
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-              style={{ 
-                borderRadius: '10px',
-                borderColor: loginMode === LOGIN_MODES.MANAGER ? '#8b5cf6' : undefined
-              }}
+              onClick={() => onLogin({ ...userInfo, loginMode: LOGIN_MODES.MANAGER })}
+              className="w-full p-4 border-2 rounded-lg hover:bg-gray-50 transition-all text-left"
+              style={{ borderColor: '#f59e0b', borderRadius: '10px' }}
             >
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center`}
-                  style={{ 
-                    borderColor: loginMode === LOGIN_MODES.MANAGER ? '#8b5cf6' : '#d1d5db'
-                  }}
-                >
-                  {loginMode === LOGIN_MODES.MANAGER && (
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8b5cf6' }} />
-                  )}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f59e0b' }}>
+                  <Shield size={24} style={{ color: 'white' }} />
                 </div>
-                <div className="text-left flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield size={20} style={{ color: '#8b5cf6' }} />
-                    <h3 className="font-bold text-lg" style={{ color: '#000000' }}>
-                      지점 관리
-                    </h3>
-                  </div>
-                  <p className="text-sm text-gray-600">
+                <div className="flex-1">
+                  <p className="font-bold text-lg" style={{ color: '#92400e' }}>
+                    🛡️ 지점 관리
+                  </p>
+                  <p className="text-xs text-gray-600">
                     직원 관리, 통계 조회 등
                   </p>
                 </div>
@@ -195,19 +140,10 @@ export default function Login({ onNavigate, onLogin }) {
           </div>
 
           <button
-            onClick={handleModeSelect}
-            className="w-full mt-6 py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: loginMode === LOGIN_MODES.MANAGER ? '#8b5cf6' : '#249689', borderRadius: '10px', fontSize: '15px' }}
-          >
-            {loginMode === LOGIN_MODES.MANAGER ? '🛡️ 관리자로 시작하기' : '👤 일반 업무 시작하기'}
-          </button>
-
-          <button
             onClick={() => {
               setUserInfo(null)
-              setLoginMode(LOGIN_MODES.STAFF)
             }}
-            className="w-full mt-2 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            className="w-full mt-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             style={{ fontSize: '15px' }}
           >
             ← 다른 계정으로 로그인
