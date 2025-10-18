@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
+import { canAccessManagement } from './constants/roles'
 import HeroPage from './components/HeroPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
@@ -23,6 +24,8 @@ function App() {
     console.log('👤 Current User:', user)
     if (user) {
       console.log('🔑 User Type:', user.user_type)
+      console.log('👑 Is Branch Manager:', user.is_branch_manager)
+      console.log('🎯 Login Mode:', user.loginMode)
     }
   }, [currentPage, user])
 
@@ -30,18 +33,10 @@ function App() {
     console.log('🔄 Auto login with user:', userData)
     setUser(userData)
     
-    const userType = userData?.user_type?.trim()
-    console.log('🔑 User type from auto login:', userType)
-    
-    // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
-    if (userType === '시스템관리자' || userType === '관리자') {
-      console.log('✅ Navigating to AdminDashboard')
+    // 관리 권한이 있으면 AdminDashboard로
+    if (canAccessManagement(userData)) {
       setCurrentPage('adminDashboard')
-    } else if (userType === '점장') {
-      console.log('✅ Navigating to Dashboard (점장)')
-      setCurrentPage('dashboard')
     } else {
-      console.log('✅ Navigating to Dashboard (일반)')
       setCurrentPage('dashboard')
     }
   }
@@ -65,20 +60,16 @@ function App() {
 
   const handleLogin = (userData) => {
     console.log('🔐 Login with user:', userData)
+    console.log('🎯 Login Mode:', userData.loginMode)
+    
     setUser(userData)
     
-    const userType = userData?.user_type?.trim()
-    console.log('🔑 User type from login:', userType)
-    
-    // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
-    if (userType === '시스템관리자' || userType === '관리자') {
+    // 관리 권한이 있으면 AdminDashboard로
+    if (canAccessManagement(userData)) {
       console.log('✅ ➡️ AdminDashboard로 이동')
       setCurrentPage('adminDashboard')
-    } else if (userType === '점장') {
-      console.log('✅ ➡️ Dashboard로 이동 (점장)')
-      setCurrentPage('dashboard')
     } else {
-      console.log('✅ ➡️ Dashboard로 이동 (일반)')
+      console.log('✅ ➡️ Dashboard로 이동')
       setCurrentPage('dashboard')
     }
   }
@@ -108,8 +99,7 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
-        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
+        if (!canAccessManagement(user)) {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -121,8 +111,7 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
-        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
+        if (!canAccessManagement(user)) {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -134,8 +123,7 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
-        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
+        if (!canAccessManagement(user)) {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -147,8 +135,7 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        // ✅ "관리자" 또는 "시스템관리자" 모두 허용
-        if (user.user_type !== '시스템관리자' && user.user_type !== '관리자') {
+        if (!canAccessManagement(user)) {
           alert('접근 권한이 없습니다.')
           setCurrentPage('dashboard')
           return null
@@ -203,8 +190,7 @@ function App() {
               <p className="text-gray-500 text-sm mb-4">상세 프로필 페이지는 준비중입니다.</p>
               <button
                 onClick={() => {
-                  // ✅ 관리자는 AdminDashboard로
-                  if (user.user_type === '시스템관리자' || user.user_type === '관리자') {
+                  if (canAccessManagement(user)) {
                     handleNavigate('adminDashboard')
                   } else {
                     handleNavigate('dashboard')
@@ -221,9 +207,7 @@ function App() {
       
       default:
         if (user) {
-          const userType = user.user_type
-          // ✅ "관리자" 또는 "시스템관리자" 모두 AdminDashboard로
-          if (userType === '시스템관리자' || userType === '관리자') {
+          if (canAccessManagement(user)) {
             return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
           } else {
             return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />

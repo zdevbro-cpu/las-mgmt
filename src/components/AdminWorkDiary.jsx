@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { ArrowLeft, Search, Calendar, User, Building2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { canAccessAllBranches } from '../constants/roles'
 
 export default function AdminWorkDiary({ user, onNavigate }) {
   const [workDiaries, setWorkDiaries] = useState([])
@@ -29,21 +30,28 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     }
   }
 
-    const loadWorkDiaries = async () => {
+  const loadWorkDiaries = async () => {
     setLoading(true)
     try {
-      console.log('📊 근무일지 로딩 시작...')
+      console.log('📊 근무일지 로딩...')
       
-      // ✅ 테이블이 없는 경우 처리
-      const { data, error } = await supabase
+      let query = supabase
         .from('work_diaries')
         .select('*')
         .order('work_date', { ascending: false })
       
+      // 점장(관리모드)는 자기 지점만 볼 수 있음
+      if (!canAccessAllBranches(user)) {
+        console.log('🔒 자기 지점만 필터링:', user.branch)
+        query = query.eq('branch_name', user.branch)
+      }
+      
+      const { data, error } = await query
+      
       if (error) {
         // 테이블이 없는 경우
-        if (error.code === 'PGRST200' || error.message.includes('does not exist')) {
-          console.warn('⚠️ work_diaries 테이블이 없습니다. 빈 배열 반환.')
+        if (error.code === 'PGRST200' || error.message?.includes('does not exist')) {
+          console.warn('⚠️ work_diaries 테이블이 없습니다.')
           setWorkDiaries([])
           return
         }
@@ -52,16 +60,35 @@ export default function AdminWorkDiary({ user, onNavigate }) {
       
       console.log('✅ 근무일지 데이터:', data)
       
-      // 사용자 정보 추가...
+      // 사용자 정보 매칭
+      if (data && data.length > 0) {
+        const userIds = [...new Set(data.map(d => d.user_id))]
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, branch, user_type')
+          .in('id', userIds)
+        
+        if (usersError) {
+          console.warn('⚠️ 사용자 정보 로드 실패:', usersError)
+        } else {
+          const enrichedData = data.map(diary => {
+            const userInfo = usersData.find(u => u.id === diary.user_id)
+            return {
+              ...diary,
+              users: userInfo || null
+            }
+          })
+          
+          setWorkDiaries(enrichedData)
+          return
+        }
+      }
+      
+      setWorkDiaries(data || [])
       
     } catch (err) {
       console.error('❌ 근무일지 로드 오류:', err)
-      // ✅ 사용자에게 친절한 메시지
-      if (err.message?.includes('does not exist') || err.message?.includes('schema cache')) {
-        alert('근무일지 테이블이 아직 생성되지 않았습니다.\n관리자에게 문의하세요.')
-      } else {
-        alert(`근무일지를 불러오는데 실패했습니다.\n오류: ${err.message}`)
-      }
+      alert(`근무일지를 불러오는데 실패했습니다.\n오류: ${err.message}`)
       setWorkDiaries([])
     } finally {
       setLoading(false)
@@ -70,13 +97,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
 
   const filteredDiaries = workDiaries.filter(diary => {
     const matchesSearch = diary.users?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesBranch = !filterBranch || diary.users?.branch === filterBranch
-    
-    // 지점관리자는 자신의 지점만 볼 수 있음
-    if (user?.user_type === '지점관리자') {
-      return matchesSearch && matchesBranch && diary.users?.branch === user.branch
-    }
-    
+    const matchesBranch = !filterBranch || diary.users?.branch === filterBranch || diary.branch_name === filterBranch
     return matchesSearch && matchesBranch
   })
 
@@ -100,7 +121,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
               onError={(e) => e.target.style.display = 'none'}
             />
             <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              근무일지 관리
+              {canAccessAllBranches(user) ? '근무일지 관리' : '우리 지점 근무일지'}
             </h1>
           </div>
           <div style={{ width: '100px' }}></div>
@@ -125,7 +146,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
               />
             </div>
             
-            {(user?.user_type === '시스템관리자' || user?.user_type === '관리자') && (
+            {canAccessAllBranches(user) && (
               <div className="flex items-center gap-2">
                 <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   <Building2 size={18} className="inline mr-1" />
@@ -203,7 +224,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                         {new Date(diary.work_date).toLocaleDateString('ko-KR')}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {diary.users?.branch || '-'}
+                        {diary.users?.branch || diary.branch_name || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         {diary.users?.name || '-'}

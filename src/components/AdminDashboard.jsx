@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { LogOut, Building2, Edit2, Trash2, Plus, X, Shield, Users, FileText, Package } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { isSystemAdmin, canAccessAllBranches, getDisplayMode } from '../constants/roles'
 
 export default function AdminDashboard({ user, onNavigate, onLogout }) {
   const [showBranchModal, setShowBranchModal] = useState(false)
@@ -133,7 +134,8 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
           const { error: updateUserError } = await supabase
             .from('users')
             .update({ 
-              user_type: '지점관리자',
+              user_type: 'user',
+              is_branch_manager: true,
               branch: branchForm.name.trim()
             })
             .eq('email', branchForm.email.trim())
@@ -142,7 +144,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
             console.warn('사용자 권한 업데이트 실패:', updateUserError)
             alert('지점은 등록되었으나 사용자 권한 업데이트에 실패했습니다.\n회원관리에서 수동으로 권한을 변경해주세요.')
           } else {
-            alert('새 지점이 등록되었고, 점장에게 지점관리자 권한이 부여되었습니다.')
+            alert('새 지점이 등록되었고, 점장에게 지점관리 권한이 부여되었습니다.')
           }
         } else {
           alert('새 지점이 등록되었습니다.')
@@ -176,11 +178,18 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
     }
   }
 
+  // 모드 전환 함수
+  const handleSwitchMode = () => {
+    if (window.confirm('일반 업무 모드로 전환하시겠습니까?')) {
+      onLogout()
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex items-center justify-center gap-1.5 mb-8">
+          <div className="flex items-center justify-center gap-1.5 mb-6">
             <img 
               src="/images/logo.png" 
               alt="LAS Logo" 
@@ -188,8 +197,29 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
               onError={(e) => e.target.style.display = 'none'}
             />
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              관리자 대시보드
+              {isSystemAdmin(user) ? '관리자 대시보드' : '지점관리'}
             </h2>
+          </div>
+
+          {/* 현재 모드 표시 */}
+          <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#f0fdf4', borderColor: '#249689' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600" style={{ fontSize: '13px' }}>현재 모드</p>
+                <p className="font-bold text-lg" style={{ color: '#249689', fontSize: '18px' }}>
+                  {getDisplayMode(user)}
+                </p>
+              </div>
+              {!isSystemAdmin(user) && (
+                <button
+                  onClick={handleSwitchMode}
+                  className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors"
+                  style={{ borderColor: '#7f95eb', color: '#000000', borderRadius: '10px', fontSize: '14px' }}
+                >
+                  🔄 업무 전환
+                </button>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-1.5 mb-8">
@@ -220,38 +250,45 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
           </div>
 
           <div className="space-y-4">
-            <button
-              onClick={() => setShowBranchListModal(true)}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Building2 size={20} />
-              지점정보관리
-            </button>
+            {/* 시스템관리자만 지점관리 표시 */}
+            {isSystemAdmin(user) && (
+              <button
+                onClick={() => setShowBranchListModal(true)}
+                className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              >
+                <Building2 size={20} />
+                지점관리
+              </button>
+            )}
+            
             <button
               onClick={() => onNavigate('adminUsers')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Users size={20} />
-              회원관리
+              {canAccessAllBranches(user) ? '회원관리' : '우리 지점 직원관리'}
             </button>
+            
             <button
               onClick={() => onNavigate('adminWorkDiary')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
-              근무일지조회
+              {canAccessAllBranches(user) ? '근무일지관리' : '우리 지점 근무일지'}
             </button>
+            
             <button
               onClick={() => onNavigate('adminCustomers')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Package size={20} />
-              구매자정보조회
+              {canAccessAllBranches(user) ? '구매자정보관리' : '우리 지점 구매내역'}
             </button>
+            
             <button
               onClick={onLogout}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
@@ -427,7 +464,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
                 />
                 <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
                   <Shield size={12} style={{ color: '#8b5cf6' }} />
-                  점장에게 지점관리자 권한이 부여됩니다
+                  점장에게 지점관리 권한이 부여됩니다
                 </p>
               </div>
 

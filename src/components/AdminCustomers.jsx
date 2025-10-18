@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Search, Building2, User } from 'lucide-react'
+import { ArrowLeft, Search, Building2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { canAccessAllBranches } from '../constants/roles'
 
 export default function AdminCustomers({ user, onNavigate }) {
   const [customers, setCustomers] = useState([])
@@ -32,16 +33,16 @@ export default function AdminCustomers({ user, onNavigate }) {
   const loadCustomers = async () => {
     setLoading(true)
     try {
-      console.log('📊 구매자 정보 로딩 시작...')
+      console.log('📊 구매자 정보 로딩...')
       
-      // ✅ sales 테이블에서 데이터 가져오기
       let query = supabase
         .from('sales')
         .select('*')
         .order('created_at', { ascending: false })
       
-      // 지점관리자는 자신의 지점만 볼 수 있음
-      if (user?.user_type === '지점관리자') {
+      // 점장(관리모드)는 자기 지점만 볼 수 있음
+      if (!canAccessAllBranches(user)) {
+        console.log('🔒 자기 지점만 필터링:', user.branch)
         query = query.eq('branch_name', user.branch)
       }
       
@@ -96,7 +97,7 @@ export default function AdminCustomers({ user, onNavigate }) {
               onError={(e) => e.target.style.display = 'none'}
             />
             <h1 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              구매자정보 관리
+              {canAccessAllBranches(user) ? '구매자정보 관리' : '우리 지점 구매내역'}
             </h1>
           </div>
           <div style={{ width: '100px' }}></div>
@@ -121,7 +122,7 @@ export default function AdminCustomers({ user, onNavigate }) {
               />
             </div>
             
-            {(user?.user_type === '시스템관리자' || user?.user_type === '관리자') && (
+            {canAccessAllBranches(user) && (
               <div className="flex items-center gap-2">
                 <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                   <Building2 size={18} className="inline mr-1" />
