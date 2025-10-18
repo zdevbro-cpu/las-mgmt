@@ -1,20 +1,22 @@
 import { LogOut, FileText, ShoppingCart, Package, Truck, Shield } from 'lucide-react'
-import { isBranchManager, LOGIN_MODES } from '../constants/roles'
+import { canAccessManagement, LOGIN_MODES } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('🎨 Dashboard 렌더링')
   console.log('👤 user:', user)
-  console.log('👑 isBranchManager:', isBranchManager(user))
-  console.log('📦 onSwitchMode:', onSwitchMode)
-  console.log('📦 onSwitchMode 타입:', typeof onSwitchMode)
+  console.log('👤 user.user_type:', user?.user_type)
+  console.log('👑 canAccessManagement:', canAccessManagement(user))
+  console.log('📦 onSwitchMode:', typeof onSwitchMode)
+  console.log('📦 onNavigate:', typeof onNavigate)
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
   const handleManagerModeClick = () => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('🛡️ 지점관리 버튼 클릭됨')
     console.log('📦 onSwitchMode 존재:', !!onSwitchMode)
-    console.log('📦 onSwitchMode 함수인가:', typeof onSwitchMode === 'function')
+    console.log('📦 onSwitchMode 타입:', typeof onSwitchMode)
     console.log('📦 LOGIN_MODES.MANAGER:', LOGIN_MODES.MANAGER)
-    console.log('📦 전달할 모드:', LOGIN_MODES.MANAGER)
     
     if (!onSwitchMode) {
       console.error('❌ onSwitchMode가 undefined입니다!')
@@ -39,15 +41,21 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
     }
   }
 
-  // 직접 adminDashboard로 이동하는 버튼 (테스트용)
+  // 직접 adminDashboard로 이동하는 버튼 (백업)
   const handleDirectAdminNavigation = () => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('🔄 직접 adminDashboard로 이동')
     if (onNavigate) {
       onNavigate('adminDashboard')
+      console.log('✅ adminDashboard로 이동 완료')
     } else {
       console.error('❌ onNavigate가 없습니다!')
     }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   }
+
+  // 점주 또는 지점관리자인지 확인
+  const hasManagementAccess = canAccessManagement(user)
 
   return (
     <div className="min-h-screen bg-white">
@@ -65,8 +73,8 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </h2>
           </div>
 
-          {/* 점장이면 관리자 모드 안내 */}
-          {isBranchManager(user) && (
+          {/* 점주/지점관리자면 관리자 모드 안내 */}
+          {hasManagementAccess && (
             <div className="mb-6 space-y-3">
               {/* 방법 1: onSwitchMode 사용 */}
               <div className="p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
@@ -141,7 +149,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
 
           <div className="space-y-4">
             <button
-              onClick={() => onNavigate('workDiary')}
+              onClick={() => {
+                console.log('🧭 Navigate to: workDiary')
+                onNavigate('workDiary')
+              }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -150,7 +161,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </button>
             
             <button
-              onClick={() => onNavigate('customerManagement')}
+              onClick={() => {
+                console.log('🧭 Navigate to: customerManagement')
+                onNavigate('customerManagement')
+              }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -159,7 +173,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </button>
             
             <button
-              onClick={() => onNavigate('shippingList')}
+              onClick={() => {
+                console.log('🧭 Navigate to: shippingList')
+                onNavigate('shippingList')
+              }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -168,7 +185,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </button>
             
             <button
-              onClick={() => onNavigate('purchaseHistory')}
+              onClick={() => {
+                console.log('🧭 Navigate to: purchaseHistory')
+                onNavigate('purchaseHistory')
+              }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -177,7 +197,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </button>
             
             <button
-              onClick={onLogout}
+              onClick={() => {
+                console.log('🚪 Logout 클릭')
+                onLogout()
+              }}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
