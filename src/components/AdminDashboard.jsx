@@ -181,10 +181,10 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
   // 모드 전환 함수
   const handleSwitchMode = () => {
     if (window.confirm('일반 업무 모드로 전환하시겠습니까?')) {
-      onLogout()
+      // ✅ 로그아웃 대신 모드만 변경
+      onSwitchMode(LOGIN_MODES.STAFF)
     }
   }
-
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">

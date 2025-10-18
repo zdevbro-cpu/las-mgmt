@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
-import { canAccessManagement } from './constants/roles'
+import { canAccessManagement, LOGIN_MODES } from './constants/roles'
 import HeroPage from './components/HeroPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
@@ -33,7 +33,6 @@ function App() {
     console.log('🔄 Auto login with user:', userData)
     setUser(userData)
     
-    // 관리 권한이 있으면 AdminDashboard로
     if (canAccessManagement(userData)) {
       setCurrentPage('adminDashboard')
     } else {
@@ -64,12 +63,31 @@ function App() {
     
     setUser(userData)
     
-    // 관리 권한이 있으면 AdminDashboard로
     if (canAccessManagement(userData)) {
       console.log('✅ ➡️ AdminDashboard로 이동')
       setCurrentPage('adminDashboard')
     } else {
       console.log('✅ ➡️ Dashboard로 이동')
+      setCurrentPage('dashboard')
+    }
+  }
+
+  // ✅ 모드 전환 함수 추가
+  const handleSwitchMode = (newMode) => {
+    console.log('🔄 모드 전환:', user.loginMode, '→', newMode)
+    
+    // user 객체 업데이트
+    const updatedUser = {
+      ...user,
+      loginMode: newMode
+    }
+    
+    setUser(updatedUser)
+    
+    // 모드에 따라 페이지 이동
+    if (newMode === LOGIN_MODES.MANAGER) {
+      setCurrentPage('adminDashboard')
+    } else {
       setCurrentPage('dashboard')
     }
   }
@@ -92,7 +110,7 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
       
       case 'adminDashboard':
         if (!user) {
@@ -104,7 +122,7 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
       
       case 'adminUsers':
         if (!user) {
@@ -208,9 +226,9 @@ function App() {
       default:
         if (user) {
           if (canAccessManagement(user)) {
-            return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+            return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
           } else {
-            return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+            return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
           }
         }
         return <HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />

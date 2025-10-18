@@ -1,53 +1,12 @@
 import { useState } from 'react'
-import { LogOut, FileText, Users, User, Building2, Package, Search } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { LogOut, FileText, ShoppingCart, Package, Truck, User, Shield } from 'lucide-react'
+import { isBranchManager, LOGIN_MODES } from '../constants/roles'
 
-export default function Dashboard({ user, onNavigate, onLogout }) {
-  const isBranchManager = user?.user_type === '지점관리자'
-  const [showProfileModal, setShowProfileModal] = useState(false)
-  const [profileForm, setProfileForm] = useState({
-    name: user?.name || '',
-    phone: user?.phone || ''
-  })
-
-  const handleProfileChange = (e) => {
-    setProfileForm({
-      ...profileForm,
-      [e.target.name]: e.target.value
-    })
-  }
-
-  const handleSaveProfile = async () => {
-    if (!profileForm.name.trim()) {
-      alert('이름을 입력해주세요.')
-      return
-    }
-
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          name: profileForm.name.trim(),
-          phone: profileForm.phone.trim()
-        })
-        .eq('id', user.id)
-      
-      if (error) throw error
-      
-      alert('프로필이 수정되었습니다.')
-      setShowProfileModal(false)
-      window.location.reload()
-    } catch (err) {
-      console.error('프로필 수정 오류:', err)
-      alert('프로필 수정 중 오류가 발생했습니다.')
-    }
-  }
-
+export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* 페이지 타이틀 */}
           <div className="flex items-center justify-center gap-1.5 mb-8">
             <img 
               src="/images/logo.png" 
@@ -59,8 +18,33 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               매장관리
             </h2>
           </div>
+
+          {/* ✅ 점장이면 관리자 모드로 전환 안내 */}
+          {isBranchManager(user) && (
+            <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield size={20} style={{ color: '#f59e0b' }} />
+                  <div>
+                    <p className="font-bold" style={{ color: '#92400e', fontSize: '14px' }}>
+                      👑 점장님이시군요!
+                    </p>
+                    <p className="text-xs" style={{ color: '#92400e' }}>
+                      지점 관리가 필요하시면 관리자 모드로 전환하세요
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onSwitchMode && onSwitchMode(LOGIN_MODES.MANAGER)}
+                  className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm"
+                  style={{ borderColor: '#f59e0b', color: '#92400e', borderRadius: '10px' }}
+                >
+                  🛡️ 관리자 모드
+                </button>
+              </div>
+            </div>
+          )}
           
-          {/* 사용자 정보 */}
           <div className="grid grid-cols-2 gap-1.5 mb-8">
             <div>
               <label className="block mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
@@ -68,7 +52,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </label>
               <input
                 type="text"
-                value={user?.branch || '-'}
+                value={user?.branch || ''}
                 readOnly
                 className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                 style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -80,7 +64,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </label>
               <input
                 type="text"
-                value={user?.name || '-'}
+                value={user?.name || ''}
                 readOnly
                 className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                 style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
@@ -88,25 +72,9 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </div>
           </div>
 
-          {/* 권한 표시 */}
-          {isBranchManager && (
-            <div className="mb-6 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-sm font-bold" style={{ color: '#8b5cf6' }}>
-                🛡️ 지점관리자 권한
-              </p>
-              <p className="text-xs text-gray-600 mt-1">
-                해당 지점의 모든 데이터를 관리할 수 있습니다
-              </p>
-            </div>
-          )}
-
-          {/* 버튼들 */}
           <div className="space-y-4">
             <button
-              onClick={() => {
-                console.log('근무일지 버튼 클릭')
-                onNavigate('workDiary')
-              }}
+              onClick={() => onNavigate('workDiary')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -115,58 +83,34 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </button>
             
             <button
-              onClick={() => {
-                console.log('판매관리 버튼 클릭')
-                onNavigate('customerManagement')
-              }}
+              onClick={() => onNavigate('customerManagement')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              <Users size={20} />
+              <ShoppingCart size={20} />
               판매관리
             </button>
             
             <button
-              onClick={() => {
-                console.log('송장출력 버튼 클릭')
-                onNavigate('shippingList')
-              }}
+              onClick={() => onNavigate('shippingList')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Truck size={20} />
+              배송목록
+            </button>
+            
+            <button
+              onClick={() => onNavigate('purchaseHistory')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Package size={20} />
-              송장출력
+              구매내역
             </button>
             
             <button
-              onClick={() => {
-                console.log('구매자정보조회 버튼 클릭')
-                onNavigate('purchaseHistory')
-              }}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Search size={20} />
-              구매자정보조회
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log('내 정보관리 버튼 클릭')
-                onNavigate('profile')
-              }}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <User size={20} />
-              내 정보관리
-            </button>
-            
-            <button
-              onClick={() => {
-                console.log('로그아웃 버튼 클릭')
-                onLogout()
-              }}
+              onClick={onLogout}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
