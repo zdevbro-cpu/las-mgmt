@@ -13,6 +13,13 @@ export const USER_TYPES = {
   EMPLOYEE: '직원'
 }
 
+// USER_ROLES (AdminUsers에서 사용)
+export const USER_ROLES = {
+  OWNER: '점주',
+  BRANCH_MANAGER: '지점관리자',
+  EMPLOYEE: '직원'
+}
+
 // 지점관리자 또는 점주인지 확인 (관리 권한)
 export const isBranchManager = (user) => {
   if (!user) return false
@@ -27,6 +34,29 @@ export const canAccessManagement = (user) => {
   // 점주와 지점관리자만 관리 페이지 접근 가능
   return user.user_type === USER_TYPES.OWNER || 
          user.user_type === USER_TYPES.BRANCH_MANAGER
+}
+
+// 모든 지점 접근 가능한지 확인 (점주만 가능)
+export const canAccessAllBranches = (user) => {
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER
+}
+
+// 역할 표시명 가져오기
+export const getDisplayRole = (userType) => {
+  switch (userType) {
+    case USER_TYPES.OWNER:
+    case USER_ROLES.OWNER:
+      return '점주'
+    case USER_TYPES.BRANCH_MANAGER:
+    case USER_ROLES.BRANCH_MANAGER:
+      return '지점관리자'
+    case USER_TYPES.EMPLOYEE:
+    case USER_ROLES.EMPLOYEE:
+      return '직원'
+    default:
+      return userType || '직원'
+  }
 }
 
 // 특정 기능별 권한 확인
@@ -52,4 +82,49 @@ export const canManageCustomers = (user) => {
 export const canViewOwnDataOnly = (user) => {
   if (!user) return true
   return user.user_type === USER_TYPES.EMPLOYEE
+}
+
+// 사용자 생성 권한
+export const canCreateUser = (user) => {
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
+}
+
+// 사용자 수정 권한
+export const canEditUser = (user, targetUser) => {
+  if (!user) return false
+  
+  // 본인은 항상 수정 가능
+  if (user.id === targetUser?.id) return true
+  
+  // 점주는 모든 사용자 수정 가능
+  if (user.user_type === USER_TYPES.OWNER) return true
+  
+  // 지점관리자는 같은 지점의 직원만 수정 가능
+  if (user.user_type === USER_TYPES.BRANCH_MANAGER) {
+    return user.branch === targetUser?.branch && 
+           targetUser?.user_type === USER_TYPES.EMPLOYEE
+  }
+  
+  return false
+}
+
+// 사용자 삭제 권한
+export const canDeleteUser = (user, targetUser) => {
+  if (!user) return false
+  
+  // 본인은 삭제 불가
+  if (user.id === targetUser?.id) return false
+  
+  // 점주는 모든 사용자 삭제 가능 (본인 제외)
+  if (user.user_type === USER_TYPES.OWNER) return true
+  
+  // 지점관리자는 같은 지점의 직원만 삭제 가능
+  if (user.user_type === USER_TYPES.BRANCH_MANAGER) {
+    return user.branch === targetUser?.branch && 
+           targetUser?.user_type === USER_TYPES.EMPLOYEE
+  }
+  
+  return false
 }
