@@ -57,7 +57,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               onError={(e) => e.target.style.display = 'none'}
             />
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              지점 관리
+              지점관리
             </h2>
           </div>
 
@@ -124,7 +124,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Users size={20} />
-              회원 관리
+              회원관리
             </button>
             
             <button
@@ -136,7 +136,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
-              근무일지 관리
+              근무일지관리
             </button>
             
             <button
@@ -148,7 +148,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <ShoppingCart size={20} />
-              고객 관리
+              고객관리
             </button>
             
             <button

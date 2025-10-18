@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Search, Building2, User, Crown, Shield } from 'lucide-react'
+import { ArrowLeft, Search, Building2, Crown, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { canAccessAllBranches, getDisplayRole, USER_ROLES } from '../constants/roles'
+import { canAccessAllBranches, getDisplayRole, USER_TYPES } from '../constants/roles'
 
 export default function AdminUsers({ user, onNavigate }) {
   const [users, setUsers] = useState([])
@@ -41,7 +41,7 @@ export default function AdminUsers({ user, onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false })
       
-      // 점장(관리모드)는 자기 지점만 볼 수 있음
+      // 점장은 자기 지점만 볼 수 있음
       if (!canAccessAllBranches(user)) {
         console.log('🔒 자기 지점만 필터링:', user.branch)
         query = query.eq('branch', user.branch)
@@ -51,7 +51,7 @@ export default function AdminUsers({ user, onNavigate }) {
       
       if (error) throw error
       
-      console.log('✅ 사용자 데이터:', data)
+      console.log('✅ 사용자 데이터 개수:', data?.length)
       setUsers(data || [])
       
     } catch (err) {
@@ -80,27 +80,6 @@ export default function AdminUsers({ user, onNavigate }) {
     } catch (err) {
       console.error('승인/거부 오류:', err)
       alert(`${action} 처리에 실패했습니다.`)
-    }
-  }
-
-  // 점장 지정/해제
-  const handleToggleBranchManager = async (userId, currentStatus, userName) => {
-    const action = currentStatus ? '해제' : '지정'
-    if (!window.confirm(`${userName}님을 점장으로 ${action}하시겠습니까?`)) return
-    
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_branch_manager: !currentStatus })
-        .eq('id', userId)
-      
-      if (error) throw error
-      
-      alert(`점장으로 ${action}되었습니다.`)
-      loadUsers()
-    } catch (err) {
-      console.error('점장 지정 오류:', err)
-      alert('점장 지정에 실패했습니다.')
     }
   }
 
@@ -166,7 +145,7 @@ export default function AdminUsers({ user, onNavigate }) {
               </div>
               
               {/* 지점 필터 (시스템관리자만) */}
-              {canAccessAllBranches(user) && (
+              {canAccessAllBranches(user) && branches.length > 0 && (
                 <div className="flex items-center gap-2">
                   <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     <Building2 size={18} className="inline mr-1" />
@@ -262,11 +241,11 @@ export default function AdminUsers({ user, onNavigate }) {
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         <div className="flex items-center gap-2">
                           {u.name}
-                          {u.user_type === USER_ROLES.ADMIN && (
+                          {u.user_type === USER_TYPES.SYSTEM_ADMIN && (
                             <Shield size={16} style={{ color: '#ef4444' }} title="시스템관리자" />
                           )}
-                          {u.is_branch_manager && (
-                            <Crown size={16} style={{ color: '#f59e0b' }} title="점장" />
+                          {(u.user_type === USER_TYPES.STORE_MANAGER || u.user_type === USER_TYPES.BRANCH_MANAGER) && (
+                            <Crown size={16} style={{ color: '#f59e0b' }} title="관리자" />
                           )}
                         </div>
                       </td>
@@ -281,7 +260,7 @@ export default function AdminUsers({ user, onNavigate }) {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-medium">
-                          {getDisplayRole(u)}
+                          {getDisplayRole(u.user_type)}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -317,20 +296,6 @@ export default function AdminUsers({ user, onNavigate }) {
                                 거부
                               </button>
                             </>
-                          )}
-                          
-                          {/* 일반 사용자에게만 점장 지정 가능 */}
-                          {u.user_type === USER_ROLES.USER && u.status === 'approved' && (
-                            <button
-                              onClick={() => handleToggleBranchManager(u.id, u.is_branch_manager, u.name)}
-                              className={`px-3 py-1 rounded text-xs font-bold hover:opacity-80 ${
-                                u.is_branch_manager 
-                                  ? 'bg-yellow-100 text-yellow-700 border border-yellow-300' 
-                                  : 'bg-gray-100 text-gray-700 border border-gray-300'
-                              }`}
-                            >
-                              {u.is_branch_manager ? '👑 점장 해제' : '점장 지정'}
-                            </button>
                           )}
                         </div>
                       </td>
