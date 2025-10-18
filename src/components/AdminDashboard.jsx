@@ -57,13 +57,12 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               onError={(e) => e.target.style.display = 'none'}
             />
             <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              지점관리
+              지점 관리
             </h2>
           </div>
 
           {/* 일반 업무로 돌아가기 버튼 */}
-          <div className="mb-6 space-y-3">
-            {/* 방법 1: onSwitchMode 사용 */}
+          <div className="mb-6">
             <div className="p-4 rounded-lg border-2" style={{ backgroundColor: '#f0f9ff', borderColor: '#0284c7' }}>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 flex-1">
@@ -83,24 +82,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
                   style={{ borderColor: '#0284c7', color: '#075985', borderRadius: '10px' }}
                 >
                   👤 일반업무
-                </button>
-              </div>
-            </div>
-
-            {/* 방법 2: 직접 이동 (백업) */}
-            <div className="p-3 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-bold" style={{ color: '#92400e' }}>
-                    💡 위 버튼이 작동하지 않나요? 아래 버튼을 클릭하세요
-                  </p>
-                </div>
-                <button
-                  onClick={handleDirectDashboardNavigation}
-                  className="px-3 py-1.5 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-xs whitespace-nowrap"
-                  style={{ borderColor: '#f59e0b', color: '#92400e', borderRadius: '8px' }}
-                >
-                  📋 업무화면
                 </button>
               </div>
             </div>
@@ -143,7 +124,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Users size={20} />
-              회원관리
+              회원 관리
             </button>
             
             <button
@@ -155,7 +136,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
-              근무일지관리
+              근무일지 관리
             </button>
             
             <button
@@ -167,7 +148,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <ShoppingCart size={20} />
-              고객관리
+              고객 관리
             </button>
             
             <button

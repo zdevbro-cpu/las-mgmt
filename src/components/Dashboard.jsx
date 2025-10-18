@@ -73,10 +73,9 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </h2>
           </div>
 
-          {/* 점주/지점관리자면 관리자 모드 안내 */}
+          {/* 점장 이상이면 관리자 모드 안내 */}
           {hasManagementAccess && (
-            <div className="mb-6 space-y-3">
-              {/* 방법 1: onSwitchMode 사용 */}
+            <div className="mb-6">
               <div className="p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-2 flex-1">
@@ -96,24 +95,6 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
                     style={{ borderColor: '#f59e0b', color: '#92400e', borderRadius: '10px' }}
                   >
                     🛡️ 지점관리
-                  </button>
-                </div>
-              </div>
-
-              {/* 방법 2: 직접 이동 (백업) */}
-              <div className="p-3 rounded-lg border-2" style={{ backgroundColor: '#e0f2fe', borderColor: '#0284c7' }}>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="text-xs font-bold" style={{ color: '#075985' }}>
-                      💡 위 버튼이 작동하지 않나요? 아래 버튼을 클릭하세요
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleDirectAdminNavigation}
-                    className="px-3 py-1.5 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-xs whitespace-nowrap"
-                    style={{ borderColor: '#0284c7', color: '#075985', borderRadius: '8px' }}
-                  >
-                    🏢 관리페이지
                   </button>
                 </div>
               </div>
