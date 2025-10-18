@@ -13,6 +13,20 @@ export default function Login({ onNavigate, onLogin }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  
+  const handleLogin = () => {
+    console.log('🔐 Login')
+    const user = users.find(u => u.email === email && u.password === password)
+    
+    if (user) {
+      console.log('✅ 로그인 성공:', user)
+      onLogin(user)
+    } else {
+      console.log('❌ 로그인 실패')
+      alert('이메일 또는 비밀번호가 올바르지 않습니다.')
+    }
+  }
+  
   const handleChange = (e) => {
     setFormData({
       ...formData,
