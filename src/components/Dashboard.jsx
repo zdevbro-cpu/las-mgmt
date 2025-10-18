@@ -3,6 +3,26 @@ import { LogOut, FileText, ShoppingCart, Package, Truck, Shield } from 'lucide-r
 import { isBranchManager, LOGIN_MODES } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) {
+  
+  // ✅ 디버깅 함수
+  const handleManagerModeClick = () => {
+    console.log('🛡️ 지점관리 버튼 클릭됨')
+    console.log('📦 user:', user)
+    console.log('📦 onSwitchMode:', onSwitchMode)
+    console.log('📦 LOGIN_MODES:', LOGIN_MODES)
+    console.log('📦 LOGIN_MODES.MANAGER:', LOGIN_MODES.MANAGER)
+    
+    if (!onSwitchMode) {
+      console.error('❌ onSwitchMode prop이 없습니다!')
+      alert('모드 전환 기능이 연결되지 않았습니다.')
+      return
+    }
+    
+    console.log('✅ onSwitchMode 호출:', LOGIN_MODES.MANAGER)
+    onSwitchMode(LOGIN_MODES.MANAGER)
+    console.log('✅ onSwitchMode 호출 완료')
+  }
+  
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
@@ -19,7 +39,10 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </h2>
           </div>
 
-          {/* ✅ 점장이면 관리자 모드 안내 */}
+          {/* ✅ 점장 안내 (디버깅 로그 추가) */}
+          {console.log('🔍 isBranchManager(user):', isBranchManager(user))}
+          {console.log('🔍 onSwitchMode 존재:', !!onSwitchMode)}
+          
           {isBranchManager(user) && onSwitchMode && (
             <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
               <div className="flex items-center justify-between">
@@ -35,7 +58,7 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
                   </div>
                 </div>
                 <button
-                  onClick={() => onSwitchMode(LOGIN_MODES.MANAGER)}
+                  onClick={handleManagerModeClick}
                   className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm whitespace-nowrap"
                   style={{ borderColor: '#f59e0b', color: '#92400e', borderRadius: '10px' }}
                 >
