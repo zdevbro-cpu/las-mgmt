@@ -62,7 +62,19 @@ function App() {
       setCurrentPage('dashboard')
     }
   }
+  <LoginModeSelector 
+    user={user} 
+    onSelectMode={(mode) => {
+      // mode는 'employee' 또는 'manager'
+      if (mode === 'manager') {
+        setCurrentPage('adminDashboard')
+      } else {
+        setCurrentPage('dashboard')
+      }
+    }} 
+  />
 
+  
   // ✅ 모드 전환 함수
   const handleSwitchMode = (newMode) => {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
