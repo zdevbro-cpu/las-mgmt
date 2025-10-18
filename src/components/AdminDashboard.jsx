@@ -203,9 +203,19 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* ... 나머지 코드 ... */}
+          <div className="flex items-center justify-center gap-1.5 mb-6">
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Logo" 
+              className="w-10 h-10 object-cover"
+              onError={(e) => e.target.style.display = 'none'}
+            />
+            <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
+              {isSystemAdmin(user) ? '관리자 대시보드' : '지점관리'}
+            </h2>
+          </div>
 
-          {/* 현재 모드 표시 */}
+          {/* ✅ 현재 모드 표시 */}
           <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#f0fdf4', borderColor: '#249689' }}>
             <div className="flex items-center justify-between">
               <div>
@@ -215,17 +225,22 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
                 </p>
               </div>
               {/* ✅ 점장만 모드 전환 버튼 표시 */}
-              {!isSystemAdmin(user) && (
+              {!isSystemAdmin(user) && onSwitchMode && (
                 <button
-                  onClick={handleSwitchMode}
+                  onClick={() => {
+                    if (window.confirm('일반 업무로 전환하시겠습니까?')) {
+                      onSwitchMode(LOGIN_MODES.STAFF)
+                    }
+                  }}
                   className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors"
                   style={{ borderColor: '#7f95eb', color: '#000000', borderRadius: '10px', fontSize: '14px' }}
                 >
-                  🔄 업무 전환
+                  👤 일반업무
                 </button>
               )}
             </div>
           </div>
+
           
           <div className="grid grid-cols-2 gap-1.5 mb-8">
             <div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LogOut, FileText, ShoppingCart, Package, Truck, User, Shield } from 'lucide-react'
+import { LogOut, FileText, ShoppingCart, Package, Truck, Shield } from 'lucide-react'
 import { isBranchManager, LOGIN_MODES } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) {
@@ -19,27 +19,27 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </h2>
           </div>
 
-          {/* ✅ 점장이면 관리자 모드로 전환 안내 */}
-          {isBranchManager(user) && (
+          {/* ✅ 점장이면 관리자 모드 안내 */}
+          {isBranchManager(user) && onSwitchMode && (
             <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Shield size={20} style={{ color: '#f59e0b' }} />
                   <div>
                     <p className="font-bold" style={{ color: '#92400e', fontSize: '14px' }}>
-                      👑 점장님이시군요!
+                      👑 점장님, 지점 관리가 필요하신가요?
                     </p>
                     <p className="text-xs" style={{ color: '#92400e' }}>
-                      지점 관리가 필요하시면 관리자 모드로 전환하세요
+                      지점 관리 모드로 전환하여 직원 및 통계를 확인하세요
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => onSwitchMode && onSwitchMode(LOGIN_MODES.MANAGER)}
-                  className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm"
+                  onClick={() => onSwitchMode(LOGIN_MODES.MANAGER)}
+                  className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm whitespace-nowrap"
                   style={{ borderColor: '#f59e0b', color: '#92400e', borderRadius: '10px' }}
                 >
-                  🛡️ 관리자 모드
+                  🛡️ 지점관리
                 </button>
               </div>
             </div>

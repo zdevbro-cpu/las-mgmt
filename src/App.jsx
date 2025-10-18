@@ -22,15 +22,10 @@ function App() {
   useEffect(() => {
     console.log('📍 Current Page:', currentPage)
     console.log('👤 Current User:', user)
-    if (user) {
-      console.log('🔑 User Type:', user.user_type)
-      console.log('👑 Is Branch Manager:', user.is_branch_manager)
-      console.log('🎯 Login Mode:', user.loginMode)
-    }
   }, [currentPage, user])
 
   const handleAutoLogin = (userData) => {
-    console.log('🔄 Auto login with user:', userData)
+    console.log('🔄 Auto login')
     setUser(userData)
     
     if (canAccessManagement(userData)) {
@@ -58,56 +53,36 @@ function App() {
   }
 
   const handleLogin = (userData) => {
-    console.log('🔐 Login with user:', userData)
-    console.log('🎯 Login Mode:', userData.loginMode)
-    
+    console.log('🔐 Login')
     setUser(userData)
     
     if (canAccessManagement(userData)) {
-      console.log('✅ ➡️ AdminDashboard로 이동')
       setCurrentPage('adminDashboard')
     } else {
-      console.log('✅ ➡️ Dashboard로 이동')
       setCurrentPage('dashboard')
     }
   }
 
+  // ✅ 모드 전환 함수
   const handleSwitchMode = (newMode) => {
-    console.log('🎯 App.jsx handleSwitchMode 호출됨')
-    console.log('📊 현재 user:', user)
-    console.log('📊 현재 모드:', user?.loginMode)
-    console.log('📊 새로운 모드:', newMode)
-    console.log('📊 현재 페이지:', currentPage)
+    console.log('🔄 모드 전환:', newMode)
     
-    if (!user) {
-      console.error('❌ user가 없습니다!')
-      return
-    }
-    
-    // user 객체 업데이트
     const updatedUser = {
       ...user,
       loginMode: newMode
     }
     
-    console.log('📦 업데이트된 user:', updatedUser)
-    
     setUser(updatedUser)
     
-    // 모드에 따라 페이지 이동
+    // 즉시 페이지 이동
     if (newMode === LOGIN_MODES.MANAGER) {
-      console.log('✅ adminDashboard로 이동')
       setCurrentPage('adminDashboard')
     } else {
-      console.log('✅ dashboard로 이동')
       setCurrentPage('dashboard')
     }
-    
-    console.log('🎯 handleSwitchMode 완료')
   }
+
   const renderPage = () => {
-    console.log('🎨 Rendering page:', currentPage)
-    
     switch (currentPage) {
       case 'hero':
         return <HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />
@@ -117,6 +92,13 @@ function App() {
       
       case 'signup':
         return <Signup onNavigate={handleNavigate} />
+      
+      case 'dashboard':
+        if (!user) {
+          setCurrentPage('login')
+          return null
+        }
+        return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
       
       case 'adminDashboard':
         if (!user) {
@@ -128,30 +110,7 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        console.log('🎨 AdminDashboard 렌더링, onSwitchMode:', handleSwitchMode)
-        return (
-          <AdminDashboard 
-            user={user} 
-            onNavigate={handleNavigate} 
-            onLogout={handleLogout} 
-            onSwitchMode={handleSwitchMode}  // ✅ 이 부분 확인
-          />
-        )
-
-      case 'dashboard':
-        if (!user) {
-          setCurrentPage('login')
-          return null
-        }
-        console.log('🎨 Dashboard 렌더링, onSwitchMode:', handleSwitchMode)
-        return (
-          <Dashboard 
-            user={user} 
-            onNavigate={handleNavigate} 
-            onLogout={handleLogout} 
-            onSwitchMode={handleSwitchMode}  // ✅ 이 부분 확인
-          />
-        )
+        return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
       
       case 'adminUsers':
         if (!user) {
@@ -163,7 +122,7 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        return <AdminUsers user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <AdminUsers user={user} onNavigate={handleNavigate} />
       
       case 'adminWorkDiary':
         if (!user) {
@@ -175,7 +134,7 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        return <AdminWorkDiary user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <AdminWorkDiary user={user} onNavigate={handleNavigate} />
       
       case 'adminCustomers':
         if (!user) {
@@ -187,7 +146,7 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        return <AdminCustomers user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <AdminCustomers user={user} onNavigate={handleNavigate} />
       
       case 'workDiary':
         if (!user) {
@@ -201,21 +160,21 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        return <SalesManagement user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <SalesManagement user={user} onNavigate={handleNavigate} />
       
       case 'shippingList':
         if (!user) {
           setCurrentPage('login')
           return null
         }
-        return <ShippingList user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <ShippingList user={user} onNavigate={handleNavigate} />
       
       case 'purchaseHistory':
         if (!user) {
           setCurrentPage('login')
           return null
         }
-        return <PurchaseHistory user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
+        return <PurchaseHistory user={user} onNavigate={handleNavigate} />
       
       case 'profile':
         if (!user) {
@@ -232,7 +191,6 @@ function App() {
                 <p className="text-gray-600">이름: {user.name}</p>
                 <p className="text-gray-600">이메일: {user.email}</p>
                 <p className="text-gray-600">지점: {user.branch}</p>
-                <p className="text-gray-600">구분: {user.user_type}</p>
               </div>
               <p className="text-gray-500 text-sm mb-4">상세 프로필 페이지는 준비중입니다.</p>
               <button
