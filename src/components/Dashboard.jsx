@@ -3,26 +3,26 @@ import { LogOut, FileText, ShoppingCart, Package, Truck, Shield } from 'lucide-r
 import { isBranchManager, LOGIN_MODES } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) {
-  
-  // ✅ 디버깅 함수
+  console.log('🎨 Dashboard 렌더링')
+  console.log('👤 user:', user)
+  console.log('👑 isBranchManager:', isBranchManager(user))
+  console.log('📦 onSwitchMode:', onSwitchMode)
+
   const handleManagerModeClick = () => {
     console.log('🛡️ 지점관리 버튼 클릭됨')
-    console.log('📦 user:', user)
-    console.log('📦 onSwitchMode:', onSwitchMode)
-    console.log('📦 LOGIN_MODES:', LOGIN_MODES)
+    console.log('📦 onSwitchMode 존재:', !!onSwitchMode)
     console.log('📦 LOGIN_MODES.MANAGER:', LOGIN_MODES.MANAGER)
     
-    if (!onSwitchMode) {
-      console.error('❌ onSwitchMode prop이 없습니다!')
+    if (onSwitchMode) {
+      console.log('✅ onSwitchMode 호출')
+      onSwitchMode(LOGIN_MODES.MANAGER)
+      console.log('✅ onSwitchMode 호출 완료')
+    } else {
+      console.error('❌ onSwitchMode가 없습니다!')
       alert('모드 전환 기능이 연결되지 않았습니다.')
-      return
     }
-    
-    console.log('✅ onSwitchMode 호출:', LOGIN_MODES.MANAGER)
-    onSwitchMode(LOGIN_MODES.MANAGER)
-    console.log('✅ onSwitchMode 호출 완료')
   }
-  
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
@@ -39,14 +39,11 @@ export default function Dashboard({ user, onNavigate, onLogout, onSwitchMode }) 
             </h2>
           </div>
 
-          {/* ✅ 점장 안내 (디버깅 로그 추가) */}
-          {console.log('🔍 isBranchManager(user):', isBranchManager(user))}
-          {console.log('🔍 onSwitchMode 존재:', !!onSwitchMode)}
-          
-          {isBranchManager(user) && onSwitchMode && (
+          {/* ✅ 점장이면 관리자 모드 안내 */}
+          {isBranchManager(user) && (
             <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#fef3c7', borderColor: '#f59e0b' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2 flex-1">
                   <Shield size={20} style={{ color: '#f59e0b' }} />
                   <div>
                     <p className="font-bold" style={{ color: '#92400e', fontSize: '14px' }}>
