@@ -98,7 +98,16 @@ function App() {
           setCurrentPage('login')
           return null
         }
-        return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
+        console.log('🎨 Dashboard 렌더링')
+        console.log('📦 onSwitchMode 전달:', handleSwitchMode)
+        return (
+          <Dashboard 
+            user={user} 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            onSwitchMode={handleSwitchMode}  // ← 이게 있는지 확인
+          />
+        )
       
       case 'adminDashboard':
         if (!user) {
