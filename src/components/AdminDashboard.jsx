@@ -178,28 +178,32 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
     }
   }
 
-  // 모드 전환 함수
   const handleSwitchMode = () => {
+    console.log('🔄 handleSwitchMode 호출됨')
+    console.log('📦 onSwitchMode prop:', onSwitchMode)
+    console.log('📦 LOGIN_MODES:', LOGIN_MODES)
+    
     if (window.confirm('일반 업무 모드로 전환하시겠습니까?')) {
-      // ✅ 로그아웃 대신 모드만 변경
-      onSwitchMode(LOGIN_MODES.STAFF)
+      console.log('✅ 사용자가 확인을 눌렀습니다')
+      
+      if (onSwitchMode) {
+        console.log('✅ onSwitchMode 호출 시작:', LOGIN_MODES.STAFF)
+        onSwitchMode(LOGIN_MODES.STAFF)
+        console.log('✅ onSwitchMode 호출 완료')
+      } else {
+        console.error('❌ onSwitchMode prop이 없습니다!')
+        alert('모드 전환 기능이 연결되지 않았습니다.')
+      }
+    } else {
+      console.log('❌ 사용자가 취소를 눌렀습니다')
     }
   }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex items-center justify-center gap-1.5 mb-6">
-            <img 
-              src="/images/logo.png" 
-              alt="LAS Logo" 
-              className="w-10 h-10 object-cover"
-              onError={(e) => e.target.style.display = 'none'}
-            />
-            <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
-              {isSystemAdmin(user) ? '관리자 대시보드' : '지점관리'}
-            </h2>
-          </div>
+          {/* ... 나머지 코드 ... */}
 
           {/* 현재 모드 표시 */}
           <div className="mb-6 p-4 rounded-lg border-2" style={{ backgroundColor: '#f0fdf4', borderColor: '#249689' }}>
@@ -210,6 +214,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout }) {
                   {getDisplayMode(user)}
                 </p>
               </div>
+              {/* ✅ 점장만 모드 전환 버튼 표시 */}
               {!isSystemAdmin(user) && (
                 <button
                   onClick={handleSwitchMode}

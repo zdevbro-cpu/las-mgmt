@@ -72,9 +72,17 @@ function App() {
     }
   }
 
-  // ✅ 모드 전환 함수 추가
   const handleSwitchMode = (newMode) => {
-    console.log('🔄 모드 전환:', user.loginMode, '→', newMode)
+    console.log('🎯 App.jsx handleSwitchMode 호출됨')
+    console.log('📊 현재 user:', user)
+    console.log('📊 현재 모드:', user?.loginMode)
+    console.log('📊 새로운 모드:', newMode)
+    console.log('📊 현재 페이지:', currentPage)
+    
+    if (!user) {
+      console.error('❌ user가 없습니다!')
+      return
+    }
     
     // user 객체 업데이트
     const updatedUser = {
@@ -82,16 +90,21 @@ function App() {
       loginMode: newMode
     }
     
+    console.log('📦 업데이트된 user:', updatedUser)
+    
     setUser(updatedUser)
     
     // 모드에 따라 페이지 이동
     if (newMode === LOGIN_MODES.MANAGER) {
+      console.log('✅ adminDashboard로 이동')
       setCurrentPage('adminDashboard')
     } else {
+      console.log('✅ dashboard로 이동')
       setCurrentPage('dashboard')
     }
+    
+    console.log('🎯 handleSwitchMode 완료')
   }
-
   const renderPage = () => {
     console.log('🎨 Rendering page:', currentPage)
     
@@ -105,13 +118,6 @@ function App() {
       case 'signup':
         return <Signup onNavigate={handleNavigate} />
       
-      case 'dashboard':
-        if (!user) {
-          setCurrentPage('login')
-          return null
-        }
-        return <Dashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
-      
       case 'adminDashboard':
         if (!user) {
           setCurrentPage('login')
@@ -122,7 +128,30 @@ function App() {
           setCurrentPage('dashboard')
           return null
         }
-        return <AdminDashboard user={user} onNavigate={handleNavigate} onLogout={handleLogout} onSwitchMode={handleSwitchMode} />
+        console.log('🎨 AdminDashboard 렌더링, onSwitchMode:', handleSwitchMode)
+        return (
+          <AdminDashboard 
+            user={user} 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            onSwitchMode={handleSwitchMode}  // ✅ 이 부분 확인
+          />
+        )
+
+      case 'dashboard':
+        if (!user) {
+          setCurrentPage('login')
+          return null
+        }
+        console.log('🎨 Dashboard 렌더링, onSwitchMode:', handleSwitchMode)
+        return (
+          <Dashboard 
+            user={user} 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            onSwitchMode={handleSwitchMode}  // ✅ 이 부분 확인
+          />
+        )
       
       case 'adminUsers':
         if (!user) {
