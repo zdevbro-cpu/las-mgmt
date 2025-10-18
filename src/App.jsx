@@ -64,24 +64,32 @@ function App() {
   }
 
   // ✅ 모드 전환 함수
-  const handleSwitchMode = (newMode) => {
-    console.log('🔄 모드 전환:', newMode)
-    
-    const updatedUser = {
-      ...user,
-      loginMode: newMode
-    }
-    
-    setUser(updatedUser)
-    
-    // 즉시 페이지 이동
-    if (newMode === LOGIN_MODES.MANAGER) {
-      setCurrentPage('adminDashboard')
-    } else {
-      setCurrentPage('dashboard')
-    }
+const handleSwitchMode = (newMode) => {
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+  console.log('🔄 App.jsx - handleSwitchMode 호출됨')
+  console.log('📦 현재 모드:', user?.loginMode)
+  console.log('📦 새로운 모드:', newMode)
+  console.log('👤 현재 사용자:', user)
+  
+  const updatedUser = {
+    ...user,
+    loginMode: newMode
   }
-
+  
+  console.log('✅ 업데이트된 사용자:', updatedUser)
+  setUser(updatedUser)
+  
+  // 즉시 페이지 이동
+  if (newMode === LOGIN_MODES.MANAGER) {
+    console.log('✅ MANAGER 모드로 전환 → adminDashboard로 이동')
+    setCurrentPage('adminDashboard')
+  } else {
+    console.log('✅ EMPLOYEE 모드로 전환 → dashboard로 이동')
+    setCurrentPage('dashboard')
+  }
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+}
   const renderPage = () => {
     switch (currentPage) {
       case 'hero':

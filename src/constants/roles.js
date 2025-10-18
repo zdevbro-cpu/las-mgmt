@@ -1,60 +1,55 @@
-// 권한 상수
-export const USER_ROLES = {
-  ADMIN: 'admin',
-  USER: 'user'
-}
+// src/constants/roles.js
 
 // 로그인 모드
 export const LOGIN_MODES = {
-  STAFF: 'staff',      // 일반 업무
-  MANAGER: 'manager'   // 지점 관리
+  EMPLOYEE: 'employee',  // 직원 모드 (일반 업무)
+  MANAGER: 'manager'     // 관리자 모드 (지점 관리)
 }
 
-// ========== 권한 체크 함수 ==========
-
-// 시스템관리자인가?
-export const isSystemAdmin = (user) => {
-  return user?.user_type === USER_ROLES.ADMIN
+// 사용자 타입
+export const USER_TYPES = {
+  OWNER: '점주',
+  BRANCH_MANAGER: '지점관리자',
+  EMPLOYEE: '직원'
 }
 
-// 점장인가?
+// 지점관리자 또는 점주인지 확인 (관리 권한)
 export const isBranchManager = (user) => {
-  return user?.is_branch_manager === true
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
 }
 
-// 관리자 모드인가?
-export const isManagerMode = (user) => {
-  return user?.loginMode === LOGIN_MODES.MANAGER
-}
-
-// 모든 지점 접근 가능한가?
-export const canAccessAllBranches = (user) => {
-  return isSystemAdmin(user)
-}
-
-// 관리 기능 접근 가능한가?
+// 관리 페이지 접근 권한 확인
 export const canAccessManagement = (user) => {
-  return isSystemAdmin(user) || isManagerMode(user)
+  if (!user) return false
+  
+  // 점주와 지점관리자만 관리 페이지 접근 가능
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
 }
 
-// ========== 표시용 함수 ==========
-
-// 역할 표시명
-export const getDisplayRole = (user) => {
-  if (isSystemAdmin(user)) return '시스템관리자'
-  if (isBranchManager(user)) return '점장'
-  return '일반 사용자'
+// 특정 기능별 권한 확인
+export const canManageUsers = (user) => {
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
 }
 
-// 모드 표시명
-export const getDisplayMode = (user) => {
-  if (isSystemAdmin(user)) return '전체 시스템 관리'
-  if (isManagerMode(user)) return `${user.branch} 관리`
-  return '일반 업무'
+export const canManageWorkDiaries = (user) => {
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
 }
 
-// 역할 라벨 (테이블 표시용)
-export const ROLE_LABELS = {
-  [USER_ROLES.ADMIN]: '시스템관리자',
-  [USER_ROLES.USER]: '일반 사용자'
+export const canManageCustomers = (user) => {
+  if (!user) return false
+  return user.user_type === USER_TYPES.OWNER || 
+         user.user_type === USER_TYPES.BRANCH_MANAGER
+}
+
+// 본인 데이터만 조회 가능한지 확인
+export const canViewOwnDataOnly = (user) => {
+  if (!user) return true
+  return user.user_type === USER_TYPES.EMPLOYEE
 }
