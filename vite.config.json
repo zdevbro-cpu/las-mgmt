@@ -1,0 +1,19 @@
+{
+  "name": "las-management-system",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vite": "^5.4.11"
+  },
+  "server": {
+    "port": "3000"
+  },
+  "engines": {
+    "node": "20"
+  }
+}
