@@ -82,7 +82,7 @@ export default function AdminCustomers({ user, onNavigate }) {
       <div className="bg-white shadow-md p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
-            onClick={() => onNavigate('adminDashboard')}
+            onClick={() => onNavigate('AdminDashboard')}
             className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
             style={{ color: '#249689', fontSize: '15px' }}
           >

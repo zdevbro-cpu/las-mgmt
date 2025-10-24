@@ -111,8 +111,8 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
           <div className="space-y-4">
             <button
               onClick={() => {
-                console.log('🧭 Navigate to: adminWorkDiary')
-                onNavigate('adminWorkDiary')
+                console.log('🧭 Navigate to: AdminWorkDiary')
+                onNavigate('AdminWorkDiary')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -123,8 +123,8 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
 
             <button
               onClick={() => {
-                console.log('🧭 Navigate to: adminUsers')
-                onNavigate('adminUsers')
+                console.log('🧭 Navigate to: AdminUsers')
+                onNavigate('AdminUsers')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -135,8 +135,8 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
             
             <button
               onClick={() => {
-                console.log('🧭 Navigate to: adminCustomers')
-                onNavigate('adminCustomers')
+                console.log('🧭 Navigate to: AdminCustomers')
+                onNavigate('AdminCustomers')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -149,8 +149,8 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
             {showEventDashboard && (
               <button
                 onClick={() => {
-                  console.log('🧭 Navigate to: adminEventDashboard')
-                  onNavigate('adminEventDashboard')
+                  console.log('🧭 Navigate to: AdminEventDashboard')
+                  onNavigate('AdminEventDashboard')
                 }}
                 className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#dc2626', borderRadius: '10px', fontSize: '15px' }}

@@ -58,7 +58,7 @@ export default function AdminEventMenu({ user, onNavigate, onLogout, onBack }) {
                 onNavigate('adminEvent')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              style={{ backgroundColor: '#4A9B8E', borderRadius: '10px', fontSize: '15px' }}
             >
               <BarChart3 size={20} />
               이벤트 대시보드
@@ -67,30 +67,30 @@ export default function AdminEventMenu({ user, onNavigate, onLogout, onBack }) {
             {/* 2. 이벤트 템플릿 관리 */}
             <button
               onClick={() => {
-                console.log('🧭 Navigate to: adminEventManager')
-                onNavigate('adminEventManager')
+                console.log('🧭 Navigate to: AdminEventManager')
+                onNavigate('AdminEventManager')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
               이벤트 템플릿 관리
             </button>
 
-            {/* 3. 돌아가기 */}
+            {/* 3. 나가기 */}
             <button
               onClick={() => {
                 console.log('🧭 Navigate back')
                 if (onBack) {
                   onBack()
                 } else if (isSystemAdmin) {
-                  onNavigate('systemAdminDashboard')
+                  onNavigate('SystemAdminDashboard')
                 } else {
-                  onNavigate('adminDashboard')
+                  onNavigate('AdminDashboard')
                 }
               }}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
-              style={{ color: '#000000', border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+              style={{ color: '#000000', border: '2px solid #A5AEE3', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
             >
               <ArrowLeft size={20} />
               나가기

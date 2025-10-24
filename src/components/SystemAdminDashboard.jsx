@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from 'react'
 import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3 } from 'lucide-react'
 
 export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
@@ -46,9 +46,17 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
           </div>
 
           <div className="space-y-4">
+            <button
+              onClick={() => onNavigate('SystemAdminBranches')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Building2 size={20} />
+              지점관리
+            </button>
 
             <button
-              onClick={() => onNavigate('systemAdminUsers')}
+              onClick={() => onNavigate('SystemAdminUsers')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -57,7 +65,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             </button>
 
             <button
-              onClick={() => onNavigate('systemAdminCustomers')}
+              onClick={() => onNavigate('SystemAdminCustomers')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -66,7 +74,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             </button>
 
             <button
-              onClick={() => onNavigate('systemAdminPurchases')}
+              onClick={() => onNavigate('SystemAdminPurchases')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -75,7 +83,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             </button>
 
             <button
-              onClick={() => onNavigate('systemAdminShipping')}
+              onClick={() => onNavigate('SystemAdminShipping')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
@@ -83,20 +91,11 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               배송관리
             </button>
 
-            <button
-              onClick={() => onNavigate('systemAdminBranches')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Building2 size={20} />
-              지점관리
-            </button>
-
             {/* ⭐ 이벤트 관리 메뉴로 이동 */}
             <button
               onClick={() => {
-                console.log('🧭 Navigate to: adminEventMenu')
-                onNavigate('adminEventMenu')
+                console.log('🧭 Navigate to: AdminEventMenu')
+                onNavigate('AdminEventMenu')
               }}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#dc2626', borderRadius: '10px', fontSize: '15px' }}

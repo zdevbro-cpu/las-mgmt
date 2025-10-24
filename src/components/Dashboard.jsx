@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from 'react'
 import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User } from 'lucide-react'
 import { isMonitoringAgent, isContractWorker } from '../constants/roles'
 
@@ -47,7 +47,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate('adminDashboard')}
+                    onClick={() => onNavigate('AdminDashboard')}
                     className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm whitespace-nowrap"
                     style={{ borderColor: '#0284c7', color: '#075985', borderRadius: '10px' }}
                   >
@@ -92,7 +92,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             {isContractUser && (
               <>
                 <button
-                  onClick={() => onNavigate('workDiary')}
+                  onClick={() => onNavigate('WorkDiary')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -101,7 +101,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
-                  onClick={() => onNavigate('customerManagement')}
+                  onClick={() => onNavigate('CustomerManagement')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -115,7 +115,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             {!hasLimitedAccess && !isContractUser && (
               <>
                 <button
-                  onClick={() => onNavigate('workDiary')}
+                  onClick={() => onNavigate('WorkDiary')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -124,7 +124,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
-                  onClick={() => onNavigate('customerManagement')}
+                  onClick={() => onNavigate('CustomerManagement')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -133,7 +133,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
-                  onClick={() => onNavigate('shippingList')}
+                  onClick={() => onNavigate('ShippingList')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -142,7 +142,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
-                  onClick={() => onNavigate('purchaseHistory')}
+                  onClick={() => onNavigate('PurchaseHistory')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
@@ -154,7 +154,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
 
             {/* 내정보관리 버튼 - 모든 사용자 표시 */}
             <button
-              onClick={() => onNavigate('myInfo')}
+              onClick={() => onNavigate('MyInfo')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#7f95eb', borderRadius: '10px', fontSize: '15px' }}
             >

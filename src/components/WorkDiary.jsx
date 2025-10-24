@@ -159,12 +159,12 @@ export default function WorkDiary({ user, onNavigate }) {
     if (hasContent) {
       if (window.confirm('작성 중인 내용이 있습니다. 나가기하시겠습니까?')) {
         if (onNavigate) {
-          onNavigate('dashboard')
+          onNavigate('Dashboard')
         }
       }
     } else {
       if (onNavigate) {
-        onNavigate('dashboard')
+        onNavigate('Dashboard')
       }
     }
   }

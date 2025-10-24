@@ -1,162 +1,128 @@
-import React, { useState } from 'react'
-import { Mail, Lock } from 'lucide-react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { LOGIN_MODES } from '../constants/roles'
 
 export default function Login({ onNavigate, onLogin }) {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  })
-  const [error, setError] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-    setError('')
-  }
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
-    
-    const { email, password } = formData
-
-    if (!email || !password) {
-      setError('이메일과 비밀번호를 입력해주세요.')
-      setLoading(false)
-      return
-    }
 
     try {
-      const { data: users, error: queryError } = await supabase
+      // users 테이블에서 이메일과 비밀번호로 직접 조회
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .eq('password', password)
         .single()
 
-      if (queryError || !users) {
-        setError('이메일 또는 비밀번호가 일치하지 않습니다.')
-        setLoading(false)
+      if (userError || !userData) {
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.')
         return
       }
 
-      if (users.status === 'pending') {
-        setError('승인 대기 중입니다. 관리자 승인 후 로그인하실 수 있습니다.')
-        setLoading(false)
+      // 승인 상태 확인
+      if (userData.status !== 'approved') {
+        alert('관리자 승인 대기 중입니다. 승인 후 로그인이 가능합니다.')
         return
       }
 
-      if (users.status === 'rejected') {
-        setError('가입이 거부되었습니다. 관리자에게 문의해주세요.')
-        setLoading(false)
-        return
-      }
+      // 로그인 성공
+      onLogin(userData)
 
-      console.log('로그인 성공:', users)
-      
-      // 모든 사용자 바로 로그인
-      onLogin({ ...users, loginMode: LOGIN_MODES.EMPLOYEE })
-      
-    } catch (err) {
-      console.error('로그인 오류:', err)
-      setError('로그인 중 오류가 발생했습니다.')
+    } catch (error) {
+      console.error('로그인 오류:', error)
+      alert('로그인에 실패했습니다: ' + error.message)
+    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex justify-center items-start pt-8 pb-8">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-        <p className="text-center mb-4 font-bold" style={{ color: '#249689', fontSize: '15px' }}>
-          LAS 매장관리 시스템에 오신것을 환영합니다.
-        </p>
-
-        <div className="flex items-center justify-center mb-4 gap-2">
-          <img 
-            src="/images/logo.png" 
-            alt="LAS Logo" 
-            className="h-10 w-10 object-cover"
-            onError={(e) => e.target.style.display = 'none'}
-          />
-          <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
-            로그인
-          </h1>
+    <div className="min-h-screen flex items-start justify-center p-4 pt-4" style={{ backgroundColor: '#f5f5f5' }}>
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
+        <div className="text-center mb-6">
+          <p className="text-sm mb-4" style={{ color: '#249689' }}>
+            LAS 매장관리 시스템에 오신것을 환영합니다.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <img 
+              src="/images/logo.png" 
+              alt="LAS Book Logo" 
+              className="h-16"
+            />
+            <h1 className="text-3xl font-bold" style={{ color: '#249689' }}>로그인</h1>
+          </div>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
+          {/* 이메일 */}
           <div>
-            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              <Mail size={18} />
-              이메일
+            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+              <span>📧</span>
+              <span>이메일</span>
             </label>
             <input
               type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="이메일을 입력하세요"
-              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              required
+              className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', fontSize: '15px' }}
             />
           </div>
 
+          {/* 비밀번호 */}
           <div>
-            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              <Lock size={18} />
-              비밀번호
+            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+              <span>🔒</span>
+              <span>비밀번호</span>
             </label>
             <input
               type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="비밀번호를 입력하세요"
-              className="w-full px-4 py-2 border border-gray-300 focus:border-teal-500 focus:outline-none"
+              required
+              className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', fontSize: '15px' }}
             />
           </div>
 
-          <div className="flex gap-2 pt-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-              style={{ backgroundColor: '#249689', fontSize: '15px' }}
-            >
-              {loading ? '로그인 중...' : '로그인'}
-            </button>
-            <button
-              type="button"
-              onClick={() => onNavigate('hero')}
-              className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-50 transition-colors"
-              style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', fontSize: '15px' }}
-            >
-              취소
-            </button>
-          </div>
+          {/* 로그인 버튼 */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-lg font-bold text-white hover:opacity-90 mt-6"
+            style={{ backgroundColor: '#249689', fontSize: '16px' }}
+          >
+            {loading ? '로그인 중...' : '로그인'}
+          </button>
+
+          {/* 취소 버튼 */}
+          <button
+            type="button"
+            onClick={() => onNavigate('signup')}
+            className="w-full py-3 rounded-lg font-bold border-2 hover:bg-gray-50"
+            style={{ borderColor: '#cccccc', fontSize: '16px' }}
+          >
+            취소
+          </button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p style={{ color: '#000000', fontSize: '15px' }}>
-            아직 직원이 아니신가요?{' '}
+        <div className="mt-4 text-center">
+          <p style={{ color: '#666666', fontSize: '13px' }}>
+            아직 직원등록 전 이신가요?{' '}
             <button
               onClick={() => onNavigate('signup')}
-              className="font-bold underline hover:opacity-80"
+              className="font-bold hover:underline"
               style={{ color: '#249689' }}
             >
-              직원가입하기
+              직원등록 가기
             </button>
           </p>
         </div>

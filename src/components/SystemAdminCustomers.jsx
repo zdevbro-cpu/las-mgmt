@@ -114,7 +114,7 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => onNavigate('systemAdminDashboard')}
+              onClick={() => onNavigate('SystemAdminDashboard')}
               className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
               style={{ color: '#249689', fontSize: '15px' }}
             >

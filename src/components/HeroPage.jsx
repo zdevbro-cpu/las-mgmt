@@ -106,14 +106,14 @@ export default function HeroPage({ onNavigate, onAutoLogin }) {
           <div className="flex flex-col gap-2 w-full px-10">
             <button
               onClick={() => onNavigate('login')}
-              className="px-8 py-2.5 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-opacity w-full" 
+              className="px-8 py-3.5 text-white font-bold rounded-lg shadow-md hover:opacity-90 transition-opacity w-full" 
               style={{ backgroundColor: '#249689', fontSize: '15px' }}
             >
               로그인
             </button>
             <button
               onClick={() => onNavigate('signup')}
-              className="px-8 py-2.5 font-bold rounded-lg shadow-md hover:bg-gray-50 transition-colors w-full" 
+              className="px-8 py-3.5 font-bold rounded-lg shadow-md hover:bg-gray-50 transition-colors w-full" 
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', fontSize: '15px' }}
             >
               직원등록

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Calendar, Clock, User, Search } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, User, Search, ClipboardList } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { canAccessAllBranches } from '../constants/roles'
 
@@ -95,6 +95,16 @@ export default function AdminWorkDiary({ user, onNavigate }) {
     }
   })
 
+  // 총 근무시간 계산 함수
+  const calculateTotalHours = (diaryList) => {
+    return diaryList.reduce((total, diary) => {
+      const hours = parseFloat(diary.work_hours) || 0
+      return total + hours
+    }, 0)
+  }
+
+  const totalWorkHours = calculateTotalHours(sortedDiaries)
+
   const formatDate = (dateString) => {
     if (!dateString) return '-'
     const date = new Date(dateString)
@@ -111,7 +121,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
       <div className="bg-white shadow-md p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <button
-            onClick={() => onNavigate('adminDashboard')}
+            onClick={() => onNavigate('AdminDashboard')}
             className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
             style={{ color: '#249689', fontSize: '15px' }}
           >
@@ -207,8 +217,9 @@ export default function AdminWorkDiary({ user, onNavigate }) {
               </div>
 
               {/* 검색 결과 수 */}
-              <div className="text-xs text-gray-600 text-center pt-2 border-t">
-                총 <strong className="text-teal-600">{sortedDiaries.length}</strong>건
+              <div className="text-xs text-gray-600 text-center pt-2 border-t space-y-1">
+                <div>총 <strong className="text-teal-600">{sortedDiaries.length}</strong>건</div>
+                <div className="font-bold text-teal-600">총 근무시간: {totalWorkHours.toFixed(1)}시간</div>
               </div>
             </div>
 
@@ -257,9 +268,17 @@ export default function AdminWorkDiary({ user, onNavigate }) {
             {selectedDiary ? (
               <div className="h-full overflow-y-auto p-6">
                 <div className="max-w-2xl mx-auto">
-                  <h2 className="text-2xl font-bold mb-6" style={{ color: '#249689' }}>
-                    근무일지 상세
-                  </h2>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <ClipboardList size={28} style={{ color: '#249689' }} />
+                      <h2 className="text-2xl font-bold" style={{ color: '#249689' }}>
+                        근무일지 상세
+                      </h2>
+                    </div>
+                    <div className="text-lg font-bold" style={{ color: '#249689' }}>
+                      (총근무시간 {totalWorkHours.toFixed(1)}시간)
+                    </div>
+                  </div>
 
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">
                     <div className="grid grid-cols-2 gap-4">

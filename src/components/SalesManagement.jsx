@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 export default function SalesManagement({ user, onNavigate }) {
   const [formData, setFormData] = useState({
@@ -441,7 +441,7 @@ export default function SalesManagement({ user, onNavigate }) {
               {loading ? '저장 중...' : '확인'}
             </button>
             <button
-              onClick={() => onNavigate?.('dashboard')}
+              onClick={() => onNavigate?.('Dashboard')}
               disabled={loading}
               className="flex-1 py-2 font-bold rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               style={{ color: '#000000', border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}

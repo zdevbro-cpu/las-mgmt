@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { canAccessManagement, canAccessEventDashboard, LOGIN_MODES } from './constants/roles'
@@ -22,12 +22,11 @@ import SystemAdminCustomers from './components/SystemAdminCustomers'
 import SystemAdminPurchases from './components/SystemAdminPurchases'
 import SystemAdminShipping from './components/SystemAdminShipping'
 import MyInfo from './components/MyInfo'
+import MyQRCode from './components/MyQRCode'
 import EventLandingPage from './components/event/EventLandingPage'
 import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
 import AdminEventManager from './components/Admin/AdminEventManager'
-import EventParticipantPage from './components/EventParticipantPage'
-
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -71,32 +70,33 @@ function AppContent() {
       'login': '/login',
       'signup': '/signup',
       'event': '/event',
-      'dashboard': '/dashboard',
-      'adminDashboard': '/admin',
-      'adminUsers': '/admin/users',
-      'adminWorkDiary': '/admin/workdiary',
-      'adminCustomers': '/admin/customers',
-      'adminEventMenu': '/admin/event-menu',
+      'Dashboard': '/dashboard',
+      'AdminDashboard': '/admin',
+      'AdminUsers': '/admin/users',
+      'AdminWorkDiary': '/admin/workdiary',
+      'AdminCustomers': '/admin/customers',
+      'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
-      'adminEventDashboard': '/admin/event',
-      'adminEventManager': '/admin/event-manager',
-      'myInfo': '/myinfo',
-      'workDiary': '/workdiary',
-      'customerManagement': '/customers',
-      'shippingList': '/shipping',
-      'purchaseHistory': '/purchases',
-      'systemAdminDashboard': '/system-admin',
-      'systemAdminBranches': '/system-admin/branches',
-      'systemAdminUsers': '/system-admin/users',
-      'systemAdminCustomers': '/system-admin/customers',
-      'systemAdminPurchases': '/system-admin/purchases',
-      'systemAdminShipping': '/system-admin/shipping',
-      'profile': '/profile'
+      'AdminEventDashboard': '/admin/event',
+      'AdminEventManager': '/admin/event-manager',
+      'MyInfo': '/myinfo',
+      'MyQRCode': '/myqrcode',
+      'WorkDiary': '/workdiary',
+      'CustomerManagement': '/customers',
+      'ShippingList': '/shipping',
+      'PurchaseHistory': '/purchases',
+      'SystemAdminDashboard': '/system-admin',
+      'SystemAdminBranches': '/system-admin/branches',
+      'SystemAdminUsers': '/system-admin/users',
+      'SystemAdminCustomers': '/system-admin/customers',
+      'SystemAdminPurchases': '/system-admin/purchases',
+      'SystemAdminShipping': '/system-admin/shipping',
+      'Profile': '/profile'
     }
     
     const targetPath = pageMap[page]
     if (!targetPath) {
-      console.error('❌ 알 수 없는 페이지:', page)
+      console.error('⌛ 알 수 없는 페이지:', page)
       navigate('/')
       return
     }
@@ -117,7 +117,7 @@ function AppContent() {
   }
 
   const handleSwitchMode = (newMode) => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('App.jsx - handleSwitchMode 호출됨')
     console.log('현재 모드:', user?.loginMode)
     console.log('새로운 모드:', newMode)
@@ -137,19 +137,17 @@ function AppContent() {
       navigate('/dashboard')
     }
     
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   }
 
   return (
     <Routes>
       {/* 공개 페이지 */}
-      <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} />
+
+      <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
+
       <Route path="/login" element={<Login onNavigate={handleNavigate} onLogin={handleLogin} />} />
       <Route path="/signup" element={<Signup onNavigate={handleNavigate} />} />
-      
-      {/* 이벤트 참가자 전용 페이지 - 공개 */}
-      <Route path="/event/:participantId" element={<EventParticipantPage />} />
-
       
       {/* ⭐ 이벤트 랜딩 페이지 - 공개 */}
       <Route path="/event" element={<EventLandingPage />} />
@@ -279,7 +277,19 @@ function AppContent() {
         path="/myinfo" 
         element={
           user ? (
-            <MyInfo user={user} onBack={() => navigate('/dashboard')} />
+            <MyInfo user={user} onBack={() => navigate('/dashboard')} onNavigate={handleNavigate} />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        } 
+      />
+      
+      {/* ⭐ 내 QR 코드 페이지 */}
+      <Route 
+        path="/myqrcode" 
+        element={
+          user ? (
+            <MyQRCode user={user} onBack={() => navigate('/myinfo')} />
           ) : (
             <Navigate to="/login" replace />
           )

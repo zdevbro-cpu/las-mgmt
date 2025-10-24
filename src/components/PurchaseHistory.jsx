@@ -187,7 +187,7 @@ ${purchase.deposit_bank ? `🏦 입금기관: ${purchase.deposit_bank}` : ''}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-8">
             <button
-              onClick={() => onNavigate('dashboard')}
+              onClick={() => onNavigate('Dashboard')}
               className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
               style={{ color: '#249689', fontSize: '15px' }}
             >

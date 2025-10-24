@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Search, RotateCcw, Edit, Trash2, CheckCircle, XCircle, Clock, AlertCircle, Users, Key } from 'lucide-react'
+import { ArrowLeft, Search, Download, Edit, Trash2, CheckCircle, XCircle, Key } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import * as XLSX from 'xlsx'
 
 // 고유코드 생성 함수
 const generateReferralCode = async (userType) => {
@@ -45,10 +46,13 @@ const generateReferralCode = async (userType) => {
 export default function SystemAdminUsers({ user, onNavigate }) {
   const [users, setUsers] = useState([])
   const [branches, setBranches] = useState([])
-  const [changeRequests, setChangeRequests] = useState([])
   const [loading, setLoading] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterBranch, setFilterBranch] = useState('')
+  const [filterUserType, setFilterUserType] = useState('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [selectedUsers, setSelectedUsers] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [resettingPassword, setResettingPassword] = useState(null)
@@ -62,7 +66,6 @@ export default function SystemAdminUsers({ user, onNavigate }) {
   useEffect(() => {
     fetchBranches()
     fetchUsers()
-    fetchChangeRequests()
   }, [])
 
   const fetchBranches = async () => {
@@ -73,11 +76,9 @@ export default function SystemAdminUsers({ user, onNavigate }) {
         .order('name', { ascending: true })
 
       if (error) throw error
-
-      console.log('✅ Branches loaded:', data)
       setBranches(data || [])
     } catch (err) {
-      console.error('❌ 지점 조회 오류:', err)
+      console.error('지점 조회 오류:', err)
     }
   }
 
@@ -90,98 +91,58 @@ export default function SystemAdminUsers({ user, onNavigate }) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-
-      console.log('✅ 직원 목록:', data)
       setUsers(data || [])
     } catch (err) {
-      console.error('❌ 직원 조회 오류:', err)
-      alert('직원 목록을 불러오는 중 오류가 발생했습니다: ' + err.message)
+      console.error('직원 조회 오류:', err)
+      alert('직원 목록을 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchChangeRequests = async () => {
+  const handleApprove = async (userId) => {
+    if (!window.confirm('이 직원을 승인하시겠습니까?')) return
+
+    setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('change_requests')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
+      const targetUser = users.find(u => u.id === userId)
+      let referralCode = null
+      
+      if (targetUser) {
+        referralCode = await generateReferralCode(targetUser.user_type)
+      }
+
+      const updateData = {
+        status: 'approved',
+        approved_at: new Date().toISOString()
+      }
+
+      if (referralCode) {
+        updateData.referral_code = referralCode
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', userId)
 
       if (error) throw error
 
-      console.log('✅ 변경요청 목록:', data)
-      setChangeRequests(data || [])
-    } catch (err) {
-      console.error('❌ 변경요청 조회 오류:', err)
-    }
-  }
-
-  const handleSearch = () => {
-    fetchUsers()
-  }
-
-  const handleReset = () => {
-    setSearchValue('')
-    setFilterStatus('all')
-    fetchUsers()
-  }
-
-  const handleApprove = async (userId) => {
-      console.log('🔍 승인 시작 - userId:', userId)
+      if (referralCode) {
+        alert(`직원이 승인되었습니다!\n고유코드: ${referralCode}`)
+      } else {
+        alert('직원이 승인되었습니다!')
+      }
       
-      if (!window.confirm('이 직원을 승인하시겠습니까?')) {
-        console.log('❌ 사용자가 승인 취소')
-        return
-      }
-
-      setLoading(true)
-      try {
-        const targetUser = users.find(u => u.id === userId)
-        console.log('👤 대상 사용자:', targetUser)
-        
-        const updateData = {
-          status: 'approved',
-          approved_at: new Date().toISOString()
-        }
-
-        // referral_code가 없는 경우에만 생성
-        if (targetUser && !targetUser.referral_code) {
-          const referralCode = await generateReferralCode(targetUser.user_type)
-          console.log('🎫 생성된 고유코드:', referralCode)
-          if (referralCode) {
-            updateData.referral_code = referralCode
-          }
-        }
-
-        console.log('📝 업데이트 데이터:', updateData)
-
-        const { error, data } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', userId)
-          .select()
-
-        console.log('✅ 업데이트 결과:', data)
-        console.log('❌ 에러:', error)
-
-        if (error) throw error
-
-        if (updateData.referral_code) {
-          alert(`직원이 승인되었습니다!\n고유코드: ${updateData.referral_code}`)
-        } else {
-          alert('직원이 승인되었습니다!')
-        }
-        
-        fetchUsers()
-      } catch (err) {
-        console.error('❌ 승인 오류:', err)
-        alert('승인 처리 중 오류가 발생했습니다: ' + err.message)
-      } finally {
-        setLoading(false)
-      }
+      fetchUsers()
+    } catch (err) {
+      console.error('승인 오류:', err)
+      alert('승인 처리 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
+  }
+
   const handleReject = async (userId) => {
     if (!window.confirm('이 직원을 거부하시겠습니까?\n거부된 직원은 삭제됩니다.')) return
 
@@ -197,136 +158,78 @@ export default function SystemAdminUsers({ user, onNavigate }) {
       alert('직원이 거부되었습니다!')
       fetchUsers()
     } catch (err) {
-      console.error('❌ 거부 오류:', err)
-      alert('거부 처리 중 오류가 발생했습니다: ' + err.message)
+      console.error('거부 오류:', err)
+      alert('거부 처리 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }
 
-const handlePasswordReset = async (targetUser) => {
-  const tempPassword = 'las0000'
-  
-  if (!window.confirm(
-    `${targetUser.name}(${targetUser.email})님의 비밀번호를 초기화하시겠습니까?\n\n초기화 비밀번호: ${tempPassword}\n\n※ 직원에게 유선으로 전달해주세요.`
-  )) {
-    return
-  }
-
-  setResettingPassword(targetUser.id)
-  try {
-    // users 테이블의 password 컬럼 직접 업데이트
-    const { error } = await supabase
-      .from('users')
-      .update({ password: tempPassword })
-      .eq('id', targetUser.id)
-
-    if (error) throw error
-
-    alert(
-      `비밀번호가 초기화되었습니다!\n\n` +
-      `초기화 비밀번호: ${tempPassword}\n\n` +
-      `※ 직원에게 유선으로 초기화 비밀번호를 전달하고,\n` +
-      `로그인 후 반드시 비밀번호를 변경하도록 안내해주세요.`
-    )
-  } catch (err) {
-    console.error('Password reset error:', err)
-    alert('비밀번호 초기화에 실패했습니다: ' + err.message)
-  } finally {
-    setResettingPassword(null)
-  }
-}
-
-  const handleApproveChangeRequest = async (requestId, userId, changes) => {
-    if (!window.confirm('변경요청을 승인하시겠습니까?')) return
-
-    setLoading(true)
-    try {
-      const { error: requestError } = await supabase
-        .from('change_requests')
-        .update({ status: 'approved' })
-        .eq('id', requestId)
-
-      if (requestError) throw requestError
-
-      const updateData = {}
-      if (changes.branch) updateData.branch = changes.branch
-      if (changes.user_type) updateData.user_type = changes.user_type
-
-      const { error: userError } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', userId)
-
-      if (userError) throw userError
-
-      alert('변경요청이 승인되었습니다!')
-      fetchUsers()
-      fetchChangeRequests()
-    } catch (err) {
-      console.error('❌ 변경요청 승인 오류:', err)
-      alert('변경요청 승인 중 오류가 발생했습니다: ' + err.message)
-    } finally {
-      setLoading(false)
+  const handlePasswordReset = async (targetUser) => {
+    const tempPassword = 'las0000'
+    
+    if (!window.confirm(
+      `${targetUser.name}(${targetUser.email})님의 비밀번호를 초기화하시겠습니까?\n\n초기화 비밀번호: ${tempPassword}\n\n※ 직원에게 유선으로 전달해주세요.`
+    )) {
+      return
     }
-  }
 
-  const handleRejectChangeRequest = async (requestId) => {
-    if (!window.confirm('변경요청을 거부하시겠습니까?')) return
-
-    setLoading(true)
+    setResettingPassword(targetUser.id)
     try {
       const { error } = await supabase
-        .from('change_requests')
-        .update({ status: 'rejected' })
-        .eq('id', requestId)
+        .from('users')
+        .update({ password: tempPassword })
+        .eq('id', targetUser.id)
 
       if (error) throw error
 
-      alert('변경요청이 거부되었습니다!')
-      fetchChangeRequests()
+      alert(
+        `비밀번호가 초기화되었습니다!\n\n` +
+        `초기화 비밀번호: ${tempPassword}\n\n` +
+        `※ 직원에게 유선으로 초기화 비밀번호를 전달하고,\n` +
+        `로그인 후 반드시 비밀번호를 변경하도록 안내해주세요.`
+      )
     } catch (err) {
-      console.error('❌ 변경요청 거부 오류:', err)
-      alert('변경요청 거부 중 오류가 발생했습니다: ' + err.message)
+      console.error('비밀번호 초기화 오류:', err)
+      alert('비밀번호 초기화에 실패했습니다.')
     } finally {
-      setLoading(false)
+      setResettingPassword(null)
     }
   }
 
   const openEditModal = (u) => {
     setSelectedUser(u)
     setFormData({
-      name: u.name || '',
-      phone: u.phone || '',
-      branch: u.branch || '',
-      user_type: u.user_type || ''
+      name: u.name,
+      branch: u.branch,
+      phone: u.phone,
+      user_type: u.user_type
     })
     setShowEditModal(true)
   }
 
   const handleChange = (e) => {
-    const { name, value } = e.target
     setFormData({
       ...formData,
-      [name]: value
+      [e.target.name]: e.target.value
     })
   }
 
   const handleUpdateUser = async () => {
-    if (!formData.name?.trim()) {
+    if (!formData.name.trim()) {
       alert('이름을 입력해주세요.')
       return
     }
 
-    if (!window.confirm('수정 내용을 저장하시겠습니까?')) return
+    if (!window.confirm('수정하시겠습니까?')) return
 
     setLoading(true)
     try {
       const { error } = await supabase
         .from('users')
         .update({
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
+          name: formData.name,
+          phone: formData.phone,
           branch: formData.branch,
           user_type: formData.user_type
         })
@@ -334,21 +237,19 @@ const handlePasswordReset = async (targetUser) => {
 
       if (error) throw error
 
-      alert('수정되었습니다.')
+      alert('수정되었습니다!')
       setShowEditModal(false)
       fetchUsers()
     } catch (err) {
-      console.error('❌ 수정 오류:', err)
-      alert('수정에 실패했습니다.')
+      console.error('수정 오류:', err)
+      alert('수정 처리 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleDelete = async (userId, userName) => {
-    if (!window.confirm(`${userName} 직원을 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
-      return
-    }
+    if (!window.confirm(`${userName}님을 삭제하시겠습니까?`)) return
 
     setLoading(true)
     try {
@@ -359,273 +260,388 @@ const handlePasswordReset = async (targetUser) => {
 
       if (error) throw error
 
-      alert('삭제되었습니다.')
+      alert('삭제되었습니다!')
       fetchUsers()
     } catch (err) {
-      console.error('❌ 삭제 오류:', err)
-      alert('삭제에 실패했습니다.')
+      console.error('삭제 오류:', err)
+      alert('삭제 처리 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCheckboxChange = (userId) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    )
+  }
+
+  const handleExcelDownload = async () => {
+    if (selectedUsers.length === 0) {
+      alert('다운로드할 직원을 선택해주세요.')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      const selectedData = users.filter(u => selectedUsers.includes(u.id))
+      
+      const excelData = await Promise.all(selectedData.map(async (u) => {
+        // 날짜가 없으면 자동 설정: 가입일 ~ 오늘
+        const effectiveStartDate = startDate || new Date(u.created_at).toISOString().split('T')[0]
+        const effectiveEndDate = endDate || new Date().toISOString().split('T')[0]
+
+        // work_diaries에서 해당 기간의 근무시간 합계 조회
+        const { data: workDiaries, error } = await supabase
+          .from('work_diaries')
+          .select('work_hours')
+          .eq('user_id', u.id)
+          .gte('work_date', effectiveStartDate)
+          .lte('work_date', effectiveEndDate)
+
+        if (error) {
+          console.error(`근무일지 조회 오류 (user_id: ${u.id}):`, error)
+        }
+
+        const totalWorkHours = workDiaries?.reduce((sum, diary) => {
+          return sum + (parseFloat(diary.work_hours) || 0)
+        }, 0) || 0
+
+        const maskedSSN = u.ssn ? u.ssn.substring(0, 6) + '-*******' : '-'
+        const maskedAccount = u.account_number 
+          ? u.account_number.substring(0, u.account_number.length - 4) + '****'
+          : '-'
+
+        return {
+          '지점명': u.branch || '-',
+          '이름': u.name || '-',
+          '전화번호': u.phone || '-',
+          '구분': u.user_type || '-',
+          '근무시작일': new Date(effectiveStartDate).toLocaleDateString('ko-KR'),
+          '근무종료일': new Date(effectiveEndDate).toLocaleDateString('ko-KR'),
+          '총근무시간': `${totalWorkHours.toFixed(1)}시간`,
+          '주민번호': maskedSSN,
+          '예금주': u.account_holder || '-',
+          '기관명': u.bank_name || '-',
+          '계좌번호': maskedAccount
+        }
+      }))
+
+      const ws = XLSX.utils.json_to_sheet(excelData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, '직원목록')
+      
+      const dateRange = startDate && endDate 
+        ? `${startDate}_${endDate}`
+        : `전체기간_${new Date().toISOString().split('T')[0]}`
+      
+      const fileName = `직원목록_${dateRange}.xlsx`
+      XLSX.writeFile(wb, fileName)
+      
+      
+    } catch (error) {
+      console.error('엑셀 다운로드 오류:', error)
+      alert('엑셀 파일 생성 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
   }
 
   const filteredUsers = users.filter(u => {
-    const matchSearch = !searchValue || 
-      u.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchValue.toLowerCase())
+    const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesBranch = !filterBranch || u.branch === filterBranch
+    const matchesUserType = filterUserType === 'all' || u.user_type === filterUserType
     
-    const matchStatus = filterStatus === 'all' || u.status === filterStatus
+    let matchesDate = true
+    if (startDate || endDate) {
+      const createdDate = new Date(u.created_at)
+      if (startDate) matchesDate = matchesDate && createdDate >= new Date(startDate)
+      if (endDate) matchesDate = matchesDate && createdDate <= new Date(endDate)
+    }
     
-    return matchSearch && matchStatus
+    return matchesSearch && matchesBranch && matchesUserType && matchesDate
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <button
-            onClick={() => onNavigate('systemAdminDashboard')}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
-          >
-            <ArrowLeft size={20} style={{ color: '#249689' }} />
-            <span style={{ color: '#249689', fontSize: '14px', fontWeight: 'bold' }}>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* 헤더 */}
+        <div className="bg-white border-b pb-4 mb-6">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => onNavigate('SystemAdminDashboard')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              style={{ fontSize: '15px' }}
+            >
+              <ArrowLeft size={20} />
               나가기
-            </span>
-          </button>
-          <h1 className="font-bold" style={{ color: '#249689', fontSize: '24px' }}>
-            👥 직원정보관리
-          </h1>
-          <div style={{ width: '100px' }}></div>
-        </div>
-      </div>
+            </button>
+            
+            <div className="flex items-center gap-3">
+              <img 
+                src="/images/logo.png" 
+                alt="LAS Book" 
+                className="h-10"
+              />
+              <h1 className="text-2xl font-bold" style={{ color: '#249689' }}>
+                직원정보관리
+              </h1>
+            </div>
 
-      <div className="max-w-7xl mx-auto p-4">
-        {/* 변경요청 알림 */}
-        {changeRequests.length > 0 && (
-          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle size={20} style={{ color: '#f59e0b' }} />
-              <span className="font-bold" style={{ color: '#f59e0b', fontSize: '15px' }}>
-                🔔 대기 중인 변경요청이 {changeRequests.length}건 있습니다
-              </span>
-            </div>
-            <div className="space-y-2">
-              {changeRequests.map((req) => {
-                const reqUser = users.find(u => u.id === req.user_id)
-                return (
-                  <div key={req.id} className="bg-white p-3 rounded border border-gray-200 flex items-center justify-between">
-                    <div>
-                      <span className="font-bold" style={{ fontSize: '14px' }}>
-                        {reqUser?.name || '알 수 없음'}
-                      </span>
-                      <span className="text-gray-600 ml-2" style={{ fontSize: '13px' }}>
-                        {req.requested_changes?.branch && `지점: ${req.requested_changes.branch}`}
-                        {req.requested_changes?.user_type && ` / 구분: ${req.requested_changes.user_type}`}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleApproveChangeRequest(req.id, req.user_id, req.requested_changes)}
-                        className="px-3 py-1.5 rounded-lg hover:bg-green-50"
-                        style={{ color: '#10b981', fontSize: '13px', border: '1px solid #10b981' }}
-                      >
-                        승인
-                      </button>
-                      <button
-                        onClick={() => handleRejectChangeRequest(req.id)}
-                        className="px-3 py-1.5 rounded-lg hover:bg-red-50"
-                        style={{ color: '#dc2626', fontSize: '13px', border: '1px solid #dc2626' }}
-                      >
-                        거부
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            <div className="w-24" />
           </div>
-        )}
+        </div>
 
         {/* 검색 및 필터 */}
-        <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="flex-1 min-w-[250px]">
-              <div className="flex items-center gap-2">
-                <Search size={18} style={{ color: '#249689' }} />
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h2 className="text-lg font-bold mb-4" style={{ color: '#249689' }}>
+            검색 조건
+          </h2>
+          
+          <div className="flex gap-4">
+            {/* 이름/이메일 검색 */}
+            <div className="flex-1">
+              <label className="block mb-2 font-bold" style={{ fontSize: '14px' }}>
+                이름 / 이메일
+              </label>
+              <div className="relative">
                 <input
                   type="text"
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  placeholder="이름, 이메일 검색"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="검색어를 입력하세요"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg"
                   style={{ fontSize: '14px' }}
                 />
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
               </div>
             </div>
 
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg"
-              style={{ fontSize: '14px' }}
-            >
-              <option value="all">전체 상태</option>
-              <option value="approved">승인됨</option>
-              <option value="pending">대기중</option>
-              <option value="rejected">거부됨</option>
-            </select>
+            {/* 지점 필터 */}
+            <div className="flex-1">
+              <label className="block mb-2 font-bold" style={{ fontSize: '14px' }}>
+                지점
+              </label>
+              <select
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                style={{ fontSize: '14px' }}
+              >
+                <option value="">전체 지점</option>
+                {branches.map((branch) => (
+                  <option key={branch.name} value={branch.name}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2 rounded-lg font-bold"
-              style={{ backgroundColor: '#249689', color: 'white', fontSize: '14px' }}
-            >
-              검색
-            </button>
+            {/* 직원구분 필터 */}
+            <div className="flex-1">
+              <label className="block mb-2 font-bold" style={{ fontSize: '14px' }}>
+                직원구분
+              </label>
+              <select
+                value={filterUserType}
+                onChange={(e) => setFilterUserType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                style={{ fontSize: '14px' }}
+              >
+                <option value="all">전체</option>
+                <option value="점주">점주</option>
+                <option value="점장">점장</option>
+                <option value="직원">직원</option>
+                <option value="모니터링요원">모니터링요원</option>
+                <option value="계약근무">계약근무</option>
+                <option value="지점관리자">지점관리자</option>
+                <option value="시스템관리자">시스템관리자</option>
+              </select>
+            </div>
 
+            {/* 근무 시작일 */}
+            <div className="flex-1">
+              <label className="block mb-2 font-bold" style={{ fontSize: '14px' }}>
+                근무 시작일
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                style={{ fontSize: '14px' }}
+              />
+            </div>
+
+            {/* 근무 종료일 */}
+            <div className="flex-1">
+              <label className="block mb-2 font-bold" style={{ fontSize: '14px' }}>
+                근무 종료일
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                style={{ fontSize: '14px' }}
+              />
+            </div>
+          </div>
+
+          {/* 엑셀 다운로드 버튼 */}
+          <div className="mt-4 flex justify-end">
             <button
-              onClick={handleReset}
-              className="p-2 rounded-lg hover:bg-gray-100"
-              title="초기화"
+              onClick={handleExcelDownload}
+              
+              className="flex items-center gap-2 px-6 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px' }}
             >
-              <RotateCcw size={18} style={{ color: '#249689' }} />
+              <Download size={18} />
+              엑셀 다운로드 ({selectedUsers.length})
             </button>
           </div>
         </div>
 
-        {/* 직원 목록 테이블 */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    이름
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    이메일
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    지점
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    구분
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    전화번호
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px' }}>
-                    고유코드
-                  </th>
-                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '14px' }}>
-                    관리
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
+        {/* 직원 목록 */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block w-8 h-8 border-4 border-gray-200 border-t-[#249689] rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-600">로딩 중...</p>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border">
+            <p className="text-gray-500" style={{ fontSize: '15px' }}>
+              조건에 맞는 직원이 없습니다.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
                   <tr>
-                    <td colSpan="7" className="text-center py-8 text-gray-500">
-                      로딩 중...
-                    </td>
+                    <th className="px-4 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUsers(filteredUsers.map(u => u.id))
+                          } else {
+                            setSelectedUsers([])
+                          }
+                        }}
+                        checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                        className="rounded border-gray-300"
+                      />
+                    </th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>이름</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>이메일</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>전화번호</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>지점</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>직원구분</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>고유코드</th>
+                    <th className="px-4 py-3 text-left font-bold" style={{ fontSize: '14px' }}>상태</th>
+                    <th className="px-4 py-3 text-center font-bold" style={{ fontSize: '14px' }}>관리</th>
                   </tr>
-                ) : filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="text-center py-8 text-gray-500">
-                      직원이 없습니다.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map((u) => (
-                    <tr key={u.id} className="border-b hover:bg-gray-50">
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
-                        {u.name}
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredUsers.map((u) => (
+                    <tr key={u.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.includes(u.id)}
+                          onChange={() => handleCheckboxChange(u.id)}
+                          className="rounded border-gray-300"
+                        />
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
-                        {u.email}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
-                        {u.branch}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
-                        {u.user_type}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
-                        {u.phone || '-'}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px', fontWeight: 'bold', color: '#249689' }}>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.name}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.email}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.phone || '-'}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.branch}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.user_type}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px', fontWeight: 'bold', color: '#249689' }}>
                         {u.referral_code || '-'}
                       </td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="px-4 py-3">
+                        <span
+                          className="px-2 py-1 rounded-full text-xs font-semibold"
+                          style={{
+                            backgroundColor: u.status === 'approved' ? '#D1FAE5' : u.status === 'pending' ? '#FEF3C7' : '#FEE2E2',
+                            color: u.status === 'approved' ? '#065F46' : u.status === 'pending' ? '#92400E' : '#991B1B'
+                          }}
+                        >
+                          {u.status === 'approved' ? '승인됨' : u.status === 'pending' ? '대기중' : '거부됨'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-2">
                           {u.status === 'pending' ? (
                             <>
                               <button
                                 onClick={() => handleApprove(u.id)}
-                                className="p-1.5 rounded-lg hover:bg-green-50"
-                                style={{ color: '#10b981' }}
+                                className="p-1 text-green-600 hover:bg-green-50 rounded"
                                 title="승인"
                               >
-                                <CheckCircle size={16} />
+                                <CheckCircle size={18} />
                               </button>
                               <button
                                 onClick={() => handleReject(u.id)}
-                                className="p-1.5 rounded-lg hover:bg-red-50"
-                                style={{ color: '#dc2626' }}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded"
                                 title="거부"
                               >
-                                <XCircle size={16} />
+                                <XCircle size={18} />
                               </button>
                             </>
                           ) : (
                             <>
                               <button
                                 onClick={() => openEditModal(u)}
-                                className="p-1.5 rounded-lg hover:bg-blue-50"
-                                style={{ color: '#2563eb' }}
+                                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                                 title="수정"
                               >
-                                <Edit size={16} />
+                                <Edit size={18} />
                               </button>
-                              {/* 비밀번호 초기화 버튼 - 본인이 아닌 경우만 */}
                               {u.id !== user.id && (
                                 <button
                                   onClick={() => handlePasswordReset(u)}
                                   disabled={resettingPassword === u.id}
-                                  className="p-1.5 rounded-lg hover:bg-purple-50 transition-colors disabled:opacity-50"
+                                  className="p-1 hover:bg-purple-50 rounded disabled:opacity-50"
                                   style={{ color: '#7f95eb' }}
                                   title="비밀번호 초기화"
                                 >
-                                  <Key size={16} />
+                                  <Key size={18} />
                                 </button>
                               )}
                               <button
                                 onClick={() => handleDelete(u.id, u.name)}
-                                className="p-1.5 rounded-lg hover:bg-red-50"
-                                style={{ color: '#dc2626' }}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded"
                                 title="삭제"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
                               </button>
                             </>
                           )}
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 총 개수 */}
-          {filteredUsers.length > 0 && (
-            <div className="mt-4 text-right text-gray-600" style={{ fontSize: '13px' }}>
-              총 <strong style={{ color: '#249689' }}>{filteredUsers.length}</strong>명
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+
+            {/* 총 개수 */}
+            {filteredUsers.length > 0 && (
+              <div className="mt-4 px-4 pb-4 text-right text-gray-600" style={{ fontSize: '13px' }}>
+                총 <strong style={{ color: '#249689' }}>{filteredUsers.length}</strong>명
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 직원정보 수정 모달 */}
@@ -719,12 +735,13 @@ const handlePasswordReset = async (targetUser) => {
                   <option value="모니터링요원">모니터링요원</option>
                   <option value="점주">점주</option>
                   <option value="점장">점장</option>
+                  <option value="계약근무">계약근무</option>
                   <option value="지점관리자">지점관리자</option>
                   <option value="시스템관리자">시스템관리자</option>
                 </select>
               </div>
 
-              {/* 비밀번호 초기화 버튼 - 수정 모달 내에서도 제공 */}
+              {/* 비밀번호 초기화 버튼 */}
               {selectedUser.id !== user.id && (
                 <div className="pt-2 border-t">
                   <button
