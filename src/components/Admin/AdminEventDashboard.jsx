@@ -230,10 +230,13 @@ export default function AdminEventDashboard({ user, onBack }) {
     }
   }
 
-  const loadParticipants = async () => {
+  const loadParticipants = async (customFilters = null) => {
     try {
+      // customFilters가 제공되면 사용, 없으면 현재 state의 filters 사용
+      const activeFilters = customFilters !== null ? customFilters : filters
+      
       console.log('🔍 참가자 목록 로드 시작...')
-      console.log('📋 현재 필터:', filters)
+      console.log('📋 현재 필터:', activeFilters)
       
       // 1. 참가자 데이터 먼저 가져오기
       let query = supabase
@@ -248,17 +251,19 @@ export default function AdminEventDashboard({ user, onBack }) {
       }
 
       // 필터 적용
-      if (filters.referrer) {
-        console.log('✅ 추천인 필터 적용:', filters.referrer)
-        query = query.eq('referrer_code', filters.referrer)
+      if (activeFilters.referrer) {
+        console.log('✅ 추천인 필터 적용:', activeFilters.referrer)
+        query = query.eq('referrer_code', activeFilters.referrer)
       }
-      if (filters.startDate) {
-        console.log('✅ 시작일 필터 적용:', filters.startDate)
-        query = query.gte('created_at', filters.startDate)
+      if (activeFilters.startDate) {
+        console.log('✅ 시작일 필터 적용:', activeFilters.startDate)
+        // 시작일은 해당 날짜의 00:00:00부터
+        query = query.gte('created_at', `${activeFilters.startDate}T00:00:00`)
       }
-      if (filters.endDate) {
-        console.log('✅ 종료일 필터 적용:', filters.endDate)
-        query = query.lte('created_at', filters.endDate)
+      if (activeFilters.endDate) {
+        console.log('✅ 종료일 필터 적용:', activeFilters.endDate)
+        // 종료일은 해당 날짜의 23:59:59까지
+        query = query.lte('created_at', `${activeFilters.endDate}T23:59:59`)
       }
 
       const { data: participantsData, error } = await query
@@ -300,9 +305,9 @@ export default function AdminEventDashboard({ user, onBack }) {
 
       // 5. 지점 필터 적용 (users 정보를 가져온 후)
       let filteredData = enrichedData
-      if (filters.branch) {
-        console.log('✅ 지점 필터 적용:', filters.branch)
-        filteredData = enrichedData.filter(p => p.users?.branch === filters.branch)
+      if (activeFilters.branch) {
+        console.log('✅ 지점 필터 적용:', activeFilters.branch)
+        filteredData = enrichedData.filter(p => p.users?.branch === activeFilters.branch)
       }
 
       console.log('✅ 최종 참가자 데이터:', filteredData.length, '명')
@@ -323,13 +328,15 @@ export default function AdminEventDashboard({ user, onBack }) {
   }
 
   const handleResetFilters = () => {
-    setFilters({
+    const emptyFilters = {
       branch: '',
       referrer: '',
       startDate: '',
       endDate: ''
-    })
-    setTimeout(() => loadParticipants(), 100)
+    }
+    setFilters(emptyFilters)
+    // 빈 필터를 직접 전달하여 즉시 검색
+    loadParticipants(emptyFilters)
   }
 
   const handleDeleteParticipant = async (id) => {
@@ -738,7 +745,7 @@ export default function AdminEventDashboard({ user, onBack }) {
                 className="w-full px-6 py-2 text-white rounded-lg hover:opacity-90 font-bold"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
-                적용
+                검색
               </button>
             </div>
             <div>

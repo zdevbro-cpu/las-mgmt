@@ -21,6 +21,13 @@ export default function EventLandingPage() {
   const [referralLink, setReferralLink] = useState('')
   const [isFromReferralLink, setIsFromReferralLink] = useState(false)
   const [referralCodeError, setReferralCodeError] = useState('')
+  const [showVideoModal, setShowVideoModal] = useState(false)
+  
+  // MP4 영상 파일 경로 (public 폴더 기준)
+  const sampleVideoUrl = "/videos/mathletter.mp4"
+  
+  // 테스트용 공개 영상 (파일이 없을 때 임시로 사용 가능)
+  // const sampleVideoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
   // URL 파라미터에서 추천인 코드 추출
   useEffect(() => {
@@ -33,6 +40,44 @@ export default function EventLandingPage() {
       }
     } catch (err) {
       console.error('URL 파라미터 파싱 오류:', err)
+    }
+  }, [])
+
+  // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
+  useEffect(() => {
+    // 1. Link preload 태그 추가 (더 높은 우선순위)
+    const preloadLink = document.createElement('link')
+    preloadLink.rel = 'preload'
+    preloadLink.as = 'video'
+    preloadLink.href = sampleVideoUrl
+    document.head.appendChild(preloadLink)
+    
+    // 2. Video 태그로 프리로드
+    const preloadVideo = document.createElement('video')
+    preloadVideo.src = sampleVideoUrl
+    preloadVideo.preload = 'auto'
+    preloadVideo.muted = true
+    preloadVideo.style.display = 'none'
+    preloadVideo.style.position = 'absolute'
+    preloadVideo.style.pointerEvents = 'none'
+    document.body.appendChild(preloadVideo)
+    
+    // 명시적으로 로드 시작
+    preloadVideo.load()
+    
+    // 로딩 상태 확인 (디버깅용)
+    preloadVideo.addEventListener('loadeddata', () => {
+      console.log('✅ 영상 프리로드 완료')
+    })
+    
+    preloadVideo.addEventListener('error', (e) => {
+      console.error('❌ 영상 로드 실패:', e)
+      console.error('파일 경로:', sampleVideoUrl)
+    })
+    
+    return () => {
+      document.head.removeChild(preloadLink)
+      document.body.removeChild(preloadVideo)
     }
   }, [])
 
@@ -351,6 +396,37 @@ export default function EventLandingPage() {
           </h2>
         </div>
 
+        {/* 샘플 영상 버튼 */}
+        <div className="text-center mb-4">
+          <button
+            onClick={() => setShowVideoModal(true)}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold transition-all hover:opacity-90 hover:scale-105"
+            style={{ 
+              backgroundColor: '#3b82f6', 
+              color: 'white',
+              fontSize: '17px',
+              boxShadow: '0 4px 6px rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            {/* 플레이 아이콘 SVG */}
+            <svg 
+              width="26" 
+              height="26" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ flexShrink: 0 }}
+            >
+              <circle cx="12" cy="12" r="10" fill="white" fillOpacity="0.2"/>
+              <path 
+                d="M10 8L16 12L10 16V8Z" 
+                fill="white"
+              />
+            </svg>
+            <span style={{ fontSize: '17px' }}>수학편지 샘플영상</span>
+          </button>
+        </div>
+
         <div className="space-y-2" style={{ marginTop: '16px' }}>
           {/* 학부모 이름 */}
           <div>
@@ -664,6 +740,51 @@ export default function EventLandingPage() {
             >
               확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 샘플 영상 모달 */}
+      {showVideoModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
+          onClick={() => setShowVideoModal(false)}
+        >
+          <div 
+            className="relative bg-black rounded-lg shadow-2xl max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+            style={{ aspectRatio: '16/9' }}
+          >
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setShowVideoModal(false)}
+              className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors z-10"
+              style={{ fontSize: '32px', fontWeight: 'bold' }}
+            >
+              ✕
+            </button>
+            
+            {/* HTML5 Video 태그 */}
+            <video
+              className="w-full h-full rounded-lg"
+              controls
+              autoPlay
+              muted
+              playsInline
+              controlsList="nodownload"
+              onError={(e) => {
+                console.error('비디오 재생 오류:', e)
+                alert('영상을 불러올 수 없습니다. 파일 경로를 확인해주세요.\n경로: ' + sampleVideoUrl)
+              }}
+              onLoadedData={() => console.log('영상 로드 완료')}
+              style={{ 
+                border: 'none',
+                backgroundColor: '#000'
+              }}
+            >
+              <source src={sampleVideoUrl} type="video/mp4" />
+              브라우저가 비디오 태그를 지원하지 않습니다.
+            </video>
           </div>
         </div>
       )}

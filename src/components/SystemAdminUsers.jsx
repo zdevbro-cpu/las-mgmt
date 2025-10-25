@@ -533,7 +533,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
               style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px' }}
             >
               <Download size={18} />
-              선택({selectedUsers.length}) 엑셀 다운로드
+              엑셀다운로드({selectedUsers.length})
             </button>
           </div>
         </div>

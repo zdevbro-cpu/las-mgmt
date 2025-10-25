@@ -284,13 +284,13 @@ export default function Signup({ onNavigate }) {
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
-                  value="모니터링 요원"
-                  checked={userType === '모니터링 요원'}
+                  value="모니터링요원"
+                  checked={userType === '모니터링요원'}
                   onChange={(e) => setUserType(e.target.value)}
                   className="w-4 h-4"
                   style={{ accentColor: '#249689' }}
                 />
-                <span style={{ fontSize: '15px' }}>모니터링 요원</span>
+                <span style={{ fontSize: '15px' }}>모니터링요원</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
