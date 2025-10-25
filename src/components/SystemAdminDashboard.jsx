@@ -47,15 +47,6 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
 
           <div className="space-y-4">
             <button
-              onClick={() => onNavigate('SystemAdminBranches')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Building2 size={20} />
-              지점관리
-            </button>
-
-            <button
               onClick={() => onNavigate('SystemAdminUsers')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -65,21 +56,12 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             </button>
 
             <button
-              onClick={() => onNavigate('SystemAdminCustomers')}
+              onClick={() => onNavigate('SystemAdminBranches')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
-              <ShoppingCart size={20} />
-              고객관리
-            </button>
-
-            <button
-              onClick={() => onNavigate('SystemAdminPurchases')}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Package size={20} />
-              구매관리
+              <Building2 size={20} />
+              지점관리
             </button>
 
             <button
@@ -88,7 +70,25 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Truck size={20} />
-              배송관리
+              배송목록관리
+            </button>
+
+            <button
+              onClick={() => onNavigate('SystemAdminPurchases')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <Package size={20} />
+              구매이력관리
+            </button>
+
+            <button
+              onClick={() => onNavigate('SystemAdminCustomers')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <ShoppingCart size={20} />
+              구매자정보
             </button>
 
             {/* ⭐ 이벤트 관리 메뉴로 이동 */}
