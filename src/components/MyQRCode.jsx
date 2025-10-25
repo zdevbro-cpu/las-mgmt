@@ -18,7 +18,11 @@ export default function MyQRCode({ user, onBack }) {
   const userName = user?.name || '사용자'
   const userBranch = user?.brname || '지점'
   const referralCode = user?.referral_code || 'LAS0000'
-  const eventUrl = `https://lasmanager.vercel.app/event?ref=${referralCode}`
+  
+  // 선택된 이벤트의 landing_url 사용 (동적)
+  const eventUrl = selectedEvent 
+    ? `${selectedEvent.landing_url}?ref=${referralCode}`
+    : `https://lasmanager.vercel.app/event?ref=${referralCode}`
 
   useEffect(() => {
     fetchActiveEvents()
@@ -132,15 +136,24 @@ export default function MyQRCode({ user, onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-cyan-50 p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-cyan-50 p-2 sm:p-2">
+      <div className="max-w-md mx-auto">
         {/* 헤더 */}
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-4 sm:mb-6" style={{ borderRadius: '15px' }}>
+        <div className="bg-white rounded-xl shadow-lg p-2 sm:p-2 mb-2 sm:mb-3" style={{ borderRadius: '15px' }}>
           {/* 상단: 나가기 + 타이틀 */}
-          <div className="grid grid-cols-3 items-center mb-4">
+          <div className="grid grid-cols-3 items-center mb-2">
             <div className="flex justify-start">
               <button
-                onClick={onBack}
+                onClick={() => {
+                  if (selectedEvent) {
+                    // QR 생성 후: 템플릿 선택 화면으로 돌아가기
+                    setSelectedEvent(null)
+                    setGeneratedImageUrl(null)
+                  } else {
+                    // 템플릿 선택 전: 내QR페이지로 돌아가기
+                    onBack()
+                  }
+                }}
                 className="flex items-center gap-1.5 font-bold hover:opacity-70 transition-opacity text-sm sm:text-base"
                 style={{ color: '#4A9B8E' }}
               >
@@ -156,8 +169,8 @@ export default function MyQRCode({ user, onBack }) {
                 className="w-8 h-8 sm:w-10 sm:h-10 object-contain" 
                 onError={(e) => e.target.style.display = 'none'} 
               />
-              <h1 className="text-lg sm:text-2xl font-bold" style={{ color: '#249689' }}>
-                내 QR 페이지
+              <h1 className="text-base sm:text-lg font-bold" style={{ color: '#249689', whiteSpace: 'nowrap' }}>
+                내QR페이지 만들기
               </h1>
             </div>
             
@@ -165,18 +178,18 @@ export default function MyQRCode({ user, onBack }) {
           </div>
 
           {/* 안내 메시지 */}
-          <div className="p-3 rounded-lg text-center" style={{ backgroundColor: '#f0f9ff', border: '2px solid #3b82f6', borderRadius: '10px' }}>
-            <p className="text-xs sm:text-sm font-medium" style={{ color: '#1e40af' }}>
+          <div className="p-2 rounded-lg text-center" style={{ backgroundColor: '#f0f9ff', border: '2px solid #3b82f6', borderRadius: '10px' }}>
+            <p className="text-xs font-medium" style={{ color: '#1e40af' }}>
               {!selectedEvent ? '🎨 템플릿을 선택하고 나만의 QR 페이지를 만드세요' : '🎉 주천 링크가 생성되었습니다!'}
             </p>
           </div>
 
           {/* 내 정보 + 링크/검색 (템플릿 선택 전에만 표시) */}
           {!selectedEvent && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg" style={{ borderRadius: '10px' }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="mt-4 p-2 bg-gray-50 rounded-lg" style={{ borderRadius: '10px' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {/* 왼쪽: 내 정보 (3줄) */}
-                <div className="space-y-2 text-xs sm:text-sm text-gray-600">
+                <div className="space-y-2 text-xs text-gray-600">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">👤 이름:</span>
                     <span className="font-semibold text-gray-800">{userName}</span>
@@ -250,9 +263,9 @@ export default function MyQRCode({ user, onBack }) {
         </div>
 
         {/* 메인 컨텐츠 */}
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6" style={{ borderRadius: '15px' }}>
+        <div className="bg-white rounded-xl shadow-lg p-2 sm:p-2" style={{ borderRadius: '15px' }}>
           {loading ? (
-            <div className="flex justify-center items-center py-20">
+            <div className="flex justify-center items-center py-8">
               <div 
                 className="animate-spin rounded-full h-12 w-12 border-b-2" 
                 style={{ borderColor: '#4A9B8E' }}
@@ -260,26 +273,26 @@ export default function MyQRCode({ user, onBack }) {
             </div>
           ) : !selectedEvent ? (
             <>
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
                 <h2 className="text-base sm:text-lg font-bold" style={{ color: '#4A9B8E' }}>
                   📋 템플릿 선택하기
                 </h2>
                 {events.length > 0 && (
-                  <span className="text-xs sm:text-sm text-gray-500">
+                  <span className="text-xs text-gray-500">
                     총 {events.length}개
                   </span>
                 )}
               </div>
 
               {events.length === 0 ? (
-                <div className="text-center py-16 sm:py-20">
-                  <div className="text-5xl sm:text-6xl mb-4">📅</div>
+                <div className="text-center py-16 sm:py-8">
+                  <div className="text-5xl sm:text-6xl mb-2">📅</div>
                   <p className="text-sm sm:text-base text-gray-600 mb-2">활성화된 템플릿이 없습니다</p>
-                  <p className="text-xs sm:text-sm text-gray-400">관리자에게 문의해주세요</p>
+                  <p className="text-xs text-gray-400">관리자에게 문의해주세요</p>
                 </div>
               ) : (
                 // 심플 그리드: 모바일 1열, 태블릿 2열, PC 3열
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-2">
                   {events.map((event) => (
                     <div
                       key={event.id}
@@ -294,7 +307,7 @@ export default function MyQRCode({ user, onBack }) {
                             src={event.template_image_url}
                             alt={event.name}
                             className="w-full h-auto object-cover group-hover:opacity-90 transition-opacity"
-                            style={{ maxHeight: '300px' }}
+                            style={{ maxHeight: '100px' }}
                           />
                           {/* 호버 오버레이 */}
                           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
@@ -306,12 +319,12 @@ export default function MyQRCode({ user, onBack }) {
                       )}
                       
                       {/* 템플릿 정보 */}
-                      <div className="p-3 sm:p-4">
+                      <div className="p-2 sm:p-2">
                         <h3 className="font-bold mb-1 text-sm sm:text-base" style={{ color: '#249689' }}>
                           {event.name}
                         </h3>
                         {event.description && (
-                          <p className="text-xs sm:text-sm text-gray-600 line-clamp-2">
+                          <p className="text-xs text-gray-600 line-clamp-2">
                             {event.description}
                           </p>
                         )}
@@ -324,7 +337,7 @@ export default function MyQRCode({ user, onBack }) {
           ) : (
             <>
               {/* QR 생성 완료 화면 */}
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
                 <h2 className="text-base sm:text-lg font-bold" style={{ color: '#4A9B8E' }}>
                   🎉 내 QR 페이지
                 </h2>
@@ -333,31 +346,31 @@ export default function MyQRCode({ user, onBack }) {
                     setSelectedEvent(null)
                     setGeneratedImageUrl(null)
                   }}
-                  className="text-xs sm:text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  className="text-xs text-gray-600 hover:text-gray-900 font-medium"
                 >
                   ← 다른 템플릿 선택
                 </button>
               </div>
 
               {generating ? (
-                <div className="text-center py-12 sm:py-16">
-                  <div className="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-2 mx-auto mb-4" style={{ borderColor: '#4A9B8E' }}></div>
+                <div className="text-center py-2 sm:py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 mx-auto mb-2" style={{ borderColor: '#4A9B8E' }}></div>
                   <p className="text-sm sm:text-base text-gray-600 font-medium">QR 이미지 생성 중...</p>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-2">잠시만 기다려주세요</p>
+                  <p className="text-xs text-gray-400 mt-2">잠시만 기다려주세요</p>
                 </div>
               ) : generatedImageUrl ? (
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-2 sm:space-y-3">
                   {/* 생성된 이미지 */}
                   <div className="border-4 rounded-xl overflow-hidden shadow-lg" style={{ borderColor: '#4A9B8E', borderRadius: '12px' }}>
                     <img
                       src={generatedImageUrl}
                       alt="내 QR 페이지"
-                      className="w-full h-auto"
+                      className="w-full h-auto" style={{ maxWidth: "300px", margin: "0 auto" }}
                     />
                   </div>
 
                   {/* 내 정보 */}
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg" style={{ borderRadius: '10px' }}>
+                  <div className="p-2 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg" style={{ borderRadius: '10px' }}>
                     <div className="text-sm space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">👤 이름</span>
@@ -377,7 +390,7 @@ export default function MyQRCode({ user, onBack }) {
                   {/* 메인 액션: 다운로드 (크게) */}
                   <button
                     onClick={downloadImage}
-                    className="w-full py-4 flex items-center justify-center gap-2 text-white rounded-xl hover:opacity-90 font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all"
+                    className="w-full py-2 flex items-center justify-center gap-2 text-white rounded-xl hover:opacity-90 font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all"
                     style={{ backgroundColor: '#4A9B8E', borderRadius: '12px' }}
                   >
                     <Download size={22} />
@@ -388,13 +401,13 @@ export default function MyQRCode({ user, onBack }) {
                   <div className="space-y-3 pt-4 border-t border-gray-200">
                     {/* 링크 복사 */}
                     <div>
-                      <p className="text-xs sm:text-sm text-gray-600 mb-2">🔗 내 주천 링크</p>
+                      <p className="text-xs text-gray-600 mb-2">🔗 내 주천 링크</p>
                       <div className="flex gap-2">
                         <input
                           type="text"
                           value={eventUrl}
                           readOnly
-                          className="flex-1 px-3 py-2 text-xs sm:text-sm bg-gray-50 border border-gray-300 rounded-lg"
+                          className="flex-1 px-3 py-2 text-xs bg-gray-50 border border-gray-300 rounded-lg"
                           style={{ borderRadius: '8px' }}
                         />
                         <button
@@ -409,7 +422,7 @@ export default function MyQRCode({ user, onBack }) {
                     </div>
 
                     {/* 사용 팁 */}
-                    <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200" style={{ borderRadius: '8px' }}>
+                    <div className="p-2 bg-yellow-50 rounded-lg border border-yellow-200" style={{ borderRadius: '8px' }}>
                       <p className="text-xs text-yellow-800 font-medium mb-1">💡 사용 방법:</p>
                       <ul className="text-xs text-yellow-700 space-y-1 ml-4">
                         <li>• QR 페이지를 생성하여 이미지로 전달하거나</li>

@@ -338,9 +338,10 @@ export default function SystemAdminUsers({ user, onNavigate }) {
         ? `${startDate}_${endDate}`
         : `전체기간_${new Date().toISOString().split('T')[0]}`
       
-      const fileName = `직원목록_${dateRange}.xlsx`
+      const fileName = `직원목록_${dateRange.replace(/-/g, '')}.xlsx`
       XLSX.writeFile(wb, fileName)
       
+
       
     } catch (error) {
       console.error('엑셀 다운로드 오류:', error)
@@ -501,7 +502,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
               style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px' }}
             >
               <Download size={18} />
-              엑셀 다운로드 ({selectedUsers.length})
+              선택 항목 엑셀 다운로드 ({selectedUsers.length})
             </button>
           </div>
         </div>

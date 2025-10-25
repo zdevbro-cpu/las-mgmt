@@ -238,7 +238,7 @@ export default function AdminUsers({ user, onNavigate }) {
         ? `${startDate}_${endDate}`
         : `전체기간_${new Date().toISOString().split('T')[0]}`
       
-      const fileName = `직원목록_${dateRange}.xlsx`
+      const fileName = `직원목록_${dateRange.replace(/-/g, '')}.xlsx`
       XLSX.writeFile(wb, fileName)
       
 

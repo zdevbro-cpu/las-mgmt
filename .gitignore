@@ -23,18 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 ```
 
-### 2-2. 이미지 파일 확인
-
-다음 파일들이 있는지 확인:
-```
-public/
-  images/
-    ├── hero-cell.jpg  ✓
-    └── logo.png       ✓
-```
-
----
-
 ## 💻 Step 3: Git으로 GitHub에 업로드
 
 프로젝트 폴더에서 **터미널(명령 프롬프트)** 을 열고:
