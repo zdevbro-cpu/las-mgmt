@@ -11,6 +11,10 @@ export default function AdminEventDashboard({ user, onBack }) {
   const [topReferrers, setTopReferrers] = useState([])
   const [participants, setParticipants] = useState([])
   const [loading, setLoading] = useState(true)
+  
+  // 이벤트 관련 state
+  const [events, setEvents] = useState([])
+  const [selectedEvent, setSelectedEvent] = useState('')
 
   // 검색/필터 상태
   const [filters, setFilters] = useState({
@@ -26,9 +30,32 @@ export default function AdminEventDashboard({ user, onBack }) {
   const [referrers, setReferrers] = useState([])
 
   useEffect(() => {
+    loadEvents()
+    // loadData와 loadFilterOptions는 selectedEvent useEffect에서 처리
+  }, [])
+  
+  useEffect(() => {
     loadData()
     loadFilterOptions()
-  }, [])
+  }, [selectedEvent])
+  
+  const loadEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('name')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      setEvents(data || [])
+      
+      // 초기값은 빈 문자열(전체 이벤트)로 유지
+      // 사용자가 명시적으로 선택하도록 함
+    } catch (error) {
+      console.error('이벤트 목록 로드 실패:', error)
+    }
+  }
 
   const loadFilterOptions = async () => {
     try {
@@ -42,21 +69,34 @@ export default function AdminEventDashboard({ user, onBack }) {
       const uniqueBranches = [...new Set(branchData?.map(b => b.branch) || [])]
       setBranches(uniqueBranches)
 
-      // 추천인 목록 로드
-      const { data: referrerData } = await supabase
-        .from('event_participants')
-        .select('referrer_name, referrer_code')
-        .not('referrer_code', 'is', null)
-        .order('referrer_name')
+      // 추천인 목록 로드 - users 테이블에서 가져오기
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('name, referral_code')
+        .not('referral_code', 'is', null)
+        .order('name')
 
-      const uniqueReferrers = []
-      const seen = new Set()
-      referrerData?.forEach(r => {
-        if (!seen.has(r.referrer_code)) {
-          seen.add(r.referrer_code)
-          uniqueReferrers.push(r)
-        }
-      })
+      // event_participants에 실제 사용된 추천인만 필터링
+      let participantsQuery = supabase
+        .from('event_participants')
+        .select('referrer_code, event_name')
+        .not('referrer_code', 'is', null)
+      
+      // 이벤트 필터 적용
+      if (selectedEvent) {
+        participantsQuery = participantsQuery.eq('event_name', selectedEvent)
+      }
+      
+      const { data: participantsData } = await participantsQuery
+
+      const usedReferrerCodes = new Set(participantsData?.map(p => p.referrer_code) || [])
+      
+      const uniqueReferrers = usersData?.filter(u => usedReferrerCodes.has(u.referral_code))
+        .map(u => ({
+          referrer_name: u.name,
+          referrer_code: u.referral_code
+        })) || []
+
       setReferrers(uniqueReferrers)
     } catch (error) {
       console.error('필터 옵션 로드 실패:', error)
@@ -70,9 +110,17 @@ export default function AdminEventDashboard({ user, onBack }) {
 
       // 통계 데이터 로드
       console.log('📊 통계 데이터 로드 중...')
-      const { data: allParticipants, error: statsError } = await supabase
+      let statsQuery = supabase
         .from('event_participants')
-        .select('child_gender, child_age')
+        .select('child_gender, child_age, event_name')
+      
+      // 이벤트 필터 적용
+      if (selectedEvent) {
+        console.log('✅ 이벤트 필터 적용:', selectedEvent)
+        statsQuery = statsQuery.eq('event_name', selectedEvent)
+      }
+      
+      const { data: allParticipants, error: statsError } = await statsQuery
 
       if (statsError) throw statsError
 
@@ -117,10 +165,17 @@ export default function AdminEventDashboard({ user, onBack }) {
 
       // 추천인별 통계
       console.log('🏆 추천인 통계 로드 중...')
-      const { data: referrerStats, error: referrerError } = await supabase
+      let referrerStatsQuery = supabase
         .from('event_participants')
         .select('referrer_name, referrer_code')
         .not('referrer_code', 'is', null)
+      
+      // 이벤트 필터 적용
+      if (selectedEvent) {
+        referrerStatsQuery = referrerStatsQuery.eq('event_name', selectedEvent)
+      }
+      
+      const { data: referrerStats, error: referrerError } = await referrerStatsQuery
 
       if (referrerError) {
         console.error('❌ 추천인 통계 에러:', referrerError)
@@ -147,6 +202,7 @@ export default function AdminEventDashboard({ user, onBack }) {
         if (!referrerMap[key]) {
           referrerMap[key] = {
             name: p.referrer_name || user?.name || '-',
+            code: p.referrer_code,
             branch: user?.branch || '-',
             count: 0
           }
@@ -184,6 +240,12 @@ export default function AdminEventDashboard({ user, onBack }) {
         .from('event_participants')
         .select('*')
         .order('created_at', { ascending: false })
+
+      // 이벤트 필터 적용
+      if (selectedEvent) {
+        console.log('✅ 이벤트 필터 적용:', selectedEvent)
+        query = query.eq('event_name', selectedEvent)
+      }
 
       // 필터 적용
       if (filters.referrer) {
@@ -289,7 +351,7 @@ export default function AdminEventDashboard({ user, onBack }) {
     }
   }
 
-  const handleDownloadCSV = () => {
+  const handleDownloadExcel = () => {
     if (participants.length === 0) {
       alert('다운로드할 데이터가 없습니다.')
       return
@@ -328,8 +390,14 @@ export default function AdminEventDashboard({ user, onBack }) {
     const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
+    
+    const today = new Date()
+    const dateStr = today.getFullYear() + 
+                    String(today.getMonth() + 1).padStart(2, '0') + 
+                    String(today.getDate()).padStart(2, '0')
+    
     link.setAttribute('href', url)
-    link.setAttribute('download', `event_participants_${new Date().toISOString().slice(0, 10)}.csv`)
+    link.setAttribute('download', `이벤트 참가자목록_${dateStr}.xls`)
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
@@ -374,14 +442,27 @@ export default function AdminEventDashboard({ user, onBack }) {
                 이벤트 대시보드
               </h2>
             </div>
-            <button
-              onClick={handleDownloadCSV}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity font-bold"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <span>💾</span>
-              <span>CSV 다운로드</span>
-            </button>
+            <div>
+              <select
+                value={selectedEvent}
+                onChange={(e) => setSelectedEvent(e.target.value)}
+                className="px-4 py-2 border-2 rounded-lg font-medium"
+                style={{ 
+                  borderColor: '#249689', 
+                  color: '#249689',
+                  borderRadius: '10px',
+                  fontSize: '15px',
+                  minWidth: '200px'
+                }}
+              >
+                <option value="">전체 이벤트</option>
+                {events.map((event) => (
+                  <option key={event.name} value={event.name}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* 안내 메시지 */}
@@ -563,7 +644,7 @@ export default function AdminEventDashboard({ user, onBack }) {
                     </span>
                     <div className="flex-1">
                       <p className="font-bold text-sm" style={{ color: '#1f2937' }}>
-                        {ref.name}
+                        {ref.name}({ref.code})
                       </p>
                       <p className="text-xs text-gray-500">
                         📍 {ref.branch}
@@ -594,10 +675,19 @@ export default function AdminEventDashboard({ user, onBack }) {
 
         {/* 필터 */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>🔍 검색 필터</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold" style={{ color: '#249689' }}>🔍 검색 필터</h3>
+            <button
+              onClick={handleDownloadExcel}
+              className="px-6 py-2 text-white rounded-lg hover:opacity-90 font-bold"
+              style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
+            >
+              엑셀다운로드({participants.length})
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium mb-1">지점</label>
+              <label className="block text-sm font-medium mb-1">추천인지점</label>
               <select
                 value={filters.branch}
                 onChange={(e) => handleFilterChange('branch', e.target.value)}
@@ -619,7 +709,7 @@ export default function AdminEventDashboard({ user, onBack }) {
                 <option value="">전체</option>
                 {referrers.map(r => (
                   <option key={r.referrer_code} value={r.referrer_code}>
-                    {r.referrer_name} ({r.referrer_code})
+                    {r.referrer_name}({r.referrer_code})
                   </option>
                 ))}
               </select>

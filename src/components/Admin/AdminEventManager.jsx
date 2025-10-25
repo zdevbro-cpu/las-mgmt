@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Plus } from 'lucide-react'
+import { ArrowLeft, Plus, Eye, EyeOff, Edit2, Trash2, Calendar } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 export default function AdminEventManager({ user, onBack }) {
@@ -31,44 +31,47 @@ export default function AdminEventManager({ user, onBack }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="grid grid-cols-3 items-center mb-8">
-            <div className="flex justify-start">
-              <button
-                onClick={onBack}
-                className="flex items-center gap-1 font-bold hover:opacity-70 transition-opacity"
-                style={{ color: '#4A9B8E', fontSize: '16px' }}
-              >
-                <ArrowLeft size={20} />
-                나가기
-              </button>
-            </div>
-            <div className="flex items-center gap-1.5 justify-center">
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 font-bold hover:opacity-70 transition-opacity"
+              style={{ color: '#4A9B8E', fontSize: '16px' }}
+            >
+              <ArrowLeft size={20} />
+              나가기
+            </button>
+            <div className="flex items-center gap-1.5">
               <img src="/images/logo.png" alt="LAS Logo" className="w-10 h-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
               <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>이벤트 템플릿 관리</h2>
             </div>
-            <div className="flex justify-end">
-              <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold" style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}>
-                <Plus size={20} />생성하기
-              </button>
-            </div>
+            <div style={{ width: '80px' }}></div>
           </div>
           <div className="mb-6 p-3 rounded-lg" style={{ backgroundColor: '#f0f9ff', border: '2px solid #3b82f6', borderRadius: '10px' }}>
             <p className="text-sm" style={{ color: '#1e40af' }}>ℹ️ 이벤트 템플릿을 생성하고 관리합니다</p>
           </div>
-          <div className="flex gap-2 border-b border-gray-200">
-            {[{ value: 'all', label: '전체' }, { value: 'active', label: '진행중' }, { value: 'scheduled', label: '예정' }, { value: 'ended', label: '종료' }, { value: 'inactive', label: '비활성' }].map((tab) => (
-              <button key={tab.value} onClick={() => setFilter(tab.value)} className={`px-4 py-2 font-medium transition-colors ${filter === tab.value ? 'border-b-2' : 'text-gray-600 hover:text-gray-900'}`} style={filter === tab.value ? { color: '#249689', borderColor: '#249689' } : {}}>{tab.label}</button>
-            ))}
+          <div className="flex items-center justify-between border-b border-gray-200">
+            <div className="flex gap-2">
+              {[{ value: 'all', label: '전체' }, { value: 'active', label: '진행중' }, { value: 'scheduled', label: '예정' }, { value: 'ended', label: '종료' }, { value: 'inactive', label: '비활성' }].map((tab) => (
+                <button key={tab.value} onClick={() => setFilter(tab.value)} className={`px-4 py-2 font-medium transition-colors ${filter === tab.value ? 'border-b-2' : 'text-gray-600 hover:text-gray-900'}`} style={filter === tab.value ? { color: '#249689', borderColor: '#249689' } : {}}>{tab.label}</button>
+              ))}
+            </div>
+            <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold mb-2" style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}>
+              <Plus size={20} />생성하기
+            </button>
           </div>
         </div>
         {loading ? (
           <div className="flex justify-center items-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: '#249689' }}></div></div>
         ) : events.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-lg shadow-sm border"><div className="text-6xl mb-4">📅</div><p className="text-gray-600 mb-4">등록된 이벤트가 없습니다</p><button onClick={() => setShowCreateModal(true)} className="px-6 py-2 text-white rounded-lg hover:opacity-90" style={{ backgroundColor: '#249689', borderRadius: '10px' }}>첫 이벤트 만들기</button></div>
+          <div className="text-center py-20 bg-white rounded-lg shadow-sm border">
+            <Calendar size={64} className="mx-auto mb-4" style={{ color: '#249689' }} />
+            <p className="text-gray-600 mb-4">등록된 이벤트가 없습니다</p>
+            <button onClick={() => setShowCreateModal(true)} className="px-6 py-2 text-white rounded-lg hover:opacity-90" style={{ backgroundColor: '#249689', borderRadius: '10px' }}>첫 이벤트 만들기</button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">{events.map((event) => (<EventCard key={event.id} event={event} onRefresh={fetchEvents} />))}</div>
+          <div className="grid grid-cols-4 gap-4 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">{events.map((event) => (<EventCard key={event.id} event={event} onRefresh={fetchEvents} />))}</div>
         )}
       </div>
       {showCreateModal && (<CreateEventModal onClose={() => setShowCreateModal(false)} onSuccess={() => { setShowCreateModal(false); fetchEvents() }} />)}
@@ -111,27 +114,31 @@ function EventCard({ event, onRefresh }) {
     <>
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden hover:shadow-md transition-shadow">
         {event.template_image_url ? (
-          <div className="h-48 bg-gray-100 relative overflow-hidden"><img src={event.template_image_url} alt={event.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><span>이미지를 불러올 수 없습니다</span></div>' }} /></div>
+          <div className="h-32 bg-gray-100 relative overflow-hidden"><img src={event.template_image_url} alt={event.name} className="w-full h-full object-contain" onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-gray-400"><span>이미지를 불러올 수 없습니다</span></div>' }} /></div>
         ) : (
-          <div className="h-48 bg-gray-100 flex items-center justify-center"><span className="text-gray-400">이미지 없음</span></div>
+          <div className="h-32 bg-gray-100 flex items-center justify-center"><span className="text-gray-400 text-xs">이미지 없음</span></div>
         )}
-        <div className="p-4">
+        <div className="p-3">
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 line-clamp-1">{event.name}</h3>
             {getStatusBadge(event.status)}
           </div>
-          {event.description && <p className="text-sm text-gray-600 mb-3 line-clamp-2">{event.description}</p>}
-          <div className="text-xs text-gray-500 space-y-1 mb-4">
-            <div>시작일: {formatDate(event.start_date)}</div>
-            <div>종료일: {formatDate(event.end_date)}</div>
+          {event.description && <p className="text-xs text-gray-600 mb-2 line-clamp-1">{event.description}</p>}
+          <div className="text-xs text-gray-500 space-y-1 mb-3">
+            <div>시작: {formatDate(event.start_date)}</div>
+            <div>종료: {formatDate(event.end_date)}</div>
           </div>
-          <div className="flex gap-2">
-            <button onClick={toggleStatus} className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm" style={{ borderRadius: '10px' }}>
-              <span>{event.status === 'active' ? '👁️‍🗨️' : '👁️'}</span>
-              {event.status === 'active' ? '비활성화' : '활성화'}
+          <div className="flex gap-1">
+            <button onClick={toggleStatus} className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-xs" style={{ borderRadius: '8px' }}>
+              {event.status === 'active' ? <EyeOff size={14} /> : <Eye size={14} />}
+              <span className="hidden lg:inline">{event.status === 'active' ? '비활성' : '활성'}</span>
             </button>
-            <button onClick={() => setShowEditModal(true)} className="px-3 py-2 rounded hover:opacity-80" style={{ backgroundColor: '#249689', color: 'white', borderRadius: '10px' }}>✏️</button>
-            <button onClick={deleteEvent} className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200" style={{ borderRadius: '10px' }}>🗑️</button>
+            <button onClick={() => setShowEditModal(true)} className="px-2 py-1.5 rounded hover:opacity-80" style={{ backgroundColor: '#249689', color: 'white', borderRadius: '8px' }}>
+              <Edit2 size={14} />
+            </button>
+            <button onClick={deleteEvent} className="px-2 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200" style={{ borderRadius: '8px' }}>
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
       </div>
@@ -402,29 +409,19 @@ function CreateEventModal({ onClose, onSuccess }) {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" style={{ paddingTop: '2rem' }}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative" style={{ borderRadius: '10px' }}>
-        <div className="p-6 max-h-[90vh] overflow-y-auto">
-          {/* 나가기 버튼 - 상단 왼쪽 */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-4 left-4 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            style={{ fontSize: '14px' }}
-          >
-            <ArrowLeft size={18} />
-            나가기
-          </button>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm relative" style={{ borderRadius: '10px' }}>
+        <div className="p-5 max-h-[90vh] overflow-y-auto">
           
-          <div className="flex flex-col items-center justify-center mb-6">
-            <div className="flex items-center gap-1.5 mb-4">
+          <div className="flex flex-col items-center justify-center mb-3">
+            <div className="flex items-center gap-1.5 mb-2">
               <img src="/images/logo.png" alt="LAS Logo" className="w-10 h-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
-              <h2 className="font-bold" style={{ color: '#249689', fontSize: '28px' }}>새 템플릿 만들기</h2>
+              <h2 className="font-bold" style={{ color: '#249689', fontSize: '28px' }}>템플릿 만들기</h2>
             </div>
           </div>
           
           {/* 상태 메시지 */}
           {uploadStatus.message && (
-            <div className={`mb-4 p-3 rounded-lg ${
+            <div className={`mb-3 p-3 rounded-lg ${
               uploadStatus.type === 'error' ? 'bg-red-50 border-2 border-red-300' : 
               uploadStatus.type === 'success' ? 'bg-green-50 border-2 border-green-300' :
               'bg-blue-50 border-2 border-blue-300'
@@ -437,7 +434,7 @@ function CreateEventModal({ onClose, onSuccess }) {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 이벤트명 <span style={{ color: 'red' }}>*</span>
@@ -447,7 +444,7 @@ function CreateEventModal({ onClose, onSuccess }) {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
-              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3" placeholder="이벤트에 대한 간단한 설명" style={{ borderRadius: '10px' }} />
+              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="2" placeholder="이벤트에 대한 간단한 설명" style={{ borderRadius: '10px' }} />
             </div>
             
             <div>
@@ -464,11 +461,11 @@ function CreateEventModal({ onClose, onSuccess }) {
               <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} disabled={uploading} />
             </div>
             
-            <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-300 shadow-md" style={{ borderRadius: '10px' }}>
-              <label className="block text-sm font-bold text-gray-700 mb-3 text-center">📍 QR코드 위치를 선택하세요</label>
-              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '450px' }}>
+            <div className="p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-300 shadow-md" style={{ borderRadius: '10px' }}>
+              <label className="block text-sm font-bold text-gray-700 mb-2 text-center">📍 QR코드 위치를 선택하세요</label>
+              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '400px' }}>
                 {uploading ? (
-                  <div className="flex items-center justify-center" style={{ minHeight: '450px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
                       <p className="text-sm text-blue-700 font-medium">⏳ 이미지 업로드 중...</p>
@@ -477,7 +474,7 @@ function CreateEventModal({ onClose, onSuccess }) {
                 ) : (previewUrl || formData.template_image_url) ? (
                   <QRImageSelector imageUrl={previewUrl || formData.template_image_url} position={formData.qr_position} onPositionChange={(pos) => setFormData(prev => ({ ...prev, qr_position: pos }))} />
                 ) : (
-                  <div className="flex items-center justify-center" style={{ minHeight: '450px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
                     <div className="text-center text-gray-400">
                       <svg className="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -488,13 +485,13 @@ function CreateEventModal({ onClose, onSuccess }) {
                 )}
               </div>
               {formData.qr_position && formData.qr_position.width > 0 && (
-                <div className="mt-3 p-2 bg-green-50 rounded border border-green-300" style={{ borderRadius: '10px' }}>
+                <div className="mt-2 p-2 bg-green-50 rounded border border-green-300" style={{ borderRadius: '10px' }}>
                   <p className="text-xs text-green-700 font-medium text-center">✅ QR 위치가 선택되었습니다!</p>
                 </div>
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
                 <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
@@ -515,7 +512,10 @@ function CreateEventModal({ onClose, onSuccess }) {
               </select>
             </div>
             
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-3">
+              <button type="button" onClick={onClose} className="w-full py-3 flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold" style={{ borderRadius: '10px', fontSize: '15px' }}>
+                나가기
+              </button>
               <button type="submit" disabled={saving || uploading} className="w-full py-3 flex items-center justify-center gap-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-bold" style={{ backgroundColor: '#4A9B8E', borderRadius: '10px', fontSize: '15px' }}>
                 <Plus size={18} />
                 {saving ? '생성 중...' : '생성하기'}
@@ -604,28 +604,18 @@ function EditEventModal({ event, onClose, onSuccess }) {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" style={{ paddingTop: '2rem' }}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md relative" style={{ borderRadius: '10px' }}>
-        <div className="p-6 max-h-[90vh] overflow-y-auto">
-          {/* 나가기 버튼 - 상단 왼쪽 */}
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-4 left-4 flex items-center gap-1 text-gray-600 hover:text-gray-900 transition-colors font-medium z-10"
-            style={{ fontSize: '14px' }}
-          >
-            <ArrowLeft size={18} />
-            나가기
-          </button>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm relative" style={{ borderRadius: '10px' }}>
+        <div className="p-5 max-h-[90vh] overflow-y-auto">
           
-          <div className="flex flex-col items-center justify-center mb-6">
-            <div className="flex items-center gap-1.5 mb-4">
+          <div className="flex flex-col items-center justify-center mb-4">
+            <div className="flex items-center gap-1.5 mb-3">
               <img src="/images/logo.png" alt="LAS Logo" className="w-10 h-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
               <h2 className="font-bold" style={{ color: '#249689', fontSize: '28px' }}>이벤트 수정하기</h2>
             </div>
           </div>
           
           {uploadStatus.message && (
-            <div className={`mb-4 p-3 rounded-lg ${
+            <div className={`mb-3 p-3 rounded-lg ${
               uploadStatus.type === 'error' ? 'bg-red-50 border-2 border-red-300' : 
               uploadStatus.type === 'success' ? 'bg-green-50 border-2 border-green-300' :
               'bg-blue-50 border-2 border-blue-300'
@@ -638,7 +628,7 @@ function EditEventModal({ event, onClose, onSuccess }) {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-3">
+          <form onSubmit={handleSubmit} className="space-y-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 이벤트명 <span style={{ color: 'red' }}>*</span>
@@ -648,7 +638,7 @@ function EditEventModal({ event, onClose, onSuccess }) {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
-              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3" placeholder="이벤트에 대한 간단한 설명" style={{ borderRadius: '10px' }} />
+              <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="2" placeholder="이벤트에 대한 간단한 설명" style={{ borderRadius: '10px' }} />
             </div>
             
             <div>
@@ -665,11 +655,11 @@ function EditEventModal({ event, onClose, onSuccess }) {
               <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} disabled={uploading} />
             </div>
             
-            <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-300 shadow-md" style={{ borderRadius: '10px' }}>
-              <label className="block text-sm font-bold text-gray-700 mb-3 text-center">📍 QR코드 위치를 선택하세요</label>
-              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '450px' }}>
+            <div className="p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-300 shadow-md" style={{ borderRadius: '10px' }}>
+              <label className="block text-sm font-bold text-gray-700 mb-2 text-center">📍 QR코드 위치를 선택하세요</label>
+              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '400px' }}>
                 {uploading ? (
-                  <div className="flex items-center justify-center" style={{ minHeight: '450px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
                       <p className="text-sm text-blue-700 font-medium">⏳ 이미지 업로드 중...</p>
@@ -678,7 +668,7 @@ function EditEventModal({ event, onClose, onSuccess }) {
                 ) : (previewUrl || formData.template_image_url) ? (
                   <QRImageSelector imageUrl={previewUrl || formData.template_image_url} position={formData.qr_position} onPositionChange={(pos) => setFormData(prev => ({ ...prev, qr_position: pos }))} />
                 ) : (
-                  <div className="flex items-center justify-center" style={{ minHeight: '450px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
                     <div className="text-center text-gray-400">
                       <svg className="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -689,13 +679,13 @@ function EditEventModal({ event, onClose, onSuccess }) {
                 )}
               </div>
               {formData.qr_position && formData.qr_position.width > 0 && (
-                <div className="mt-3 p-2 bg-green-50 rounded border border-green-300" style={{ borderRadius: '10px' }}>
+                <div className="mt-2 p-2 bg-green-50 rounded border border-green-300" style={{ borderRadius: '10px' }}>
                   <p className="text-xs text-green-700 font-medium text-center">✅ QR 위치가 선택되었습니다!</p>
                 </div>
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
                 <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
@@ -716,7 +706,10 @@ function EditEventModal({ event, onClose, onSuccess }) {
               </select>
             </div>
             
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-3">
+              <button type="button" onClick={onClose} className="w-full py-3 flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold" style={{ borderRadius: '10px', fontSize: '15px' }}>
+                나가기
+              </button>
               <button type="submit" disabled={saving || uploading} className="w-full py-3 flex items-center justify-center gap-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-bold" style={{ backgroundColor: '#4A9B8E', borderRadius: '10px', fontSize: '15px' }}>
                 <Plus size={18} />
                 {saving ? '저장 중...' : '수정하기'}
