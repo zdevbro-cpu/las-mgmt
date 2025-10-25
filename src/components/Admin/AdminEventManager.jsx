@@ -229,13 +229,13 @@ function QRImageSelector({ imageUrl, position, onPositionChange }) {
     return { left: `${position.x}%`, top: `${position.y}%`, width: `${position.width}%`, height: `${position.height}%` }
   }
   return (
-    <div ref={containerRef} className="relative w-full cursor-crosshair" style={{ minHeight: '450px' }} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+    <div ref={containerRef} className="relative w-full " style={{ minHeight: '350px' }} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
       <img 
         ref={imageRef}
         src={imageUrl} 
         alt="Template" 
-        className="w-full h-auto" 
-        style={{ maxHeight: '600px', objectFit: 'contain' }} 
+        className="w-full h-auto block cursor-crosshair" 
+        style={{ maxHeight: '500px', objectFit: 'contain' }} 
         draggable="false"
         onDragStart={(e) => e.preventDefault()}
         onLoad={() => { 
@@ -345,6 +345,23 @@ function CreateEventModal({ onClose, onSuccess }) {
     }
   }
   
+  const calculateStatus = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'active'
+    
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const start = new Date(startDate)
+    start.setHours(0, 0, 0, 0)
+    
+    const end = new Date(endDate)
+    end.setHours(0, 0, 0, 0)
+    
+    if (today > end) return 'ended'
+    if (today < start) return 'scheduled'
+    return 'active'
+  }
+  
   const handleSubmit = async (e) => {
     e.preventDefault()
     
@@ -389,7 +406,11 @@ function CreateEventModal({ onClose, onSuccess }) {
       setUploadStatus({ type: 'uploading', message: '이벤트 생성 중...' })
       console.log('📝 저장할 데이터:', formData)
       
-      const { error } = await supabase.from('events').insert([formData])
+      const calculatedStatus = calculateStatus(formData.start_date, formData.end_date)
+      const dataToSave = { ...formData, status: calculatedStatus }
+      console.log('📅 계산된 상태:', calculatedStatus)
+      
+      const { error } = await supabase.from('events').insert([dataToSave])
       
       if (error) {
         console.error('❌ DB 저장 실패:', error)
@@ -454,6 +475,17 @@ function CreateEventModal({ onClose, onSuccess }) {
               <input type="url" value={formData.landing_url} onChange={(e) => setFormData(prev => ({ ...prev, landing_url: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="https://example.com/event" style={{ borderRadius: '10px' }} required />
             </div>
             
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+                <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+                <input type="date" value={formData.end_date} onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
+              </div>
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 템플릿 이미지 <span style={{ color: 'red' }}>*</span>
@@ -489,27 +521,6 @@ function CreateEventModal({ onClose, onSuccess }) {
                   <p className="text-xs text-green-700 font-medium text-center">✅ QR 위치가 선택되었습니다!</p>
                 </div>
               )}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                <input type="date" value={formData.end_date} onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
-              <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }}>
-                <option value="active">진행중</option>
-                <option value="scheduled">예정</option>
-                <option value="inactive">비활성</option>
-                <option value="ended">종료</option>
-              </select>
             </div>
             
             <div className="flex gap-3 pt-3">
@@ -549,35 +560,41 @@ function EditEventModal({ event, onClose, onSuccess }) {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`
       const filePath = `event-templates/${fileName}`
-      const { error: uploadError } = await supabase.storage.from('event-images').upload(filePath, file)
-      if (uploadError) {
-        setUploadStatus({ type: 'error', message: '이미지 업로드 실패: ' + uploadError.message })
-        setUploading(false)
-        return
-      }
-      
-      // Supabase URL로 직접 Public URL 구성
+      const { data: uploadData, error: uploadError } = await supabase.storage.from('event-images').upload(filePath, file)
+      if (uploadError) throw uploadError
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://sgxnxbhbyvrmgrzhosyh.supabase.co'
       const publicUrl = `${supabaseUrl}/storage/v1/object/public/event-images/${filePath}`
-      console.log('🔗 EditModal - 구성한 Public URL:', publicUrl)
-      
       setFormData(prev => ({ ...prev, template_image_url: publicUrl }))
+      setTimeout(() => setPreviewUrl(''), 100)
       setUploadStatus({ type: 'success', message: '✅ 이미지 업로드 완료!' })
     } catch (error) {
-      setUploadStatus({ type: 'error', message: '이미지 업로드 중 오류 발생' })
+      setUploadStatus({ type: 'error', message: '이미지 업로드 실패: ' + error.message })
     } finally {
       setUploading(false)
     }
+  }
+  
+  const calculateStatus = (startDate, endDate) => {
+    if (!startDate || !endDate) return 'active'
+    
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const start = new Date(startDate)
+    start.setHours(0, 0, 0, 0)
+    
+    const end = new Date(endDate)
+    end.setHours(0, 0, 0, 0)
+    
+    if (today > end) return 'ended'
+    if (today < start) return 'scheduled'
+    return 'active'
   }
   
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.name || !formData.landing_url) {
       setUploadStatus({ type: 'error', message: '필수 항목을 입력해주세요.' })
-      return
-    }
-    if (uploading) {
-      setUploadStatus({ type: 'error', message: '이미지 업로드가 진행 중입니다.' })
       return
     }
     if (!formData.template_image_url) {
@@ -591,7 +608,12 @@ function EditEventModal({ event, onClose, onSuccess }) {
     try {
       setSaving(true)
       setUploadStatus({ type: 'uploading', message: '이벤트 수정 중...' })
-      const { error } = await supabase.from('events').update(formData).eq('id', event.id)
+      
+      const calculatedStatus = calculateStatus(formData.start_date, formData.end_date)
+      const dataToSave = { ...formData, status: calculatedStatus }
+      console.log('📅 계산된 상태:', calculatedStatus)
+      
+      const { error } = await supabase.from('events').update(dataToSave).eq('id', event.id)
       if (error) throw error
       setUploadStatus({ type: 'success', message: '✅ 이벤트가 성공적으로 수정되었습니다!' })
       setTimeout(onSuccess, 500)
@@ -605,10 +627,10 @@ function EditEventModal({ event, onClose, onSuccess }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto" style={{ paddingTop: '2rem' }}>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-sm relative" style={{ borderRadius: '10px' }}>
-        <div className="p-5 max-h-[90vh] overflow-y-auto">
+        <div className="p-4 max-h-[85vh] overflow-y-auto">
           
-          <div className="flex flex-col items-center justify-center mb-4">
-            <div className="flex items-center gap-1.5 mb-3">
+          <div className="flex flex-col items-center justify-center mb-2.5">
+            <div className="flex items-center gap-1.5 mb-2">
               <img src="/images/logo.png" alt="LAS Logo" className="w-10 h-10 object-contain" onError={(e) => e.target.style.display = 'none'} />
               <h2 className="font-bold" style={{ color: '#249689', fontSize: '28px' }}>이벤트 수정하기</h2>
             </div>
@@ -628,28 +650,39 @@ function EditEventModal({ event, onClose, onSuccess }) {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-1.5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-0.5">
                 이벤트명 <span style={{ color: 'red' }}>*</span>
               </label>
               <input type="text" value={formData.name} onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="예: 수학편지 신청 이벤트" style={{ borderRadius: '10px' }} required />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+              <label className="block text-sm font-medium text-gray-700 mb-0.5">설명</label>
               <textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="2" placeholder="이벤트에 대한 간단한 설명" style={{ borderRadius: '10px' }} />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-0.5">
                 랜딩페이지 URL <span style={{ color: 'red' }}>*</span>
               </label>
               <input type="url" value={formData.landing_url} onChange={(e) => setFormData(prev => ({ ...prev, landing_url: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="https://example.com/event" style={{ borderRadius: '10px' }} required />
             </div>
             
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">시작일</label>
+                <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-0.5">종료일</label>
+                <input type="date" value={formData.end_date} onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
+              </div>
+            </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-0.5">
                 템플릿 이미지 <span style={{ color: 'red' }}>*</span>
               </label>
               <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} disabled={uploading} />
@@ -657,9 +690,9 @@ function EditEventModal({ event, onClose, onSuccess }) {
             
             <div className="p-3 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg border-2 border-blue-300 shadow-md" style={{ borderRadius: '10px' }}>
               <label className="block text-sm font-bold text-gray-700 mb-2 text-center">📍 QR코드 위치를 선택하세요</label>
-              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '400px' }}>
+              <div className="relative inline-block border-4 border-blue-400 rounded bg-white shadow-xl w-full" style={{ borderRadius: '10px', minHeight: '280px' }}>
                 {uploading ? (
-                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '280px' }}>
                     <div className="text-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-3"></div>
                       <p className="text-sm text-blue-700 font-medium">⏳ 이미지 업로드 중...</p>
@@ -668,7 +701,7 @@ function EditEventModal({ event, onClose, onSuccess }) {
                 ) : (previewUrl || formData.template_image_url) ? (
                   <QRImageSelector imageUrl={previewUrl || formData.template_image_url} position={formData.qr_position} onPositionChange={(pos) => setFormData(prev => ({ ...prev, qr_position: pos }))} />
                 ) : (
-                  <div className="flex items-center justify-center" style={{ minHeight: '400px' }}>
+                  <div className="flex items-center justify-center" style={{ minHeight: '280px' }}>
                     <div className="text-center text-gray-400">
                       <svg className="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -685,33 +718,12 @@ function EditEventModal({ event, onClose, onSuccess }) {
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">시작일</label>
-                <input type="date" value={formData.start_date} onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">종료일</label>
-                <input type="date" value={formData.end_date} onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }} />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
-              <select value={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg" style={{ borderRadius: '10px' }}>
-                <option value="active">진행중</option>
-                <option value="scheduled">예정</option>
-                <option value="inactive">비활성</option>
-                <option value="ended">종료</option>
-              </select>
-            </div>
-            
             <div className="flex gap-3 pt-3">
               <button type="button" onClick={onClose} className="w-full py-3 flex items-center justify-center gap-2 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold" style={{ borderRadius: '10px', fontSize: '15px' }}>
                 나가기
               </button>
               <button type="submit" disabled={saving || uploading} className="w-full py-3 flex items-center justify-center gap-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-bold" style={{ backgroundColor: '#4A9B8E', borderRadius: '10px', fontSize: '15px' }}>
-                <Plus size={18} />
+                <Edit2 size={18} />
                 {saving ? '저장 중...' : '수정하기'}
               </button>
             </div>

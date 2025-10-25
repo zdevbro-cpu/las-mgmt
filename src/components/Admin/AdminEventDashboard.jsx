@@ -39,7 +39,13 @@ export default function AdminEventDashboard({ user, onBack }) {
     loadFilterOptions()
   }, [selectedEvent])
   
+  // 천단위 콤마 포맷 함수
+  const formatNumber = (num) => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+
   const loadEvents = async () => {
+
     try {
       const { data, error } = await supabase
         .from('events')
@@ -689,7 +695,7 @@ export default function AdminEventDashboard({ user, onBack }) {
               className="px-6 py-2 text-white rounded-lg hover:opacity-90 font-bold"
               style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
             >
-              엑셀다운로드({participants.length})
+              엑셀다운로드({formatNumber(participants.length)}명)
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
@@ -762,7 +768,12 @@ export default function AdminEventDashboard({ user, onBack }) {
 
         {/* 참가자 목록 */}
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>👥 참가자 목록</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold" style={{ color: '#249689' }}>👥 참가자 목록</h3>
+            <div className="text-lg font-bold" style={{ color: '#249689' }}>
+              검색결과: {formatNumber(participants.length)}명
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
