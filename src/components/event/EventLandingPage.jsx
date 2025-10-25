@@ -21,6 +21,7 @@ export default function EventLandingPage() {
   const [referralLink, setReferralLink] = useState('')
   const [isFromReferralLink, setIsFromReferralLink] = useState(false)
   const [referralCodeError, setReferralCodeError] = useState('')
+  const [referrerName, setReferrerName] = useState('')
   const [showVideoModal, setShowVideoModal] = useState(false)
   
   // MP4 영상 파일 경로 (public 폴더 기준)
@@ -31,16 +32,23 @@ export default function EventLandingPage() {
 
   // URL 파라미터에서 추천인 코드 추출
   useEffect(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const refCode = params.get('ref')
-      if (refCode) {
-        setFormData(prev => ({ ...prev, referrerCode: refCode }))
-        setIsFromReferralLink(true)
+    const fetchReferrerInfo = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const refCode = params.get('ref')
+        if (refCode) {
+          const verification = await verifyReferralCodeExists(refCode)
+          if (verification.exists && verification.referrerName) {
+            setFormData(prev => ({ ...prev, referrerCode: refCode }))
+            setReferrerName(verification.referrerName)
+            setIsFromReferralLink(true)
+          }
+        }
+      } catch (err) {
+        console.error('URL 파라미터 파싱 오류:', err)
       }
-    } catch (err) {
-      console.error('URL 파라미터 파싱 오류:', err)
     }
+    fetchReferrerInfo()
   }, [])
 
   // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
@@ -526,17 +534,17 @@ export default function EventLandingPage() {
             />
           </div>
 
-          {/* 추천인 + 링크 생성 버튼 */}
+          {/* 추천인 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              추천인 (선택)
+              추천인(자동입력)
             </label>
             {isFromReferralLink ? (
               <>
                 <input
                   type="text"
                   name="referrerCode"
-                  value={formData.referrerCode}
+                  value={referrerName ? `${referrerName}(${formData.referrerCode})` : formData.referrerCode}
                   readOnly
                   className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
@@ -547,33 +555,20 @@ export default function EventLandingPage() {
               </>
             ) : (
               <>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      name="referrerCode"
-                      value={formData.referrerCode}
-                      onChange={handleReferrerCodeChange}
-                      placeholder="추천인 코드를 입력해주세요 (예: LAS1000)"
-                      className={`w-full px-4 py-2 border ${referralCodeError ? 'border-red-500' : 'border-gray-300'}`}
-                      style={{ borderRadius: '10px', fontSize: '15px' }}
-                    />
-                    {referralCodeError && (
-                      <p className="mt-1 text-xs text-red-600">
-                        {referralCodeError}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleGenerateQR}
-                    disabled={!formData.referrerCode.trim() || !!referralCodeError}
-                    className="px-4 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#249689', fontSize: '14px' }}
-                  >
-                    링크생성
-                  </button>
-                </div>
+                <input
+                  type="text"
+                  name="referrerCode"
+                  value={formData.referrerCode}
+                  readOnly
+                  // placeholder="추천인 코드를 입력해주세요 (예: LAS1000)"
+                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                {referralCodeError && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {referralCodeError}
+                  </p>
+                )}
               </>
             )}
           </div>
