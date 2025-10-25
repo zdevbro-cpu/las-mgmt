@@ -149,22 +149,22 @@ export default function Signup({ onNavigate }) {
 
   return (
     <div className="min-h-screen flex items-start justify-center p-4 pt-4" style={{ backgroundColor: '#f5f5f5' }}>
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-8">
-        <div className="text-center mb-6">
-          <p className="text-sm mb-4" style={{ color: '#249689' }}>
+      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+        <div className="text-center mb-4">
+          <p className="text-sm mb-3" style={{ color: '#249689' }}>
             LAS 매장관리 시스템에 오신것을 환영합니다.
           </p>
           <div className="flex items-center justify-center gap-3">
             <img 
               src="/images/logo.png" 
               alt="LAS Book Logo" 
-              className="h-16"
+              className="h-12"
             />
-            <h1 className="text-3xl font-bold" style={{ color: '#249689' }}>직원등록</h1>
+            <h1 className="text-2xl font-bold" style={{ color: '#249689' }}>직원등록</h1>
           </div>
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleSignup} className="space-y-3">
           {/* 이메일 */}
           <div>
             <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
@@ -182,55 +182,74 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 비밀번호 */}
-          <div>
-            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
-              <span>🔒</span>
-              <span>비밀번호</span>
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="비밀번호를 입력하세요"
-              required
-              className="w-full px-4 py-2 border border-gray-300"
-              style={{ borderRadius: '10px', fontSize: '15px' }}
-            />
+          {/* 비밀번호와 비밀번호 확인 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+                <span>🔒</span>
+                <span>비밀번호</span>
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="비밀번호"
+                required
+                className="w-full px-4 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px' }}
+              />
+            </div>
+            
+            <div>
+              <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+                <span>🔒</span>
+                <span>비밀번호 확인</span>
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="비밀번호 확인"
+                required
+                className="w-full px-4 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px' }}
+              />
+            </div>
           </div>
 
-          {/* 비밀번호 확인 */}
-          <div>
-            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
-              <span>🔒</span>
-              <span>비밀번호 확인</span>
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="비밀번호를 확인하세요"
-              required
-              className="w-full px-4 py-2 border border-gray-300"
-              style={{ borderRadius: '10px', fontSize: '15px' }}
-            />
-          </div>
+          {/* 이름과 핸드폰 번호 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+                <span>👤</span>
+                <span>이름</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="이름"
+                required
+                className="w-full px-4 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px' }}
+              />
+            </div>
 
-          {/* 이름 */}
-          <div>
-            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
-              <span>👤</span>
-              <span>이름</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="이름을 입력하세요"
-              required
-              className="w-full px-4 py-2 border border-gray-300"
-              style={{ borderRadius: '10px', fontSize: '15px' }}
-            />
+            <div>
+              <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
+                <span>📱</span>
+                <span>핸드폰 번호</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={handlePhoneChange}
+                placeholder="000-0000-0000"
+                required
+                className="w-full px-4 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px' }}
+              />
+            </div>
           </div>
 
           {/* 지정명 (지점) */}
@@ -253,23 +272,6 @@ export default function Signup({ onNavigate }) {
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* 핸드폰 */}
-          <div>
-            <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
-              <span>📱</span>
-              <span>핸드폰 번호</span>
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={handlePhoneChange}
-              placeholder="000-0000-0000"
-              required
-              className="w-full px-4 py-2 border border-gray-300"
-              style={{ borderRadius: '10px', fontSize: '15px' }}
-            />
           </div>
 
           {/* 구분 - 4개로 수정 */}
@@ -327,7 +329,7 @@ export default function Signup({ onNavigate }) {
           </div>
 
           {/* 급여 정보 (선택사항) */}
-          <div className="border-t pt-4 mt-6">
+          <div className="border-t pt-3 mt-4">
             <button
               type="button"
               onClick={() => setShowSalaryInfo(!showSalaryInfo)}
@@ -343,7 +345,7 @@ export default function Signup({ onNavigate }) {
             </button>
 
             {showSalaryInfo && (
-              <div className="mt-4 space-y-4">
+              <div className="mt-3 space-y-3">
                 {/* 주민등록번호 */}
                 <div>
                   <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px', color: '#666' }}>
@@ -366,36 +368,37 @@ export default function Signup({ onNavigate }) {
                   )}
                 </div>
 
-                {/* 예금주 */}
-                <div>
-                  <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px', color: '#666' }}>
-                    <span>👤</span>
-                    <span>예금주 (선택)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accountHolder}
-                    onChange={(e) => setAccountHolder(e.target.value)}
-                    placeholder="예금주를 입력하세요"
-                    className="w-full px-4 py-2 border border-gray-300"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
-                </div>
+                {/* 예금주와 기관명 */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px', color: '#666' }}>
+                      <span>👤</span>
+                      <span>예금주 (선택)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      placeholder="예금주"
+                      className="w-full px-4 py-2 border border-gray-300"
+                      style={{ borderRadius: '10px', fontSize: '15px' }}
+                    />
+                  </div>
 
-                {/* 기관명 */}
-                <div>
-                  <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px', color: '#666' }}>
-                    <span>🏦</span>
-                    <span>기관명 (선택)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="기관명을 입력하세요"
-                    className="w-full px-4 py-2 border border-gray-300"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
+                  <div>
+                    <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px', color: '#666' }}>
+                      <span>🏦</span>
+                      <span>기관명 (선택)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="기관명"
+                      className="w-full px-4 py-2 border border-gray-300"
+                      style={{ borderRadius: '10px', fontSize: '15px' }}
+                    />
+                  </div>
                 </div>
 
                 {/* 계좌번호 */}
@@ -408,7 +411,7 @@ export default function Signup({ onNavigate }) {
                     type="text"
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="계좌번호를 입력하세요"
+                    placeholder="계좌번호"
                     className="w-full px-4 py-2 border border-gray-300"
                     style={{ borderRadius: '10px', fontSize: '15px' }}
                   />
@@ -417,26 +420,29 @@ export default function Signup({ onNavigate }) {
             )}
           </div>
 
-          {/* 회원가입 버튼 */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-lg font-bold text-white hover:opacity-90 mt-6"
-            style={{ backgroundColor: '#249689', fontSize: '16px' }}
-          >
-            {loading ? '등록 중...' : '직원등록'}
-          </button>
+          {/* 버튼 */}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {/* 나가기 버튼 */}
+            <button
+              type="button"
+              onClick={() => onNavigate('login')}
+              className="py-3 rounded-lg font-bold border-2 hover:bg-gray-50 flex items-center justify-center gap-2"
+              style={{ borderColor: '#cccccc', fontSize: '16px' }}
+            >
+              <ArrowLeft size={18} />
+              나가기
+            </button>
 
-          {/* 나가기 버튼 */}
-          <button
-            type="button"
-            onClick={() => onNavigate('login')}
-            className="w-full py-3 rounded-lg font-bold border-2 hover:bg-gray-50 flex items-center justify-center gap-2"
-            style={{ borderColor: '#cccccc', fontSize: '16px' }}
-          >
-            <ArrowLeft size={20} />
-            나가기
-          </button>
+            {/* 직원등록 버튼 */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="py-3 rounded-lg font-bold text-white hover:opacity-90"
+              style={{ backgroundColor: '#249689', fontSize: '16px' }}
+            >
+              {loading ? '등록 중...' : '직원등록'}
+            </button>
+          </div>
         </form>
 
         <div className="mt-4 text-center">
