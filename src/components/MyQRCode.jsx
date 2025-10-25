@@ -12,20 +12,32 @@ export default function MyQRCode({ user, onBack }) {
   const [generating, setGenerating] = useState(false)
   const [generatedImageUrl, setGeneratedImageUrl] = useState(null)
   const [linkCopied, setLinkCopied] = useState(false)
+  const [lastSavedUrl, setLastSavedUrl] = useState('') // 마지막 저장된 링크
   const canvasRef = useRef(null)
 
   // 사용자 정보
   const userName = user?.name || '사용자'
-  const userBranch = user?.brname || '지점'
+  const userBranch = user?.branch || '지점'
   const referralCode = user?.referral_code || 'LAS0000'
   
   // 선택된 이벤트의 landing_url 사용 (동적)
   const eventUrl = selectedEvent 
     ? `${selectedEvent.landing_url}?ref=${referralCode}`
-    : `https://lasmanager.vercel.app/event?ref=${referralCode}`
+    : lastSavedUrl || `https://lasmanager.vercel.app/event?ref=${referralCode}`
 
   useEffect(() => {
     fetchActiveEvents()
+    
+    // 마지막 저장된 링크 불러오기
+    try {
+      const savedData = localStorage.getItem(`lastQRLink_${user?.id}`)
+      if (savedData) {
+        const parsed = JSON.parse(savedData)
+        setLastSavedUrl(parsed.url || '')
+      }
+    } catch (error) {
+      console.log('링크 불러오기 실패:', error)
+    }
   }, [])
 
   const fetchActiveEvents = async () => {
@@ -108,6 +120,21 @@ export default function MyQRCode({ user, onBack }) {
       const finalImageUrl = canvas.toDataURL('image/png')
       setGeneratedImageUrl(finalImageUrl)
       setSelectedEvent(event)
+      
+      // 마지막 생성 링크를 localStorage에 JSON으로 저장
+      const newUrl = `${event.landing_url}?ref=${referralCode}`
+      try {
+        const saveData = {
+          url: newUrl,
+          eventId: event.id,
+          eventName: event.name,
+          timestamp: new Date().toISOString()
+        }
+        localStorage.setItem(`lastQRLink_${user?.id}`, JSON.stringify(saveData))
+        setLastSavedUrl(newUrl)
+      } catch (error) {
+        console.log('링크 저장 실패:', error)
+      }
 
       console.log('✅ QR 이미지 생성 완료')
     } catch (error) {
@@ -170,7 +197,7 @@ export default function MyQRCode({ user, onBack }) {
                 onError={(e) => e.target.style.display = 'none'} 
               />
               <h1 className="text-base sm:text-lg font-bold" style={{ color: '#249689', whiteSpace: 'nowrap' }}>
-                내QR페이지 만들기
+                내 QR페이지 만들기
               </h1>
             </div>
             
@@ -184,79 +211,52 @@ export default function MyQRCode({ user, onBack }) {
             </p>
           </div>
 
-          {/* 내 정보 + 링크/검색 (템플릿 선택 전에만 표시) */}
+          {/* 내 정보 + 링크복사 (템플릿 선택 전에만 표시) */}
           {!selectedEvent && (
-            <div className="mt-4 p-2 bg-gray-50 rounded-lg" style={{ borderRadius: '10px' }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {/* 왼쪽: 내 정보 (3줄) */}
-                <div className="space-y-2 text-xs text-gray-600">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">👤 이름:</span>
-                    <span className="font-semibold text-gray-800">{userName}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">🏢 지점:</span>
-                    <span className="font-semibold text-gray-800">{userBranch}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">🔖 고유번호:</span>
-                    <span className="font-mono font-semibold text-gray-800">{referralCode}</span>
-                  </div>
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg space-y-3" style={{ borderRadius: '10px' }}>
+              {/* 내 정보 - 1줄 가로 배치 */}
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 text-sm font-medium text-gray-700 px-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">👤 이름:</span>
+                  <span className="font-bold text-gray-900">{userName}</span>
                 </div>
-
-                {/* 오른쪽: 링크 복사 + 템플릿 검색 (2줄) */}
-                <div className="space-y-2">
-                  {/* 링크 복사 */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={eventUrl}
-                      readOnly
-                      className="flex-1 px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg"
-                      style={{ borderRadius: '8px' }}
-                      placeholder="내 주천 링크"
-                    />
-                    <button
-                      onClick={copyLink}
-                      className="flex items-center gap-1 px-3 py-2 text-white rounded-lg hover:opacity-90 transition-all text-xs font-medium whitespace-nowrap"
-                      style={{ backgroundColor: linkCopied ? '#10B981' : '#6B7280', borderRadius: '8px' }}
-                    >
-                      {linkCopied ? (
-                        <>
-                          <Check size={14} />
-                          <span>복사됨</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={14} />
-                          <span>링크 복사</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* 이벤트 템플릿 검색 (드롭다운) */}
-                  <select
-                    onChange={(e) => {
-                      const selectedId = e.target.value
-                      if (selectedId === 'all') {
-                        fetchActiveEvents()
-                      } else if (selectedId) {
-                        const filtered = events.filter(ev => ev.id === selectedId)
-                        setEvents(filtered)
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
-                    style={{ borderRadius: '8px' }}
-                  >
-                    <option value="all">🔍 전체 템플릿 보기</option>
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">🏢 지점:</span>
+                  <span className="font-bold text-gray-900">{userBranch}</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600">🔖 고유번호:</span>
+                  <span className="font-mono font-bold text-gray-900">{referralCode}</span>
+                </div>
+              </div>
+
+              {/* 링크 복사 */}
+              <div className="flex gap-2" style={{ width: '100%' }}>
+                <input
+                  type="text"
+                  value={eventUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg"
+                  style={{ borderRadius: '8px', minWidth: 0 }}
+                  placeholder="내 주천 링크"
+                />
+                <button
+                  onClick={copyLink}
+                  className="flex items-center gap-1 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-all text-xs font-medium whitespace-nowrap"
+                  style={{ backgroundColor: linkCopied ? '#10B981' : '#4A9B8E', borderRadius: '8px' }}
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check size={14} />
+                      <span>복사됨</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} />
+                      <span>복사</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
@@ -391,10 +391,10 @@ export default function MyQRCode({ user, onBack }) {
                   <button
                     onClick={downloadImage}
                     className="w-full py-2 flex items-center justify-center gap-2 text-white rounded-xl hover:opacity-90 font-bold text-base sm:text-lg shadow-lg hover:shadow-xl transition-all"
-                    style={{ backgroundColor: '#4A9B8E', borderRadius: '12px' }}
+                    style={{ backgroundColor: '#5B9BD5', borderRadius: '12px' }}
                   >
                     <Download size={22} />
-                    내QR페이지 저장
+                    내 QR페이지 저장
                   </button>
 
                   {/* 보조 액션들 */}
@@ -413,7 +413,7 @@ export default function MyQRCode({ user, onBack }) {
                         <button
                           onClick={copyLink}
                           className="flex items-center gap-1.5 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-all text-sm font-medium"
-                          style={{ backgroundColor: linkCopied ? '#10B981' : '#6B7280', borderRadius: '8px' }}
+                          style={{ backgroundColor: linkCopied ? '#10B981' : '#4A9B8E', borderRadius: '8px' }}
                         >
                           {linkCopied ? <Check size={16} /> : <Copy size={16} />}
                           {linkCopied ? '복사됨' : '복사'}
@@ -426,7 +426,7 @@ export default function MyQRCode({ user, onBack }) {
                       <p className="text-xs text-yellow-800 font-medium mb-1">💡 사용 방법:</p>
                       <ul className="text-xs text-yellow-700 space-y-1 ml-4">
                         <li>• QR 페이지를 생성하여 이미지로 전달하거나</li>
-                        <li>• 참가자가 QR 코드를 스캔하면 자동으로 지점장님께 연결됩니다</li>
+                        <li>• 참가자가 QR 코드를 스캔하면 자동으로 내 고유코드로 연결됩니다</li>
                         <li>• 링크를 복사해 카톡/문자로 전달할 수도 있습니다</li>
                       </ul>
                     </div>

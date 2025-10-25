@@ -61,7 +61,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <Users size={20} />
-              사용자관리
+              직원정보관리
             </button>
 
             <button

@@ -15,6 +15,8 @@ export default function AdminUsers({ user, onNavigate }) {
   const [endDate, setEndDate] = useState('')
   const [selectedUsers, setSelectedUsers] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
+  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     name: '',
     branch: '',
@@ -267,6 +269,17 @@ export default function AdminUsers({ user, onNavigate }) {
     return matchesSearch && matchesBranch && matchesUserType && matchesDate
   })
 
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex)
+
+  // 필터 변경 시 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterBranch, filterUserType, startDate, endDate, itemsPerPage])
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -389,6 +402,26 @@ export default function AdminUsers({ user, onNavigate }) {
               </button>
             </div>
           </div>
+
+          {/* 총 인원수와 페이지 선택 */}
+          <div className="mt-4 flex justify-start items-center gap-4">
+            <div className="text-gray-600" style={{ fontSize: '15px' }}>
+              총 <strong style={{ color: '#249689', fontSize: '16px' }}>{filteredUsers.length}</strong>명
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">페이지당:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+                style={{ fontSize: '14px' }}
+              >
+                <option value={15}>15개</option>
+                <option value={50}>50개</option>
+                <option value={100}>100개</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* 직원 목록 */}
@@ -433,7 +466,7 @@ export default function AdminUsers({ user, onNavigate }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <input
@@ -500,6 +533,67 @@ export default function AdminUsers({ user, onNavigate }) {
                 </tbody>
               </table>
             </div>
+
+            {/* 페이지 네비게이션 */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex justify-center items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontSize: '14px' }}
+                >
+                  이전
+                </button>
+                
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`px-3 py-1 border rounded ${
+                          currentPage === pageNum
+                            ? 'text-white font-bold'
+                            : 'hover:bg-gray-50'
+                        }`}
+                        style={{
+                          fontSize: '14px',
+                          backgroundColor: currentPage === pageNum ? '#249689' : 'white',
+                          borderColor: currentPage === pageNum ? '#249689' : '#d1d5db'
+                        }}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ fontSize: '14px' }}
+                >
+                  다음
+                </button>
+
+                <span className="ml-4 text-sm text-gray-600">
+                  {currentPage} / {totalPages} 페이지
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
