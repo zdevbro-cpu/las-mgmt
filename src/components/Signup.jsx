@@ -107,7 +107,10 @@ export default function Signup({ onNavigate }) {
         newCode = `LAS${String(nextNumber).padStart(3, '0')}`
       }
 
-      // 2. users 테이블에 직접 저장
+      // 2. UUID 생성
+      const userId = crypto.randomUUID()
+
+      // 3. users 테이블에 직접 저장
       const phoneNumbers = phone.replace(/-/g, '')
       const ssnNumbers = ssn ? ssn.replace(/-/g, '') : null
       
@@ -115,6 +118,7 @@ export default function Signup({ onNavigate }) {
         .from('users')
         .insert([
           {
+            id: userId,  // UUID 명시적 추가
             email,
             password,
             name,
@@ -268,13 +272,35 @@ export default function Signup({ onNavigate }) {
             />
           </div>
 
-          {/* 구분 */}
+          {/* 구분 - 4개로 수정 */}
           <div>
             <label className="flex items-center gap-2 mb-1 font-bold" style={{ fontSize: '15px' }}>
               <span>🏷️</span>
               <span>구분</span>
             </label>
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="모니터링 요원"
+                  checked={userType === '모니터링 요원'}
+                  onChange={(e) => setUserType(e.target.value)}
+                  className="w-4 h-4"
+                  style={{ accentColor: '#249689' }}
+                />
+                <span style={{ fontSize: '15px' }}>모니터링 요원</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="계약근무"
+                  checked={userType === '계약근무'}
+                  onChange={(e) => setUserType(e.target.value)}
+                  className="w-4 h-4"
+                  style={{ accentColor: '#249689' }}
+                />
+                <span style={{ fontSize: '15px' }}>계약근무</span>
+              </label>
               <label className="flex items-center gap-2">
                 <input
                   type="radio"

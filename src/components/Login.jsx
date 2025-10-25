@@ -106,7 +106,7 @@ export default function Login({ onNavigate, onLogin }) {
           {/* 취소 버튼 */}
           <button
             type="button"
-            onClick={() => onNavigate('signup')}
+            onClick={() => onNavigate('hero')}
             className="w-full py-3 rounded-lg font-bold border-2 hover:bg-gray-50"
             style={{ borderColor: '#cccccc', fontSize: '16px' }}
           >
