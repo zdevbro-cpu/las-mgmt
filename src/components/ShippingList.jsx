@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Printer, Download, Search, RotateCcw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function ShippingList({ user, onNavigate }) {
@@ -8,7 +9,6 @@ export default function ShippingList({ user, onNavigate }) {
   const [purchases, setPurchases] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedItems, setSelectedItems] = useState([])
-  const [showPreview, setShowPreview] = useState(false)
 
   useEffect(() => {
     fetchAllPurchases()
@@ -22,8 +22,8 @@ export default function ShippingList({ user, onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false })
 
-      // 지점관리자는 자신의 지점만 볼 수 있음
-      if (user?.user_type === '지점관리자' && user?.branch) {
+      // 점주/점장/지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type && ['점주', '점장', '지점관리자'].includes(user.user_type) && user?.branch) {
         query = query.eq('branch_name', user.branch)
       }
 
@@ -53,13 +53,13 @@ export default function ShippingList({ user, onNavigate }) {
         .select('*')
         .order('created_at', { ascending: false })
 
-      // 지점관리자는 자신의 지점만 볼 수 있음
-      if (user?.user_type === '지점관리자' && user?.branch) {
+      // 점주/점장/지점관리자는 자신의 지점만 볼 수 있음
+      if (user?.user_type && ['점주', '점장', '지점관리자'].includes(user.user_type) && user?.branch) {
         query = query.eq('branch_name', user.branch)
       }
 
       if (searchValue.trim()) {
-        query = query.or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+        query = query.or(`customer_name.ilike.%${searchValue}%,phone.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
       }
 
       if (startDate) {
@@ -132,15 +132,24 @@ export default function ShippingList({ user, onNavigate }) {
     })
   }
 
-  const handlePreview = () => {
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '-'
+    const numbers = phone.replace(/[^\d]/g, '')
+    if (numbers.length === 11) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
+    } else if (numbers.length === 10) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`
+    }
+    return phone
+  }
+
+
+  const handlePrintInvoice = () => {
     if (selectedItems.length === 0) {
       alert('출력할 항목을 선택해주세요')
       return
     }
-    setShowPreview(true)
-  }
-
-  const handlePrintInvoice = () => {
+    
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
       alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
@@ -189,14 +198,14 @@ export default function ShippingList({ user, onNavigate }) {
                   <div class="section">
                     <div class="section-title">📍 수취인 정보</div>
                     <div class="field"><div class="field-label">성명</div><div class="field-value">${item.customer_name || '-'}</div></div>
-                    <div class="field"><div class="field-label">연락처</div><div class="field-value">${item.customer_phone || '-'}</div></div>
+                    <div class="field"><div class="field-label">연락처</div><div class="field-value">${formatPhoneNumber(item.phone)}</div></div>
                     <div class="field"><div class="field-label">주소</div><div class="field-value">${item.address || '-'}</div></div>
                   </div>
                   <div class="section">
                     <div class="section-title">📝 주문 정보</div>
                     <div class="field"><div class="field-label">주문일</div><div class="field-value">${formatDate(item.created_at)}</div></div>
                     <div class="field"><div class="field-label">수량</div><div class="field-value">${item.quantity || '-'}개</div></div>
-                    <div style="margin-top: 1.5mm;"><div class="field-label" style="margin-bottom: 1mm;">주문내역</div><div class="order-box">${item.order_info || '주문 정보 없음'}</div></div>
+                    <div style="margin-top: 1.5mm;"><div class="field-label" style="margin-bottom: 1mm;">주문내역</div><div class="order-box">${item.order_details || '주문 정보 없음'}</div></div>
                   </div>
                   <div class="footer">LAS Book Store · 배송 송장<br/>발행일: ${new Date().toLocaleDateString('ko-KR')}</div>
                 </div>
@@ -230,10 +239,10 @@ export default function ShippingList({ user, onNavigate }) {
       index + 1,
       formatDate(item.created_at),
       item.customer_name || '',
-      item.customer_phone || '',
+      item.phone || '',
       item.address || '',
       item.quantity || '',
-      (item.order_info || '').replace(/\n/g, ' ')
+      (item.order_details || '').replace(/\n/g, ' ')
     ])
 
     let csvContent = '\uFEFF'
@@ -309,59 +318,54 @@ export default function ShippingList({ user, onNavigate }) {
             </div>
           )}
 
-          <div className="mb-6 space-y-3">
+          <div className="mb-6">
             <div className="flex gap-2 items-center">
-              <label className="font-bold" style={{ color: '#000000', fontSize: '15px', minWidth: '80px' }}>
+              <label className="font-bold whitespace-nowrap" style={{ color: '#000000', fontSize: '15px' }}>
                 📅 주문일자
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
+                className="px-3 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px', width: '150px' }}
               />
               <span className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>~</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="px-4 py-2 border border-gray-300"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
+                className="px-3 py-2 border border-gray-300"
+                style={{ borderRadius: '10px', fontSize: '15px', width: '150px' }}
               />
-            </div>
-
-            <div className="flex gap-2">
               <input
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="이름, 전화번호, 이메일로 검색하세요"
+                placeholder="이름, 전화번호, 이메일로 검색"
                 className="flex-1 px-4 py-2 border border-gray-300"
                 style={{ borderRadius: '10px', fontSize: '15px' }}
               />
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '120px', justifyContent: 'center' }}
               >
-                <span style={{ fontSize: '18px' }}>🔍</span>
+                <Search size={18} />
                 {loading ? '검색 중...' : '검색'}
               </button>
               <button
                 onClick={handleReset}
                 disabled={loading}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
+                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 whitespace-nowrap flex items-center gap-2"
+                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689', width: '120px', justifyContent: 'center' }}
               >
+                <RotateCcw size={18} />
                 초기화
               </button>
             </div>
-            <p className="text-sm text-gray-500 ml-1">
-              💡 날짜와 검색어를 조합하여 검색할 수 있습니다
-            </p>
           </div>
 
           {selectedItems.length > 0 && (
@@ -372,17 +376,19 @@ export default function ShippingList({ user, onNavigate }) {
               <div className="flex gap-2">
                 <button
                   onClick={handleDownloadExcel}
-                  className="px-6 py-2 font-bold rounded-lg hover:opacity-90 transition-opacity"
-                  style={{ backgroundColor: '#28a745', color: 'white', borderRadius: '10px', fontSize: '15px' }}
+                  className="px-6 py-2 font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+                  style={{ backgroundColor: '#5B7FD4', color: 'white', borderRadius: '10px', fontSize: '15px' }}
                 >
-                  📊 엑셀 다운로드
+                  <Download size={18} />
+                  엑셀다운로드({selectedItems.length.toString().padStart(2, '0')})
                 </button>
                 <button
-                  onClick={handlePreview}
-                  className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+                  onClick={handlePrintInvoice}
+                  className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
-                  📄 미리보기 및 출력
+                  <Printer size={18} />
+                  인쇄
                 </button>
               </div>
             </div>
@@ -454,13 +460,13 @@ export default function ShippingList({ user, onNavigate }) {
                         {purchase.customer_name}
                       </td>
                       <td className="px-3 py-3" style={{ fontSize: '14px' }}>
-                        {purchase.customer_phone}
+                        {formatPhoneNumber(purchase.phone)}
                       </td>
                       <td className="px-3 py-3" style={{ fontSize: '14px' }}>
                         {purchase.address?.substring(0, 30)}{purchase.address?.length > 30 ? '...' : ''}
                       </td>
                       <td className="px-3 py-3" style={{ fontSize: '14px' }}>
-                        {purchase.order_info?.substring(0, 20)}{purchase.order_info?.length > 20 ? '...' : ''}
+                        {purchase.order_details?.substring(0, 20)}{purchase.order_details?.length > 20 ? '...' : ''}
                       </td>
                       <td className="px-3 py-3" style={{ fontSize: '14px' }}>
                         {formatDate(purchase.created_at)}
@@ -479,57 +485,6 @@ export default function ShippingList({ user, onNavigate }) {
           )}
         </div>
       </div>
-
-      {showPreview && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowPreview(false)}
-        >
-          <div
-            className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-            style={{ borderRadius: '10px' }}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
-                📄 배송 송장 미리보기
-              </h3>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="border-2 border-gray-200 rounded-lg p-4 mb-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
-              <p className="text-center text-sm text-gray-600 mb-4">
-                총 {selectedItems.length}건의 송장이 생성됩니다 (A4 용지 1장당 4개)
-              </p>
-              <p className="text-xs text-gray-500 text-center mb-4">
-                💡 실제 인쇄 시 더 선명하게 출력됩니다
-              </p>
-            </div>
-
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={handlePrintInvoice}
-                className="px-6 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                🖨️ 송장 인쇄
-              </button>
-              <button
-                onClick={() => setShowPreview(false)}
-                className="px-6 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

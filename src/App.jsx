@@ -13,13 +13,15 @@ import AdminCustomers from './components/AdminCustomers'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
 import ShippingList from './components/ShippingList'
-import PurchaseHistory from './components/PurchaseHistory'
+// 🔄 업데이트: 기존 PurchaseHistory를 BranchPurchases로 변경
+import BranchPurchases from './components/purchases/BranchPurchases'
 import Profile from './components/Profile'
 import SystemAdminDashboard from './components/SystemAdminDashboard'
 import SystemAdminBranches from './components/SystemAdminBranches'
 import SystemAdminUsers from './components/SystemAdminUsers'
 import SystemAdminCustomers from './components/SystemAdminCustomers'
-import SystemAdminPurchases from './components/SystemAdminPurchases'
+// 🔄 업데이트: SystemAdminPurchases 경로 변경
+import SystemAdminPurchases from './components/purchases/SystemAdminPurchases'
 import SystemAdminShipping from './components/SystemAdminShipping'
 import MyInfo from './components/MyInfo'
 import MyQRCode from './components/MyQRCode'
@@ -329,11 +331,12 @@ function AppContent() {
         } 
       />
       
+      {/* 🔄 업데이트: 지점 사용자용 구매이력 페이지 (BranchPurchases) */}
       <Route 
         path="/purchases" 
         element={
           user ? (
-            <PurchaseHistory user={user} onNavigate={handleNavigate} />
+            <BranchPurchases user={user} onNavigate={handleNavigate} />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -385,6 +388,7 @@ function AppContent() {
         } 
       />
       
+      {/* 🔄 업데이트: 시스템 관리자용 구매이력 페이지 (SystemAdminPurchases) */}
       <Route 
         path="/system-admin/purchases" 
         element={

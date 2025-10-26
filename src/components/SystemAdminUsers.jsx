@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Search, Download, Edit, Trash2, CheckCircle, XCircle, Key } from 'lucide-react'
+import { ArrowLeft, Search, Download, Edit, Trash2, CheckCircle, XCircle, Key, Check, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import * as XLSX from 'xlsx'
 
@@ -43,6 +43,26 @@ const generateReferralCode = async (userType) => {
   }
 }
 
+// 전화번호 포맷팅 함수
+const formatPhoneNumber = (phone) => {
+  if (!phone) return ''
+  
+  // 숫자만 추출
+  const numbers = phone.replace(/[^0-9]/g, '')
+  
+  // 포맷 적용
+  if (numbers.length <= 3) {
+    return numbers
+  } else if (numbers.length <= 7) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3)}`
+  } else if (numbers.length <= 11) {
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
+  } else {
+    // 11자리 초과시 11자리까지만 사용
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`
+  }
+}
+
 export default function SystemAdminUsers({ user, onNavigate }) {
   const [users, setUsers] = useState([])
   const [branches, setBranches] = useState([])
@@ -56,7 +76,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [resettingPassword, setResettingPassword] = useState(null)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [itemsPerPage, setItemsPerPage] = useState(30)
   const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     name: '',
@@ -204,17 +224,27 @@ export default function SystemAdminUsers({ user, onNavigate }) {
     setFormData({
       name: u.name,
       branch: u.branch,
-      phone: u.phone,
+      phone: formatPhoneNumber(u.phone),
       user_type: u.user_type
     })
     setShowEditModal(true)
   }
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+    
+    // 전화번호 필드인 경우 자동 포맷 적용
+    if (name === 'phone') {
+      setFormData({
+        ...formData,
+        [name]: formatPhoneNumber(value)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      })
+    }
   }
 
   const handleUpdateUser = async () => {
@@ -320,7 +350,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
         return {
           '지점명': u.branch || '-',
           '이름': u.name || '-',
-          '전화번호': u.phone || '-',
+          '전화번호': formatPhoneNumber(u.phone) || '-',
           '구분': u.user_type || '-',
           '근무시작일': new Date(effectiveStartDate).toLocaleDateString('ko-KR'),
           '근무종료일': new Date(effectiveEndDate).toLocaleDateString('ko-KR'),
@@ -520,7 +550,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                   className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
                   style={{ fontSize: '14px' }}
                 >
-                  <option value={15}>15개</option>
+                  <option value={30}>30개</option>
                   <option value={50}>50개</option>
                   <option value={100}>100개</option>
                 </select>
@@ -593,7 +623,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.name}</td>
                       <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.email}</td>
-                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.phone || '-'}</td>
+                      <td className="px-4 py-3" style={{ fontSize: '14px' }}>{formatPhoneNumber(u.phone) || '-'}</td>
                       <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.branch}</td>
                       <td className="px-4 py-3" style={{ fontSize: '14px' }}>{u.user_type}</td>
                       <td className="px-4 py-3" style={{ fontSize: '14px', fontWeight: 'bold', color: '#249689' }}>
@@ -741,9 +771,20 @@ export default function SystemAdminUsers({ user, onNavigate }) {
             onClick={(e) => e.stopPropagation()}
             style={{ borderRadius: '10px' }}
           >
-            <h3 className="font-bold mb-4" style={{ color: '#249689', fontSize: '20px' }}>
-              ✏️ 직원정보수정
-            </h3>
+            {/* 로고 + 타이틀 */}
+            <div className="flex flex-col items-center mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <img 
+                  src="/images/logo.png" 
+                  alt="LAS Logo" 
+                  className="w-10 h-10 object-cover"
+                  onError={(e) => e.target.style.display = 'none'}
+                />
+                <h3 className="font-bold" style={{ color: '#249689', fontSize: '24px' }}>
+                  직원정보수정
+                </h3>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -783,6 +824,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="010-1234-5678"
+                  maxLength="13"
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
@@ -823,52 +865,33 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                   <option value="점장">점장</option>
                   <option value="계약근무">계약근무</option>
                   <option value="지점관리자">지점관리자</option>
-                  <option value="시스템관리자">시스템관리자</option>
                 </select>
               </div>
-
-              {/* 비밀번호 초기화 버튼 */}
-              {selectedUser.id !== user.id && (
-                <div className="pt-2 border-t">
-                  <button
-                    onClick={() => {
-                      setShowEditModal(false)
-                      handlePasswordReset(selectedUser)
-                    }}
-                    disabled={resettingPassword === selectedUser.id}
-                    className="w-full py-2.5 font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                    style={{ 
-                      backgroundColor: '#7f95eb', 
-                      color: 'white',
-                      borderRadius: '10px', 
-                      fontSize: '15px' 
-                    }}
-                  >
-                    <Key size={18} />
-                    {resettingPassword === selectedUser.id ? '처리 중...' : '비밀번호 초기화'}
-                  </button>
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    초기화 비밀번호(las0000)가 설정되며, 유선으로 직원에게 전달하세요
-                  </p>
-                </div>
-              )}
             </div>
 
             <div className="flex gap-2 mt-6">
               <button
                 onClick={handleUpdateUser}
                 disabled={loading}
-                className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 py-2.5 text-white font-bold rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
-                {loading ? '저장 중...' : '수정'}
+                {loading ? (
+                  '저장 중...'
+                ) : (
+                  <>
+                    <Check size={18} />
+                    수정
+                  </>
+                )}
               </button>
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={loading}
-                className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
               >
+                <X size={18} />
                 취소
               </button>
             </div>

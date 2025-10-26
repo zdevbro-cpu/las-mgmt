@@ -15,7 +15,7 @@ export default function AdminUsers({ user, onNavigate }) {
   const [endDate, setEndDate] = useState('')
   const [selectedUsers, setSelectedUsers] = useState([])
   const [showEditModal, setShowEditModal] = useState(false)
-  const [itemsPerPage, setItemsPerPage] = useState(15)
+  const [itemsPerPage, setItemsPerPage] = useState(30)
   const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     name: '',
@@ -395,10 +395,10 @@ export default function AdminUsers({ user, onNavigate }) {
                 onClick={handleExcelDownload}
                 
                 className="w-full py-2 flex items-center justify-center gap-2 text-white font-bold rounded-lg hover:opacity-90"
-                style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px', height: '42px' }}
+                style={{ backgroundColor: '#5B7FC8', fontSize: '15px', borderRadius: '10px', height: '42px' }}
               >
                 <Download size={18} />
-                엑셀 다운로드
+                엑셀다운로드({filteredUsers.length.toString().padStart(2, '0')})
               </button>
             </div>
           </div>
@@ -416,7 +416,7 @@ export default function AdminUsers({ user, onNavigate }) {
                 className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
                 style={{ fontSize: '14px' }}
               >
-                <option value={15}>15개</option>
+                <option value={30}>30개</option>
                 <option value={50}>50개</option>
                 <option value={100}>100개</option>
               </select>
@@ -602,9 +602,17 @@ export default function AdminUsers({ user, onNavigate }) {
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>
-              직원 정보 수정
-            </h2>
+            <div className="flex items-center gap-3 mb-4">
+              <img 
+                src="/images/logo.png" 
+                alt="LAS Logo" 
+                className="w-10 h-10 object-cover"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+              <h2 className="text-xl font-bold" style={{ color: '#249689' }}>
+                직원정보수정
+              </h2>
+            </div>
 
             <div className="space-y-4">
               <div>
@@ -660,7 +668,6 @@ export default function AdminUsers({ user, onNavigate }) {
                   <option value="모니터링요원">모니터링요원</option>
                   <option value="계약근무">계약근무</option>
                   <option value="지점관리자">지점관리자</option>
-                  <option value="시스템관리자">시스템관리자</option>
                 </select>
               </div>
             </div>

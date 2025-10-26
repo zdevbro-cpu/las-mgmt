@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Search, RotateCcw, Eye, Users } from 'lucide-react'
+import { ArrowLeft, Search, RotateCcw, Eye, Users, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function SystemAdminCustomers({ user, onNavigate }) {
@@ -17,26 +17,46 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
     setLoading(true)
     try {
       // sales 테이블에서 고유한 구매자 정보 추출
+      // 🔧 수정: phone, email 필드를 customer_phone, customer_email로 alias 처리
       const { data, error } = await supabase
         .from('sales')
-        .select('customer_name, customer_phone, customer_email, address, age')
+        .select('customer_name, phone, email, address, age')
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      // 중복 제거 (이메일 또는 전화번호 기준)
+      console.log('🔍 조회된 원본 데이터:', data)
+
+      // 중복 제거 (이름 + 전화번호 기준)
       const uniqueCustomers = []
       const seen = new Set()
 
       data.forEach(item => {
-        const key = item.customer_email || item.customer_phone
-        if (key && !seen.has(key)) {
+        let key
+        if (item.customer_name && item.phone) {
+          // 이름과 전화번호가 모두 있으면 조합을 키로 사용
+          key = `${item.customer_name}-${item.phone}`
+        } else if (item.email) {
+          // 이메일이 있으면 이메일을 키로 사용
+          key = `email-${item.email}`
+        } else if (item.phone) {
+          // 전화번호만 있으면 전화번호를 키로 사용
+          key = `phone-${item.phone}`
+        } else if (item.customer_name) {
+          // 이름만 있으면 이름을 키로 사용
+          key = `name-${item.customer_name}`
+        } else {
+          // 아무 정보도 없으면 스킵
+          return
+        }
+        
+        if (!seen.has(key)) {
           seen.add(key)
           uniqueCustomers.push(item)
         }
       })
 
-      console.log('✅ 구매자 목록:', uniqueCustomers)
+      console.log('✅ 중복 제거 후 구매자 목록:', uniqueCustomers)
       setCustomers(uniqueCustomers)
     } catch (err) {
       console.error('❌ 구매자 조회 오류:', err)
@@ -54,21 +74,39 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
 
     setLoading(true)
     try {
+      // 🔧 수정: phone, email 필드로 검색
       const { data, error } = await supabase
         .from('sales')
-        .select('customer_name, customer_phone, customer_email, address, age')
-        .or(`customer_name.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%`)
+        .select('customer_name, phone, email, address, age')
+        .or(`customer_name.ilike.%${searchValue}%,phone.ilike.%${searchValue}%,email.ilike.%${searchValue}%`)
         .order('created_at', { ascending: false })
 
       if (error) throw error
 
-      // 중복 제거
+      // 중복 제거 (이름 + 전화번호 기준)
       const uniqueCustomers = []
       const seen = new Set()
 
       data.forEach(item => {
-        const key = item.customer_email || item.customer_phone
-        if (key && !seen.has(key)) {
+        let key
+        if (item.customer_name && item.phone) {
+          // 이름과 전화번호가 모두 있으면 조합을 키로 사용
+          key = `${item.customer_name}-${item.phone}`
+        } else if (item.email) {
+          // 이메일이 있으면 이메일을 키로 사용
+          key = `email-${item.email}`
+        } else if (item.phone) {
+          // 전화번호만 있으면 전화번호를 키로 사용
+          key = `phone-${item.phone}`
+        } else if (item.customer_name) {
+          // 이름만 있으면 이름을 키로 사용
+          key = `name-${item.customer_name}`
+        } else {
+          // 아무 정보도 없으면 스킵
+          return
+        }
+        
+        if (!seen.has(key)) {
           seen.add(key)
           uniqueCustomers.push(item)
         }
@@ -158,8 +196,8 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '120px', justifyContent: 'center' }}
               >
                 <Search size={18} />
                 검색
@@ -167,10 +205,11 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
               <button
                 onClick={handleReset}
                 disabled={loading}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
+                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689', width: '120px', justifyContent: 'center' }}
               >
                 <RotateCcw size={18} />
+                초기화
               </button>
             </div>
           </div>
@@ -180,30 +219,27 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6' }}>
-                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689', width: '50px' }}>
+                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689', width: '80px' }}>
                     상세
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
                     이름
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
                     전화번호
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
-                    이메일
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
                     주소
                   </th>
-                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '14px', borderBottom: '2px solid #249689' }}>
-                    나이
+                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
+                    이메일
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center">
+                    <td colSpan="5" className="px-4 py-8 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -212,7 +248,7 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                   </tr>
                 ) : customers.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
                       <Users size={48} className="mx-auto mb-2 opacity-30" />
                       <p className="mb-2">등록된 구매자 정보가 없습니다</p>
                       <p className="text-sm">판매 데이터가 생성되면 자동으로 표시됩니다</p>
@@ -238,22 +274,19 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                           <Eye size={16} />
                         </button>
                       </td>
-                      <td className="px-3 py-3 font-bold" style={{ fontSize: '14px' }}>
+                      <td className="px-3 py-3 font-bold" style={{ fontSize: '15px' }}>
                         {customer.customer_name || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
-                        {customer.customer_phone || '-'}
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
+                        {customer.phone || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
-                        {customer.customer_email || '-'}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {customer.address ? (
                           customer.address.length > 30 ? customer.address.substring(0, 30) + '...' : customer.address
                         ) : '-'}
                       </td>
-                      <td className="px-3 py-3 text-center" style={{ fontSize: '13px' }}>
-                        {customer.age ? `${customer.age}세` : '-'}
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
+                        {customer.email || '-'}
                       </td>
                     </tr>
                   ))
@@ -286,12 +319,6 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
               <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
                 👤 구매자 상세정보
               </h3>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-              >
-                ×
-              </button>
             </div>
 
             {/* 구매자 기본정보 */}
@@ -310,11 +337,11 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-600 mb-1">전화번호</p>
-                  <p className="text-sm">{selectedCustomer.customer_phone || '-'}</p>
+                  <p className="text-sm">{selectedCustomer.phone || '-'}</p>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-gray-600 mb-1">이메일</p>
-                  <p className="text-sm break-all">{selectedCustomer.customer_email || '-'}</p>
+                  <p className="text-sm break-all">{selectedCustomer.email || '-'}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-xs font-bold text-gray-600 mb-1">주소</p>
@@ -326,9 +353,10 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors"
-                style={{ border: '2px solid #7f95eb', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px' }}
+                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
+                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
               >
+                <X size={18} />
                 닫기
               </button>
             </div>

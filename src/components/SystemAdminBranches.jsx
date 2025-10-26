@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Edit, Trash2, Building2 } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, Building2, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function SystemAdminBranches({ user, onNavigate }) {
@@ -182,6 +182,41 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     }
   }
 
+  const handleExcelDownload = () => {
+    if (branches.length === 0) {
+      alert('다운로드할 지점 데이터가 없습니다.')
+      return
+    }
+
+    try {
+      const headers = ['지점명', '지점주소', '지점장', '연락처']
+      const csvContent = [
+        headers.join(','),
+        ...branches.map(branch => [
+          branch.name || '',
+          branch.address || '',
+          branch.manager_name || '',
+          branch.phone || ''
+        ].map(field => `"${field}"`).join(','))
+      ].join('\n')
+
+      const BOM = '\uFEFF'
+      const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `지점정보_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Excel download error:', err)
+      alert('엑셀 다운로드 중 오류가 발생했습니다.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-5xl mx-auto p-6">
@@ -211,16 +246,30 @@ export default function SystemAdminBranches({ user, onNavigate }) {
           </div>
 
           {/* 지점 생성 버튼 */}
-          <div className="mb-6 flex justify-end">
-            <button
-              onClick={openCreateModal}
-              disabled={loading}
-              className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Plus size={18} />
-              지점 생성
-            </button>
+          <div className="mb-6 flex justify-between items-center">
+            <div className="font-bold" style={{ color: '#249689', fontSize: '15px' }}>
+              지점수 {branches.length.toString().padStart(2, '0')}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExcelDownload}
+                disabled={loading}
+                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: '#5B7FD4', borderRadius: '10px', fontSize: '15px' }}
+              >
+                <Download size={18} />
+                엑셀다운로드({branches.length.toString().padStart(2, '0')})
+              </button>
+              <button
+                onClick={openCreateModal}
+                disabled={loading}
+                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              >
+                <Plus size={18} />
+                지점 생성
+              </button>
+            </div>
           </div>
 
           {/* 지점 목록 테이블 */}

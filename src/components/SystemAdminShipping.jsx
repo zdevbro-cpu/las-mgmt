@@ -161,7 +161,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>배송 송장</title>
+        <title>주문목록</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Malgun Gothic', sans-serif; padding: 0; line-height: 1.4; }
@@ -192,23 +192,23 @@ export default function SystemAdminShipping({ user, onNavigate }) {
               html += `
                 <div class="invoice">
                   <div class="invoice-header">
-                    <h1>배송 송장</h1>
+                    <h1>주문목록</h1>
                     <div class="invoice-number">No. ${String(j + 1).padStart(4, '0')}</div>
                   </div>
                   <div class="section">
                     <div class="section-title">수취인 정보</div>
                     <div class="field"><div class="field-label">성명</div><div class="field-value">${item.customer_name || '-'}</div></div>
-                    <div class="field"><div class="field-label">연락처</div><div class="field-value">${item.customer_phone || '-'}</div></div>
+                    <div class="field"><div class="field-label">연락처</div><div class="field-value">${formatPhoneNumber(item.customer_phone || item.phone)}</div></div>
                     <div class="field"><div class="field-label">주소</div><div class="field-value">${item.address || '-'}</div></div>
                   </div>
                   <div class="section">
                     <div class="section-title">주문 정보</div>
                     <div class="field"><div class="field-label">주문일</div><div class="field-value">${formatDate(item.created_at)}</div></div>
                     <div class="field"><div class="field-label">지점</div><div class="field-value">${item.branch_name || '-'}</div></div>
-                    <div class="field"><div class="field-label">수량</div><div class="field-value">${item.quantity || '-'}개</div></div>
+                    <div class="field"><div class="field-label">수량</div><div class="field-value">${item.quantity || '-'}권</div></div>
                     <div style="margin-top: 1.5mm;"><div class="field-label" style="margin-bottom: 1mm;">주문내역</div><div class="order-box">${item.order_details || '주문 정보 없음'}</div></div>
                   </div>
-                  <div class="footer">LAS Book Store · 배송 송장<br/>발행일: ${new Date().toLocaleDateString('ko-KR')}</div>
+                  <div class="footer">LAS Book Store · 주문목록<br/>발행일: ${new Date().toLocaleDateString('ko-KR')}</div>
                 </div>
               `
             }
@@ -241,7 +241,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
       formatDate(item.created_at),
       item.branch_name || '',
       item.customer_name || '',
-      item.customer_phone || '',
+      formatPhoneNumber(item.customer_phone || item.phone),
       item.address || '',
       item.quantity || '',
       (item.order_details || '').replace(/\n/g, ' ')
@@ -286,6 +286,17 @@ export default function SystemAdminShipping({ user, onNavigate }) {
     })
   }
 
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '-'
+    const cleaned = phone.replace(/[^\d]/g, '')
+    if (cleaned.length === 11) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7)}`
+    } else if (cleaned.length === 10) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
+    }
+    return phone
+  }
+
   const isSelected = (shipment) => {
     return selectedItems.some(item => item.id === shipment.id)
   }
@@ -294,7 +305,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-lg p-6">
           {/* 헤더 */}
           <div className="flex items-center justify-between mb-8">
@@ -321,88 +332,87 @@ export default function SystemAdminShipping({ user, onNavigate }) {
           </div>
 
           {/* 검색 및 필터 */}
-          <div className="mb-6 space-y-3">
-            {/* 지점 선택 */}
-            <div className="flex items-center gap-2">
-              <label className="font-bold text-sm flex items-center gap-1" style={{ minWidth: '80px' }}>
-                <Building2 size={16} />
-                지점
-              </label>
-              <select
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 bg-white disabled:bg-gray-100"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-              >
-                <option value="all">전체 지점</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.name}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="mb-6">
+            <div className="flex items-center gap-6">
+              {/* 그룹 1: 지점 선택 */}
+              <div className="flex items-center -space-x-3">
+                <label className="font-bold text-sm whitespace-nowrap" style={{ minWidth: '60px' }}>
+                  지점
+                </label>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 bg-white disabled:bg-gray-100"
+                  style={{ borderRadius: '10px', fontSize: '15px', width: '120px' }}
+                >
+                  <option value="all">전체 지점</option>
+                  {branches.map((branch) => (
+                    <option key={branch.id} value={branch.name}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* 날짜 범위 */}
-            <div className="flex items-center gap-2">
-              <label className="font-bold text-sm flex items-center gap-1" style={{ minWidth: '80px' }}>
-                <Calendar size={16} />
-                주문일자
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-              />
-              <span className="font-bold">~</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-              />
-            </div>
+              {/* 그룹 2: 날짜 범위 */}
+              <div className="flex items-center gap-1">
+                <label className="font-bold text-sm whitespace-nowrap" style={{ minWidth: '80px' }}>
+                  주문일자
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
+                  style={{ borderRadius: '10px', fontSize: '15px', width: '130px' }}
+                />
+                <span className="font-bold">~</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
+                  style={{ borderRadius: '10px', fontSize: '15px', width: '130px' }}
+                />
+              </div>
 
-            {/* 검색어 */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="이름, 전화번호, 주소로 검색"
-                disabled={loading}
-                className="flex-1 px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-              />
-              <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                <Search size={18} />
-                검색
-              </button>
-              <button
-                onClick={handleReset}
-                disabled={loading}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-2"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689' }}
-              >
-                <RotateCcw size={18} />
-                초기화
-              </button>
+              {/* 그룹 3: 검색 */}
+              <div className="flex items-center gap-1.5 flex-1">
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  placeholder="이름, 전화번호, 주소"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2 border border-gray-300 disabled:bg-gray-100"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                
+                <button
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
+                  style={{ border: '2px solid #249689', backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '120px', justifyContent: 'center' }}
+                >
+                  <Search size={18} />
+                  검색
+                </button>
+                
+                <button
+                  onClick={handleReset}
+                  disabled={loading}
+                  className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
+                  style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689', width: '120px', justifyContent: 'center' }}
+                >
+                  <RotateCcw size={18} />
+                  초기화
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-gray-500 ml-1">
-              지점, 날짜, 검색어를 조합하여 검색할 수 있습니다
-            </p>
           </div>
 
           {/* 선택된 항목 액션 */}
@@ -415,18 +425,18 @@ export default function SystemAdminShipping({ user, onNavigate }) {
                 <button
                   onClick={handleDownloadExcel}
                   className="px-6 py-2 font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
-                  style={{ backgroundColor: '#10b981', color: 'white', borderRadius: '10px', fontSize: '15px' }}
+                  style={{ backgroundColor: '#5B7FD4', color: 'white', borderRadius: '10px', fontSize: '15px' }}
                 >
                   <Download size={18} />
                   엑셀 다운로드
                 </button>
                 <button
-                  onClick={handlePreview}
+                  onClick={handlePrintInvoice}
                   className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
                   <Printer size={18} />
-                  미리보기 및 출력
+                  인쇄
                 </button>
               </div>
             </div>
@@ -500,27 +510,27 @@ export default function SystemAdminShipping({ user, onNavigate }) {
                           className="w-4 h-4"
                         />
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {formatDate(shipment.created_at)}
                       </td>
-                      <td className="px-3 py-3 font-bold" style={{ fontSize: '13px', color: '#249689' }}>
+                      <td className="px-3 py-3 font-bold" style={{ fontSize: '15px', color: '#249689' }}>
                         {shipment.branch_name || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {shipment.customer_name || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
-                        {shipment.customer_phone || '-'}
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
+                        {formatPhoneNumber(shipment.customer_phone || shipment.phone)}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {shipment.address ? (
                           shipment.address.length > 30 ? shipment.address.substring(0, 30) + '...' : shipment.address
                         ) : '-'}
                       </td>
-                      <td className="px-3 py-3 text-center font-bold" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3 text-center font-bold" style={{ fontSize: '15px' }}>
                         {shipment.quantity || 0}개
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '13px' }}>
+                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {shipment.order_details ? (
                           shipment.order_details.length > 20 ? shipment.order_details.substring(0, 20) + '...' : shipment.order_details
                         ) : '-'}
@@ -534,7 +544,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
 
           {/* 총 개수 */}
           {shipments.length > 0 && (
-            <div className="mt-4 text-right text-gray-600" style={{ fontSize: '13px' }}>
+            <div className="mt-4 text-right text-gray-600" style={{ fontSize: '15px' }}>
               총 <strong style={{ color: '#249689' }}>{shipments.length}</strong>건
             </div>
           )}
@@ -554,7 +564,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px' }}>
-                배송 송장 미리보기
+                주문목록 미리보기
               </h3>
               <button
                 onClick={() => setShowPreview(false)}
@@ -566,7 +576,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
 
             <div className="border-2 border-gray-200 rounded-lg p-4 mb-4 bg-gray-50 max-h-[60vh] overflow-y-auto">
               <p className="text-center text-sm text-gray-600 mb-4">
-                총 {selectedItems.length}건의 송장이 생성됩니다 (A4 용지 1장당 4개)
+                총 {selectedItems.length}건의 주문목록이 생성됩니다 (A4 용지 1장당 4개)
               </p>
               <p className="text-xs text-gray-500 text-center mb-4">
                 실제 인쇄 시 더 선명하게 출력됩니다
@@ -580,7 +590,7 @@ export default function SystemAdminShipping({ user, onNavigate }) {
                 style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
               >
                 <Printer size={18} />
-                송장 인쇄
+                목록 인쇄
               </button>
               <button
                 onClick={() => setShowPreview(false)}

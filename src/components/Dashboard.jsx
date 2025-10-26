@@ -147,7 +147,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
                 >
                   <Package size={20} />
-                  구매이력
+                  구매이력조회
                 </button>
               </>
             )}

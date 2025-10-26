@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Search, Building2 } from 'lucide-react'
+import { ArrowLeft, Search, Building2, RotateCcw } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { canAccessAllBranches } from '../constants/roles'
 
@@ -64,6 +64,24 @@ export default function AdminCustomers({ user, onNavigate }) {
     }
   }
 
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (phone) => {
+    if (!phone) return '-'
+    const cleaned = phone.replace(/[^\d]/g, '')
+    if (cleaned.length === 11) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 7)}-${cleaned.slice(7)}`
+    } else if (cleaned.length === 10) {
+      return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
+    }
+    return phone
+  }
+
+  // 전화번호에서 숫자만 추출 (비교용)
+  const normalizePhoneNumber = (phone) => {
+    if (!phone) return ''
+    return phone.replace(/[^\d]/g, '')
+  }
+
   const filteredCustomers = customers.filter(customer => {
     const matchesSearch = 
       customer.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,6 +94,24 @@ export default function AdminCustomers({ user, onNavigate }) {
     
     return matchesSearch && matchesBranch
   })
+
+  // 중복 제거: 이름과 전화번호가 같은 경우 1회만 표시 (전화번호는 숫자만 비교)
+  const uniqueCustomers = filteredCustomers.reduce((acc, customer) => {
+    const phone = normalizePhoneNumber(customer.phone || customer.customer_phone || '')
+    const name = customer.customer_name || ''
+    const key = `${name}-${phone}`
+    
+    // 이미 존재하지 않는 경우에만 추가
+    if (!acc.some(c => {
+      const existingPhone = normalizePhoneNumber(c.phone || c.customer_phone || '')
+      const existingName = c.customer_name || ''
+      return `${existingName}-${existingPhone}` === key
+    })) {
+      acc.push(customer)
+    }
+    
+    return acc
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -108,10 +144,6 @@ export default function AdminCustomers({ user, onNavigate }) {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="p-4 border-b flex items-center gap-2">
             <div className="flex-1 flex items-center gap-2">
-              <label className="font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                <Search size={18} className="inline mr-1" />
-                검색
-              </label>
               <input
                 type="text"
                 value={searchTerm}
@@ -144,13 +176,43 @@ export default function AdminCustomers({ user, onNavigate }) {
               </div>
             )}
             
-            <button 
-              onClick={loadCustomers}
-              className="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
-              title="새로고침"
-            >
-              🔄
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={loadCustomers}
+                className="px-4 py-2 flex items-center gap-2 font-bold text-white rounded-lg hover:opacity-90"
+                style={{ 
+                  backgroundColor: '#249689', 
+                  fontSize: '15px',
+                  borderRadius: '10px',
+                  width: '120px',
+                  justifyContent: 'center'
+                }}
+                title="검색"
+              >
+                <Search size={18} />
+                검색
+              </button>
+              <button 
+                onClick={() => {
+                  setSearchTerm('')
+                  setFilterBranch('')
+                }}
+                className="px-4 py-2 flex items-center gap-2 font-bold hover:bg-gray-50"
+                style={{ 
+                  backgroundColor: 'white',
+                  border: '2px solid #249689',
+                  borderRadius: '10px',
+                  color: '#249689',
+                  fontSize: '15px',
+                  width: '120px',
+                  justifyContent: 'center'
+                }}
+                title="검색 조건 초기화"
+              >
+                <RotateCcw size={18} />
+                초기화
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -190,14 +252,14 @@ export default function AdminCustomers({ user, onNavigate }) {
                       로딩 중...
                     </td>
                   </tr>
-                ) : filteredCustomers.length === 0 ? (
+                ) : uniqueCustomers.length === 0 ? (
                   <tr>
                     <td colSpan="8" className="text-center py-8 text-gray-500">
                       구매자 정보가 없습니다.
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((customer) => (
+                  uniqueCustomers.map((customer) => (
                     <tr key={customer.id} className="border-t hover:bg-gray-50">
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         {customer.branch_name || customer.user_branch || '-'}
@@ -206,7 +268,7 @@ export default function AdminCustomers({ user, onNavigate }) {
                         {customer.customer_name || '-'}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {customer.phone || customer.customer_phone || '-'}
+                        {formatPhoneNumber(customer.phone || customer.customer_phone)}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         {customer.email || customer.customer_email || '-'}
