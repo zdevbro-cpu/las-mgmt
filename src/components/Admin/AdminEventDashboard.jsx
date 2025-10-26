@@ -4,11 +4,13 @@ import { supabase } from '../../lib/supabase'
 export default function AdminEventDashboard({ user, onBack }) {
   const [stats, setStats] = useState({
     total: 0,
+    thisWeek: 0,
     male: 0,
     female: 0
   })
   const [ageDistribution, setAgeDistribution] = useState([])
   const [topReferrers, setTopReferrers] = useState([])
+  const [topBranches, setTopBranches] = useState([])
   const [participants, setParticipants] = useState([])
   const [loading, setLoading] = useState(true)
   
@@ -118,7 +120,7 @@ export default function AdminEventDashboard({ user, onBack }) {
       console.log('📊 통계 데이터 로드 중...')
       let statsQuery = supabase
         .from('event_participants')
-        .select('child_gender, child_age, event_name')
+        .select('child_gender, child_age, event_name, created_at')
       
       // 이벤트 필터 적용
       if (selectedEvent) {
@@ -134,10 +136,24 @@ export default function AdminEventDashboard({ user, onBack }) {
       const maleCount = allParticipants?.filter(p => p.child_gender === '남').length || 0
       const femaleCount = allParticipants?.filter(p => p.child_gender === '여').length || 0
 
-      console.log('✅ 통계:', { total: totalCount, male: maleCount, female: femaleCount })
+      // 이번주 참가자 계산 (월요일 기준)
+      const now = new Date()
+      const dayOfWeek = now.getDay() // 0(일) ~ 6(토)
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // 월요일까지의 차이
+      const thisMonday = new Date(now)
+      thisMonday.setDate(now.getDate() - diff)
+      thisMonday.setHours(0, 0, 0, 0)
+      
+      const thisWeekCount = allParticipants?.filter(p => {
+        const createdAt = new Date(p.created_at)
+        return createdAt >= thisMonday
+      }).length || 0
+
+      console.log('✅ 통계:', { total: totalCount, thisWeek: thisWeekCount, male: maleCount, female: femaleCount })
 
       setStats({
         total: totalCount,
+        thisWeek: thisWeekCount,
         male: maleCount,
         female: femaleCount
       })
@@ -222,6 +238,31 @@ export default function AdminEventDashboard({ user, onBack }) {
 
       console.log('✅ Top 추천인:', topReferrersList)
       setTopReferrers(topReferrersList)
+
+      // 추천지점별 통계 계산
+      console.log('🏢 추천지점 통계 계산 중...')
+      const branchMap = {}
+      referrerStats?.forEach(p => {
+        const user = referrerUsersData.find(u => u.referral_code === p.referrer_code)
+        const branch = user?.branch || '-'
+        
+        if (branch !== '-') {
+          if (!branchMap[branch]) {
+            branchMap[branch] = {
+              branch: branch,
+              count: 0
+            }
+          }
+          branchMap[branch].count++
+        }
+      })
+
+      const topBranchesList = Object.values(branchMap)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 12)
+
+      console.log('✅ Top 지점:', topBranchesList)
+      setTopBranches(topBranchesList)
 
       // 참가자 목록 로드
       console.log('👥 참가자 목록 로드 시작...')
@@ -486,7 +527,7 @@ export default function AdminEventDashboard({ user, onBack }) {
           </div>
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
             <div className="flex items-center justify-between">
               <div>
@@ -494,6 +535,15 @@ export default function AdminEventDashboard({ user, onBack }) {
                 <p className="text-4xl font-bold">{stats.total}명</p>
               </div>
               <div className="text-5xl">👥</div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm mb-2">이번주 참가자</p>
+                <p className="text-4xl font-bold">{stats.thisWeek}명</p>
+              </div>
+              <div className="text-5xl">📅</div>
             </div>
           </div>
           <div className="bg-gradient-to-br from-sky-500 to-sky-600 rounded-lg shadow-lg p-6 text-white">
@@ -624,6 +674,63 @@ export default function AdminEventDashboard({ user, onBack }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 추천지점 Top 12 */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <h3 className="text-xl font-bold mb-6" style={{ color: '#249689' }}>🏢 추천지점 Top 12</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {topBranches.map((branch, idx) => (
+              <div 
+                key={idx} 
+                className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 px-3 py-2 border-2 hover:scale-105"
+                style={{ 
+                  borderColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#249689',
+                  backgroundColor: idx < 3 ? '#fffbf0' : 'white'
+                }}
+              >
+                {/* 순위 배지 */}
+                <div 
+                  className="absolute -top-1.5 -left-1.5 w-6 h-6 rounded-full flex items-center justify-center text-white font-bold shadow-lg text-xs"
+                  style={{ 
+                    backgroundColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#249689'
+                  }}
+                >
+                  {idx + 1}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  {/* 왼쪽: 아이콘 + 정보 */}
+                  <div className="flex items-center gap-2 flex-1">
+                    <span style={{ fontSize: '20px' }}>
+                      {idx === 0 ? '👑' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏪'}
+                    </span>
+                    <div className="flex-1">
+                      <p className="font-bold text-sm" style={{ color: '#1f2937' }}>
+                        {branch.branch}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 오른쪽: 참가자 수 */}
+                  <div className="text-right">
+                    <p className="text-lg font-bold" style={{ color: '#249689' }}>
+                      {branch.count}
+                    </p>
+                    <p className="text-xs text-gray-500">명</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* 데이터 없을 때 */}
+          {topBranches.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg mb-2">🏢</p>
+              <p>지점 데이터가 없습니다</p>
+            </div>
+          )}
         </div>
 
         {/* Top 추천인 */}
