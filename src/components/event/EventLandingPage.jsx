@@ -402,6 +402,9 @@ export default function EventLandingPage() {
           <h2 className="font-bold" style={{ color: '#dc2626', fontSize: '28px', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: '900' }}>
             수학편지 신청하기
           </h2>
+          <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: '900' }}>
+            (수학편지는 매일 무료로 보내드려요!!)
+          </h3>
         </div>
 
         {/* 샘플 영상 버튼 */}
