@@ -10,7 +10,7 @@ export default function SalesManagement({ user, onNavigate }) {
     paymentMethod: '카드',
     quantity: '',
     depositor: '',
-    depositBank: '',
+    depositAmount: '',
     orderDetails: '',
     needsShipping: false,
     privacyAgreed: false,
@@ -21,6 +21,39 @@ export default function SalesManagement({ user, onNavigate }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    
+    // 전화번호: 숫자만 추출 후 하이픈 자동 삽입
+    if (name === 'phone') {
+      const numbersOnly = value.replace(/[^0-9]/g, '')
+      let formatted = numbersOnly
+      
+      if (numbersOnly.length <= 3) {
+        formatted = numbersOnly
+      } else if (numbersOnly.length <= 7) {
+        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3)
+      } else if (numbersOnly.length <= 11) {
+        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3, 7) + '-' + numbersOnly.slice(7)
+      } else {
+        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3, 7) + '-' + numbersOnly.slice(7, 11)
+      }
+      
+      setFormData({
+        ...formData,
+        [name]: formatted
+      })
+      return
+    }
+    
+    // 입금액: 숫자만 추출
+    if (name === 'depositAmount') {
+      const numbersOnly = value.replace(/[^0-9]/g, '')
+      setFormData({
+        ...formData,
+        [name]: numbersOnly
+      })
+      return
+    }
+    
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
@@ -51,14 +84,14 @@ export default function SalesManagement({ user, onNavigate }) {
       }
     }
 
-    // 입금인 경우 입금자명과 입금기관명 필수
+    // 입금인 경우 입금자명과 입금액 필수
     if (formData.paymentMethod === '입금') {
       if (!formData.depositor?.trim()) {
         alert('입금자명을 입력해주세요')
         return false
       }
-      if (!formData.depositBank?.trim()) {
-        alert('입금기관명을 입력해주세요')
+      if (!formData.depositAmount || parseInt(formData.depositAmount) <= 0) {
+        alert('입금액을 입력해주세요')
         return false
       }
     }
@@ -88,13 +121,13 @@ export default function SalesManagement({ user, onNavigate }) {
         user_name: user?.name || null,
         user_branch: user?.branch || null,
         customer_name: formData.customerName?.trim() || null,
-        customer_phone: formData.phone?.trim() || null,
+        customer_phone: formData.phone ? formData.phone.replace(/[^0-9]/g, '') : null,
         customer_email: formData.email?.trim() || null,
         address: formData.address?.trim() || null,
         payment_method: formData.paymentMethod || null,
         quantity: parseInt(formData.quantity),
         depositor: formData.depositor?.trim() || null,
-        deposit_bank: formData.depositBank?.trim() || null,
+        deposit_amount: formData.depositAmount ? parseInt(formData.depositAmount) : null,
         order_details: formData.orderDetails?.trim() || null,
         age: formData.age ? parseInt(formData.age) : null,
         needs_shipping: formData.needsShipping,
@@ -123,7 +156,7 @@ export default function SalesManagement({ user, onNavigate }) {
         paymentMethod: '카드',
         quantity: '',
         depositor: '',
-        depositBank: '',
+        depositAmount: '',
         orderDetails: '',
         needsShipping: false,
         privacyAgreed: false,
@@ -354,14 +387,14 @@ export default function SalesManagement({ user, onNavigate }) {
 
                 <div>
                   <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                    입금기관명 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
+                    입금액 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
                   <input
                     type="text"
-                    name="depositBank"
-                    value={formData.depositBank}
+                    name="depositAmount"
+                    value={formData.depositAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ",") || ""}
                     onChange={handleChange}
-                    placeholder="입금기관명"
+                    placeholder="입금액"
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
                     style={{ borderRadius: '8px', fontSize: '15px' }}
