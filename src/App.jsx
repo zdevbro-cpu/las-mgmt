@@ -29,6 +29,7 @@ import EventLandingPage from './components/event/EventLandingPage'
 import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
 import AdminEventManager from './components/Admin/AdminEventManager'
+import ScrollToTop from './components/ScrollToTop'
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -143,10 +144,11 @@ function AppContent() {
   }
 
   return (
-    <Routes>
-      {/* 공개 페이지 */}
+    <>
+      <Routes>
+        {/* 공개 페이지 */}
 
-      <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
+        <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
 
       <Route path="/login" element={<Login onNavigate={handleNavigate} onLogin={handleLogin} />} />
       <Route path="/signup" element={<Signup onNavigate={handleNavigate} />} />
@@ -450,6 +452,8 @@ function AppContent() {
       {/* 404 처리 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    <ScrollToTop />
+    </>
   )
 }
 
