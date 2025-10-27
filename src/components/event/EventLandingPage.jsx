@@ -802,15 +802,18 @@ export default function EventLandingPage() {
               ✕
             </button>
             
+            {/* HTML5 Video 태그 */}
             <video
               className="w-full h-full rounded-lg"
               controls
+              autoPlay
               playsInline
               controlsList="nodownload"
               onError={(e) => {
                 console.error('비디오 재생 오류:', e)
-                alert('영상을 불러올 수 없습니다.')
+                alert('영상을 불러올 수 없습니다. 파일 경로를 확인해주세요.\n경로: ' + sampleVideoUrl)
               }}
+              onLoadedData={() => console.log('영상 로드 완료')}
               style={{ 
                 border: 'none',
                 backgroundColor: '#000'
