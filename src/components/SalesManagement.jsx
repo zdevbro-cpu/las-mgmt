@@ -37,7 +37,6 @@ export default function SalesManagement({ user, onNavigate }) {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     
-<<<<<<< HEAD
     let finalValue = type === 'checkbox' ? checked : value
     
     // 전화번호 포맷팅 적용
@@ -48,38 +47,6 @@ export default function SalesManagement({ user, onNavigate }) {
     // 입금액 포맷팅 적용
     if (name === 'depositAmount') {
       finalValue = formatCurrency(value)
-=======
-    // 전화번호: 숫자만 추출 후 하이픈 자동 삽입
-    if (name === 'phone') {
-      const numbersOnly = value.replace(/[^0-9]/g, '')
-      let formatted = numbersOnly
-      
-      if (numbersOnly.length <= 3) {
-        formatted = numbersOnly
-      } else if (numbersOnly.length <= 7) {
-        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3)
-      } else if (numbersOnly.length <= 11) {
-        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3, 7) + '-' + numbersOnly.slice(7)
-      } else {
-        formatted = numbersOnly.slice(0, 3) + '-' + numbersOnly.slice(3, 7) + '-' + numbersOnly.slice(7, 11)
-      }
-      
-      setFormData({
-        ...formData,
-        [name]: formatted
-      })
-      return
-    }
-    
-    // 입금액: 숫자만 추출
-    if (name === 'depositAmount') {
-      const numbersOnly = value.replace(/[^0-9]/g, '')
-      setFormData({
-        ...formData,
-        [name]: numbersOnly
-      })
-      return
->>>>>>> ab1d5821116145579899a7e9594660daf5df055d
     }
     
     setFormData({
@@ -112,17 +79,13 @@ export default function SalesManagement({ user, onNavigate }) {
       }
     }
 
-    // 입금인 경우 입금자명과 입금액 필수
+    // 입금인 경우 입금자명과 입금기관명 필수
     if (formData.paymentMethod === '입금') {
       if (!formData.depositor?.trim()) {
         alert('입금자명을 입력해주세요')
         return false
       }
-<<<<<<< HEAD
       if (!formData.depositAmount?.trim()) {
-=======
-      if (!formData.depositAmount || parseInt(formData.depositAmount) <= 0) {
->>>>>>> ab1d5821116145579899a7e9594660daf5df055d
         alert('입금액을 입력해주세요')
         return false
       }
@@ -153,21 +116,13 @@ export default function SalesManagement({ user, onNavigate }) {
         user_name: user?.name || null,
         user_branch: user?.branch || null,
         customer_name: formData.customerName?.trim() || null,
-<<<<<<< HEAD
         phone: formData.phone?.trim() || null,
-=======
-        customer_phone: formData.phone ? formData.phone.replace(/[^0-9]/g, '') : null,
->>>>>>> ab1d5821116145579899a7e9594660daf5df055d
         customer_email: formData.email?.trim() || null,
         address: formData.address?.trim() || null,
         payment_method: formData.paymentMethod || null,
         quantity: parseInt(formData.quantity),
         depositor: formData.depositor?.trim() || null,
-<<<<<<< HEAD
         deposit_amount: formData.depositAmount?.replace(/,/g, '') || null,
-=======
-        deposit_amount: formData.depositAmount ? parseInt(formData.depositAmount) : null,
->>>>>>> ab1d5821116145579899a7e9594660daf5df055d
         order_details: formData.orderDetails?.trim() || null,
         age: formData.age ? parseInt(formData.age) : null,
         needs_shipping: formData.needsShipping,
@@ -435,16 +390,12 @@ export default function SalesManagement({ user, onNavigate }) {
                   <input
                     type="text"
                     name="depositAmount"
-<<<<<<< HEAD
                     value={formData.depositAmount}
-=======
-                    value={formData.depositAmount ? formData.depositAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원" : ""}
->>>>>>> ab1d5821116145579899a7e9594660daf5df055d
                     onChange={handleChange}
                     placeholder="입금액"
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-                    style={{ borderRadius: '8px', fontSize: '15px', textAlign: 'right' }}
+                    style={{ borderRadius: '8px', fontSize: '15px' }}
                   />
                 </div>
               </div>
