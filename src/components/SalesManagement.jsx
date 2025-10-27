@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function SalesManagement({ user, onNavigate }) {
   const [formData, setFormData] = useState({
@@ -10,7 +11,7 @@ export default function SalesManagement({ user, onNavigate }) {
     paymentMethod: '카드',
     quantity: '',
     depositor: '',
-    depositBank: '',
+    depositAmount: '',
     orderDetails: '',
     needsShipping: false,
     privacyAgreed: false,
@@ -19,11 +20,38 @@ export default function SalesManagement({ user, onNavigate }) {
   const [loading, setLoading] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
 
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (value) => {
+    const numbers = value.replace(/[^\d]/g, '')
+    if (numbers.length <= 3) return numbers
+    if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`
+  }
+
+  // 금액 포맷팅 함수
+  const formatCurrency = (value) => {
+    const numbers = value.replace(/[^\d]/g, '')
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    
+    let finalValue = type === 'checkbox' ? checked : value
+    
+    // 전화번호 포맷팅 적용
+    if (name === 'phone') {
+      finalValue = formatPhoneNumber(value)
+    }
+    
+    // 입금액 포맷팅 적용
+    if (name === 'depositAmount') {
+      finalValue = formatCurrency(value)
+    }
+    
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: finalValue
     })
   }
 
@@ -57,8 +85,8 @@ export default function SalesManagement({ user, onNavigate }) {
         alert('입금자명을 입력해주세요')
         return false
       }
-      if (!formData.depositBank?.trim()) {
-        alert('입금기관명을 입력해주세요')
+      if (!formData.depositAmount?.trim()) {
+        alert('입금액을 입력해주세요')
         return false
       }
     }
@@ -88,13 +116,13 @@ export default function SalesManagement({ user, onNavigate }) {
         user_name: user?.name || null,
         user_branch: user?.branch || null,
         customer_name: formData.customerName?.trim() || null,
-        customer_phone: formData.phone?.trim() || null,
+        phone: formData.phone?.trim() || null,
         customer_email: formData.email?.trim() || null,
         address: formData.address?.trim() || null,
         payment_method: formData.paymentMethod || null,
         quantity: parseInt(formData.quantity),
         depositor: formData.depositor?.trim() || null,
-        deposit_bank: formData.depositBank?.trim() || null,
+        deposit_amount: formData.depositAmount?.replace(/,/g, '') || null,
         order_details: formData.orderDetails?.trim() || null,
         age: formData.age ? parseInt(formData.age) : null,
         needs_shipping: formData.needsShipping,
@@ -104,13 +132,16 @@ export default function SalesManagement({ user, onNavigate }) {
       
       console.log('Insert Data:', insertData)
       
-      // 실제 환경에서는 supabase 호출
-      // const { data, error } = await supabase
-      //   .from('sales')
-      //   .insert([insertData])
-      //   .select()
+      const { data, error } = await supabase
+        .from('sales')
+        .insert([insertData])
+        .select()
       
-      console.log('저장 성공')
+      if (error) {
+        throw error
+      }
+      
+      console.log('저장 성공:', data)
       alert('저장되었습니다!')
       
       // 폼 초기화
@@ -123,7 +154,7 @@ export default function SalesManagement({ user, onNavigate }) {
         paymentMethod: '카드',
         quantity: '',
         depositor: '',
-        depositBank: '',
+        depositAmount: '',
         orderDetails: '',
         needsShipping: false,
         privacyAgreed: false,
@@ -354,14 +385,14 @@ export default function SalesManagement({ user, onNavigate }) {
 
                 <div>
                   <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                    입금기관명 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
+                    입금액 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
                   <input
                     type="text"
-                    name="depositBank"
-                    value={formData.depositBank}
+                    name="depositAmount"
+                    value={formData.depositAmount}
                     onChange={handleChange}
-                    placeholder="입금기관명"
+                    placeholder="입금액"
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
                     style={{ borderRadius: '8px', fontSize: '15px' }}
