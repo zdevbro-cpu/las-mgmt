@@ -46,6 +46,18 @@ export default function AdminEventDashboard({ user, onBack }) {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   }
 
+  // 전화번호 포맷 함수
+  const formatPhone = (phone) => {
+    if (!phone) return '';
+    const cleaned = phone.toString().replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    } else if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    }
+    return phone;
+  }
+
   const loadEvents = async () => {
 
     try {
@@ -901,7 +913,7 @@ export default function AdminEventDashboard({ user, onBack }) {
                   <tr key={p.id} className="border-b hover:bg-gray-50">
                     <td className="px-3 py-3 text-sm">{new Date(p.created_at).toLocaleString('ko-KR')}</td>
                     <td className="px-3 py-3">{p.parent_name}</td>
-                    <td className="px-3 py-3">{p.phone}</td>
+                    <td className="px-3 py-3">{formatPhone(p.phone)}</td>
                     <td className="px-3 py-3">{p.child_gender}</td>
                     <td className="px-3 py-3">{p.child_age}세</td>
                     <td className="px-3 py-3">{p.users?.name || p.referrer_name || '-'}</td>
