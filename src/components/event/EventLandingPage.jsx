@@ -24,35 +24,63 @@ export default function EventLandingPage() {
   const [referrerName, setReferrerName] = useState('')
   const [showVideoModal, setShowVideoModal] = useState(false)
   
+  // 🔒 접근 제어 상태
+  const [accessDenied, setAccessDenied] = useState(false)
+  const [isValidating, setIsValidating] = useState(true)
+  
   // MP4 영상 파일 경로 (public 폴더 기준)
   const sampleVideoUrl = "/videos/mathletter.mp4"
   
   // 테스트용 공개 영상 (파일이 없을 때 임시로 사용 가능)
   // const sampleVideoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
-  // URL 파라미터에서 추천인 코드 추출
+  // 🔒 무조건 추천인 링크 필수 - URL 파라미터 검증
   useEffect(() => {
-    const fetchReferrerInfo = async () => {
+    const validateAccess = async () => {
       try {
         const params = new URLSearchParams(window.location.search)
         const refCode = params.get('ref')
-        if (refCode) {
-          const verification = await verifyReferralCodeExists(refCode)
-          if (verification.exists && verification.referrerName) {
-            setFormData(prev => ({ ...prev, referrerCode: refCode }))
-            setReferrerName(verification.referrerName)
-            setIsFromReferralLink(true)
-          }
+        
+        // ref 파라미터 없으면 무조건 차단
+        if (!refCode) {
+          console.log('❌ 접근 차단: ref 파라미터 없음')
+          setAccessDenied(true)
+          setIsValidating(false)
+          return
         }
+        
+        // ref 파라미터가 있으면 DB에서 검증
+        console.log('🔍 추천인 코드 검증 중:', refCode)
+        const verification = await verifyReferralCodeExists(refCode)
+        
+        if (verification.exists && verification.referrerName) {
+          // 유효한 추천인 코드
+          console.log('✅ 유효한 추천인:', verification.referrerName)
+          setFormData(prev => ({ ...prev, referrerCode: refCode }))
+          setReferrerName(verification.referrerName)
+          setIsFromReferralLink(true)
+          setAccessDenied(false)
+        } else {
+          // 무효한 추천인 코드
+          console.log('❌ 접근 차단: 유효하지 않은 추천인 코드')
+          setAccessDenied(true)
+        }
+        
+        setIsValidating(false)
       } catch (err) {
-        console.error('URL 파라미터 파싱 오류:', err)
+        console.error('❌ 접근 검증 오류:', err)
+        setAccessDenied(true)
+        setIsValidating(false)
       }
     }
-    fetchReferrerInfo()
+    
+    validateAccess()
   }, [])
 
   // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
   useEffect(() => {
+    if (accessDenied) return
+    
     // 1. Link preload 태그 추가 (더 높은 우선순위)
     const preloadLink = document.createElement('link')
     preloadLink.rel = 'preload'
@@ -337,6 +365,67 @@ export default function EventLandingPage() {
   }
 
   // 제출 완료 화면
+  // 🔒 검증 중 화면
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f0fffe' }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: '#249689' }}></div>
+          <p style={{ color: '#249689', fontSize: '16px' }}>링크 검증 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 🔒 접근 차단 화면
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#f0fffe' }}>
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-6">
+            <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center rounded-full" style={{ backgroundColor: '#fee' }}>
+              <svg className="w-12 h-12" style={{ color: '#dc2626' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h2 className="font-bold mb-3" style={{ color: '#249689', fontSize: '24px' }}>
+              접근이 제한되었습니다
+            </h2>
+            <p className="text-gray-600 mb-2" style={{ fontSize: '15px' }}>
+              이 페이지는 초대 링크를 통해서만 접근할 수 있습니다.
+            </p>
+            <p className="text-gray-500 text-sm">
+              추천인으로부터 받은 링크나 QR코드를 통해 다시 접속해주세요.
+            </p>
+          </div>
+          
+          <div className="bg-gray-50 rounded-lg p-4 mb-6">
+            <p className="text-xs text-gray-600 mb-2">💡 올바른 접근 방법</p>
+            <ul className="text-xs text-left space-y-1" style={{ color: '#666' }}>
+              <li>✓ 추천인에게 받은 QR코드 스캔</li>
+              <li>✓ 추천인에게 받은 링크 클릭</li>
+              <li>✓ 카카오톡 등으로 공유받은 링크 사용</li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-xs text-yellow-800">
+              <strong>⚠️ 주의:</strong> 직접 URL 입력이나 북마크로는 접근할 수 없습니다.
+            </p>
+          </div>
+
+          <button
+            onClick={() => window.history.back()}
+            className="w-full py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: '#249689' }}
+          >
+            이전 페이지로 돌아가기
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   if (submitted) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -767,7 +856,6 @@ export default function EventLandingPage() {
               className="w-full h-full rounded-lg"
               controls
               autoPlay
-              muted
               playsInline
               controlsList="nodownload"
               onError={(e) => {
