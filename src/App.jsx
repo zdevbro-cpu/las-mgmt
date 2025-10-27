@@ -31,8 +31,6 @@ import AdminEventMenu from './components/Admin/AdminEventMenu'
 import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 
-
-
 function AppContent() {
   const [user, setUser] = useState(null)
   const navigate = useNavigate()
