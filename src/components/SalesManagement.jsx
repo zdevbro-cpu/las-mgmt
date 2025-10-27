@@ -392,12 +392,12 @@ export default function SalesManagement({ user, onNavigate }) {
                   <input
                     type="text"
                     name="depositAmount"
-                    value={formData.depositAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ",") || ""}
+                    value={formData.depositAmount ? formData.depositAmount.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "원" : ""}
                     onChange={handleChange}
                     placeholder="입금액"
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-                    style={{ borderRadius: '8px', fontSize: '15px' }}
+                    style={{ borderRadius: '8px', fontSize: '15px', textAlign: 'right' }}
                   />
                 </div>
               </div>
