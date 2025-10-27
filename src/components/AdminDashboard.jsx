@@ -156,7 +156,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
                 style={{ backgroundColor: '#dc2626', borderRadius: '10px', fontSize: '15px' }}
               >
                 <Calendar size={20} />
-                이벤트 대시보드
+                매장 이벤트관리
               </button>
             )}
             

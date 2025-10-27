@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User } from 'lucide-react'
+import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User, BarChart3 } from 'lucide-react'
 import { isMonitoringAgent, isContractWorker } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
@@ -151,6 +151,17 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
               </>
             )}
+
+            {/* 이벤트관리 버튼 - 모든 사용자 표시 */}
+            <button
+              onClick={() => onNavigate('AdminEventDashboard')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#dc2626', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <BarChart3 size={20} />
+              내 이벤트관리
+            </button>
+
 
             {/* 내정보관리 버튼 - 모든 사용자 표시 */}
             <button

@@ -1,61 +1,76 @@
-import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Eye, Search, RotateCcw, X, Printer, Package } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, Search, RotateCcw, Eye } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 /**
- * 구매이력 관리 공통 컴포넌트
- * 
- * @param {Object} user - 로그인한 사용자 정보
- * @param {Function} onNavigate - 페이지 이동 함수
- * @param {Boolean} isAdminView - 관리자 뷰 여부 (true: 전체 조회, false: 지점별 조회)
- * @param {String} title - 페이지 타이틀
- * @param {Boolean} showBranchFilter - 지점 필터 표시 여부
- * @param {Boolean} showDateFilter - 날짜 필터 표시 여부
- * @param {Boolean} showPrintButton - 출력 버튼 표시 여부
- * @param {String} navigateBack - 뒤로가기 페이지 (기본: 'Dashboard')
+ * 구매이력 조회 공통 컴포넌트
+ * - 시스템관리자와 지점관리자가 동일한 UI/UX로 사용
+ * - props로 권한과 표시 옵션 제어
  */
-export default function PurchaseHistoryBase({
-  user,
+export default function PurchaseHistoryBase({ 
+  user, 
   onNavigate,
-  isAdminView = false,
-  title = '구매이력',
-  showBranchFilter = true,
-  showDateFilter = true,
-  showPrintButton = true,
-  navigateBack = 'Dashboard'
+  isAdminView = false,           // 🔑 전체 지점 조회 여부
+  title = "구매이력조회",        // 페이지 타이틀
+  showBranchFilter = false,      // 지점 필터 표시 여부
+  navigateBack = "Dashboard"     // 뒤로가기 경로
 }) {
   const [purchases, setPurchases] = useState([])
   const [branches, setBranches] = useState([])
+  const [filteredPurchases, setFilteredPurchases] = useState([])
   const [loading, setLoading] = useState(false)
-  const [searchValue, setSearchValue] = useState('')
+  
+  // 필터 상태
+  const [selectedBranch, setSelectedBranch] = useState('all')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [selectedBranch, setSelectedBranch] = useState('all')
+  const [searchValue, setSearchValue] = useState('')
+  
+  // 모달 상태
   const [showModal, setShowModal] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState(null)
-  const [customerPurchases, setCustomerPurchases] = useState([])
+
+  // 통계 데이터
+  const totalCount = filteredPurchases.length
+  const totalQuantity = filteredPurchases.reduce((sum, p) => sum + (p.quantity || 0), 0)
+  
+  // 조회 지점 계산
+  const displayBranch = isAdminView 
+    ? (selectedBranch === 'all' ? '전체' : selectedBranch)
+    : (user?.branch || '-')
 
   useEffect(() => {
-    if (showBranchFilter && isAdminView) {
+    if (showBranchFilter) {
       fetchBranches()
     }
     fetchPurchases()
   }, [])
 
+  useEffect(() => {
+    applyFilters()
+  }, [purchases, selectedBranch, startDate, endDate, searchValue])
+
+  // 지점 목록 조회 (시스템관리자만)
   const fetchBranches = async () => {
     try {
       const { data, error } = await supabase
-        .from('branches')
-        .select('*')
-        .order('name')
+        .from('users')
+        .select('branch')
+        .not('branch', 'is', null)
+        .order('branch')
 
       if (error) throw error
-      setBranches(data || [])
-    } catch (err) {
-      console.error('❌ 지점 조회 오류:', err)
+      
+      // 중복 제거
+      const uniqueBranches = [...new Set(data.map(item => item.branch))]
+      setBranches(uniqueBranches.map(branch => ({ branch_name: branch })))
+    } catch (error) {
+      console.error('지점 조회 실패:', error)
+      alert('지점 목록을 불러오는데 실패했습니다.')
     }
   }
 
+  // 구매이력 조회
   const fetchPurchases = async () => {
     setLoading(true)
     try {
@@ -64,681 +79,367 @@ export default function PurchaseHistoryBase({
         .select('*')
         .order('created_at', { ascending: false })
 
-      // 🔑 핵심: 관리자가 아니면 자신의 지점만 조회
+      // 🔑 지점관리자는 자신의 지점만 조회
       if (!isAdminView && user?.branch) {
-        query = query.eq('branch_name', user.branch)
+        query = query.eq('user_branch', user.branch)
       }
 
       const { data, error } = await query
-      if (error) throw error
 
-      console.log('✅ 구매이력:', data)
+      if (error) throw error
       setPurchases(data || [])
-    } catch (err) {
-      console.error('❌ 구매이력 조회 오류:', err)
-      alert('구매이력을 불러오는 중 오류가 발생했습니다: ' + err.message)
+      setFilteredPurchases(data || [])
+    } catch (error) {
+      console.error('구매이력 조회 실패:', error)
+      alert('구매이력을 불러오는데 실패했습니다.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSearch = async () => {
-    setLoading(true)
-    try {
-      let query = supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
+  // 필터 적용
+  const applyFilters = () => {
+    let filtered = [...purchases]
 
-      // 관리자가 아니면 자신의 지점만
-      if (!isAdminView && user?.branch) {
-        query = query.eq('branch_name', user.branch)
-      }
-
-      // 지점 필터
-      if (isAdminView && selectedBranch !== 'all') {
-        query = query.eq('branch_name', selectedBranch)
-      }
-
-      // 날짜 필터
-      if (startDate) {
-        const startDateTime = new Date(startDate)
-        startDateTime.setHours(0, 0, 0, 0)
-        query = query.gte('created_at', startDateTime.toISOString())
-      }
-
-      if (endDate) {
-        const endDateTime = new Date(endDate)
-        endDateTime.setHours(23, 59, 59, 999)
-        query = query.lte('created_at', endDateTime.toISOString())
-      }
-
-      // 검색어 필터
-      if (searchValue.trim()) {
-        query = query.or(`customer_name.ilike.%${searchValue}%,phone.ilike.%${searchValue}%,email.ilike.%${searchValue}%,customer_phone.ilike.%${searchValue}%,customer_email.ilike.%${searchValue}%,order_details.ilike.%${searchValue}%`)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-
-      setPurchases(data || [])
-
-      if (!data || data.length === 0) {
-        alert('검색 결과가 없습니다')
-      }
-    } catch (err) {
-      console.error('❌ 검색 오류:', err)
-      alert('검색 중 오류가 발생했습니다: ' + err.message)
-    } finally {
-      setLoading(false)
+    // 지점명 필터 (시스템관리자만)
+    if (showBranchFilter && selectedBranch !== 'all') {
+      filtered = filtered.filter(p => p.user_branch === selectedBranch)
     }
+
+    // 날짜 필터
+    if (startDate) {
+      filtered = filtered.filter(p => {
+        const purchaseDate = new Date(p.created_at).toISOString().split('T')[0]
+        return purchaseDate >= startDate
+      })
+    }
+    if (endDate) {
+      filtered = filtered.filter(p => {
+        const purchaseDate = new Date(p.created_at).toISOString().split('T')[0]
+        return purchaseDate <= endDate
+      })
+    }
+
+    // 검색어 필터
+    if (searchValue.trim()) {
+      const search = searchValue.toLowerCase().trim()
+      filtered = filtered.filter(p =>
+        p.customer_name?.toLowerCase().includes(search) ||
+        p.phone?.includes(search) ||
+        p.depositor?.toLowerCase().includes(search)
+      )
+    }
+
+    setFilteredPurchases(filtered)
+  }
+
+  const handleSearch = () => {
+    applyFilters()
   }
 
   const handleReset = () => {
-    setSearchValue('')
+    setSelectedBranch('all')
     setStartDate('')
     setEndDate('')
-    setSelectedBranch('all')
-    fetchPurchases()
+    setSearchValue('')
   }
 
-  const fetchCustomerPurchaseHistory = async (customer) => {
-    try {
-      let query = supabase
-        .from('sales')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      // 관리자가 아니면 자신의 지점만
-      if (!isAdminView && user?.branch) {
-        query = query.eq('branch_name', user.branch)
-      }
-
-      const customerPhone = customer.phone || customer.customer_phone
-      const customerEmail = customer.email || customer.customer_email
-
-      if (customer.customer_name && customerPhone) {
-        query = query
-          .eq('customer_name', customer.customer_name)
-          .or(`phone.eq.${customerPhone},customer_phone.eq.${customerPhone}`)
-      } else if (customerEmail) {
-        query = query.or(`email.eq.${customerEmail},customer_email.eq.${customerEmail}`)
-      } else if (customerPhone) {
-        query = query.or(`phone.eq.${customerPhone},customer_phone.eq.${customerPhone}`)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-
-      return data || []
-    } catch (err) {
-      console.error('❌ 구매이력 조회 오류:', err)
-      return []
-    }
-  }
-
-  const handleViewDetails = async (purchase) => {
+  const handleViewDetail = (purchase) => {
     setSelectedPurchase(purchase)
     setShowModal(true)
-
-    const history = await fetchCustomerPurchaseHistory(purchase)
-    setCustomerPurchases(history)
   }
 
-  const handlePrintDetails = () => {
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) {
-      alert('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.')
-      return
-    }
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>구매이력상세</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            padding: 20mm; 
-            line-height: 1.6;
-          }
-          .header { 
-            text-align: center; 
-            border-bottom: 3px solid #249689; 
-            padding-bottom: 10px; 
-            margin-bottom: 20px; 
-          }
-          .header h1 { 
-            font-size: 24pt; 
-            color: #249689; 
-            margin-bottom: 5px; 
-          }
-          .section { 
-            margin-bottom: 20px; 
-            border: 2px solid #ddd; 
-            border-radius: 8px; 
-            padding: 15px; 
-          }
-          .section-title { 
-            font-size: 14pt; 
-            font-weight: bold; 
-            margin-bottom: 10px; 
-            padding-bottom: 8px; 
-            border-bottom: 2px solid #249689; 
-          }
-          .field { display: flex; margin-bottom: 8px; }
-          .field-label { 
-            font-weight: bold; 
-            width: 120px; 
-            color: #666; 
-          }
-          @media print { 
-            body { margin: 0; padding: 10mm; } 
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>구매이력상세</h1>
-          <p>출력일: ${new Date().toLocaleDateString('ko-KR')}</p>
-        </div>
-
-        <div class="section">
-          <div class="section-title">판매정보</div>
-          <div class="field">
-            <div class="field-label">구매일시</div>
-            <div class="field-value">${formatDateTime(selectedPurchase.created_at)}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">지점</div>
-            <div class="field-value">${selectedPurchase.branch_name || '-'}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">판매자</div>
-            <div class="field-value">${selectedPurchase.user_name || '-'}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">판매수량</div>
-            <div class="field-value">${selectedPurchase.quantity || 0}권</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">구매자 정보</div>
-          <div class="field">
-            <div class="field-label">이름</div>
-            <div class="field-value">${selectedPurchase.customer_name || '-'}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">나이</div>
-            <div class="field-value">${selectedPurchase.age ? selectedPurchase.age + '세' : '-'}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">전화번호</div>
-            <div class="field-value">${selectedPurchase.phone || selectedPurchase.customer_phone || '-'}</div>
-          </div>
-          <div class="field">
-            <div class="field-label">이메일</div>
-            <div class="field-value">${selectedPurchase.email || selectedPurchase.customer_email || '-'}</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">결제 정보</div>
-          <div class="field">
-            <div class="field-label">결제방법</div>
-            <div class="field-value">${selectedPurchase.payment_method || '-'}</div>
-          </div>
-          ${selectedPurchase.depositor ? `
-          <div class="field">
-            <div class="field-label">입금자</div>
-            <div class="field-value">${selectedPurchase.depositor}</div>
-          </div>
-          ` : ''}
-          ${selectedPurchase.deposit_bank ? `
-          <div class="field">
-            <div class="field-label">입금기관</div>
-            <div class="field-value">${selectedPurchase.deposit_bank}</div>
-          </div>
-          ` : ''}
-        </div>
-
-        ${selectedPurchase.order_details ? `
-        <div class="section">
-          <div class="section-title">주문 내역</div>
-          <div>${selectedPurchase.order_details}</div>
-        </div>
-        ` : ''}
-
-        <script>
-          window.print();
-        </script>
-      </body>
-      </html>
-    `
-
-    printWindow.document.open()
-    printWindow.document.write(htmlContent)
-    printWindow.document.close()
-  }
-
+  // 포맷 함수들
   const formatDate = (dateString) => {
+    if (!dateString) return '-'
     const date = new Date(dateString)
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`
   }
 
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const formatPhone = (phone) => {
+    if (!phone) return '-'
+    const cleaned = phone.toString().replace(/\D/g, '')
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3')
+    } else if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3')
+    }
+    return phone
+  }
+
+  const formatPrice = (price) => {
+    if (!price) return '0원'
+    return `${price.toLocaleString()}원`
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          {/* 헤더 */}
-          <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gray-50">
+      {/* 헤더 */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between relative">
+            {/* 왼쪽: 나가기 버튼 */}
             <button
               onClick={() => onNavigate(navigateBack)}
-              className="flex items-center gap-2 font-bold hover:opacity-70 transition-opacity"
-              style={{ color: '#249689', fontSize: '15px' }}
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800"
             >
               <ArrowLeft size={20} />
-              나가기
+              <span>나가기</span>
             </button>
-            <div className="flex items-center gap-1.5">
+            
+            {/* 중앙: 로고 + 타이틀 */}
+            <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2">
               <img 
                 src="/images/logo.png" 
                 alt="LAS Logo" 
-                className="w-10 h-10 object-cover"
+                className="w-10 h-10"
                 onError={(e) => e.target.style.display = 'none'}
               />
-              <h2 className="font-bold" style={{ color: '#249689', fontSize: '36px' }}>
+              <h1 className="text-4xl font-bold" style={{ color: '#249689' }}>
                 {title}
-              </h2>
+              </h1>
             </div>
-            <div style={{ width: '100px' }}></div>
+
+            {/* 오른쪽: 빈 공간 (균형 맞추기) */}
+            <div style={{ width: '120px' }}></div>
           </div>
-
-          {/* 검색 및 필터 - 1줄로 통합 */}
-          <div className="mb-6">
-            <div className="flex gap-2 items-center flex-wrap">
-              {/* 지점 필터 (관리자만) */}
-              {showBranchFilter && isAdminView && (
-                <select
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  disabled={loading}
-                  className="px-4 py-2 border border-gray-300 bg-white disabled:bg-gray-100"
-                  style={{ borderRadius: '10px', fontSize: '15px', minWidth: '150px' }}
-                >
-                  <option value="all">전체 지점</option>
-                  {branches.map(branch => (
-                    <option key={branch.id} value={branch.name}>{branch.name}</option>
-                  ))}
-                </select>
-              )}
-
-              {/* 날짜 필터 (관리자만) */}
-              {showDateFilter && isAdminView && (
-                <>
-                  <span className="text-sm font-bold" style={{ color: '#249689' }}>구매기간</span>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    disabled={loading}
-                    className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
-                  <span className="flex items-center">~</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    disabled={loading}
-                    className="px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                    style={{ borderRadius: '10px', fontSize: '15px' }}
-                  />
-                </>
-              )}
-
-              {/* 검색 조건 */}
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="이름, 전화번호, 이메일로 검색"
-                disabled={loading}
-                className="flex-1 px-4 py-2 border border-gray-300 disabled:bg-gray-100"
-                style={{ borderRadius: '10px', fontSize: '15px', minWidth: '200px' }}
-              />
-
-              {/* 검색 버튼 */}
-              <button
-                onClick={handleSearch}
-                disabled={loading}
-                className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50 whitespace-nowrap"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '120px', justifyContent: 'center' }}
-              >
-                <Search size={18} />
-                검색
-              </button>
-
-              {/* 초기화 버튼 */}
-              <button
-                onClick={handleReset}
-                disabled={loading}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689', width: '120px', justifyContent: 'center' }}
-              >
-                <RotateCcw size={18} />
-                초기화
-              </button>
-            </div>
-          </div>
-
-          {/* 테이블 */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr style={{ backgroundColor: '#f3f4f6' }}>
-                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689', width: '80px' }}>
-                    상세
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
-                    이름
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
-                    전화번호
-                  </th>
-                  {isAdminView && (
-                    <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
-                      지점
-                    </th>
-                  )}
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
-                    주문정보
-                  </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
-                    구매일
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={isAdminView ? "6" : "5"} className="px-4 py-8 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
-                        로딩 중...
-                      </div>
-                    </td>
-                  </tr>
-                ) : purchases.length === 0 ? (
-                  <tr>
-                    <td colSpan={isAdminView ? "6" : "5"} className="px-4 py-8 text-center text-gray-500">
-                      <Package size={48} className="mx-auto mb-2 opacity-30" />
-                      <p className="mb-2">등록된 구매이력이 없습니다</p>
-                      <p className="text-sm">판매 데이터가 생성되면 자동으로 표시됩니다</p>
-                    </td>
-                  </tr>
-                ) : (
-                  purchases.map((purchase) => (
-                    <tr
-                      key={purchase.id}
-                      className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(purchase)}
-                    >
-                      <td className="px-3 py-3 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleViewDetails(purchase)
-                          }}
-                          className="p-2 rounded-full hover:bg-gray-200 transition-colors"
-                          style={{ color: '#249689' }}
-                          title="상세보기"
-                        >
-                          <Eye size={16} />
-                        </button>
-                      </td>
-                      <td className="px-3 py-3 font-bold" style={{ fontSize: '15px' }}>
-                        {purchase.customer_name || '-'}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
-                        {purchase.phone || purchase.customer_phone || '-'}
-                      </td>
-                      {isAdminView && (
-                        <td className="px-3 py-3" style={{ fontSize: '15px' }}>
-                          {purchase.branch_name || '-'}
-                        </td>
-                      )}
-                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
-                        {purchase.order_details ? (
-                          purchase.order_details.length > 30 ? purchase.order_details.substring(0, 30) + '...' : purchase.order_details
-                        ) : '-'}
-                      </td>
-                      <td className="px-3 py-3" style={{ fontSize: '15px' }}>
-                        {formatDate(purchase.created_at)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* 총 개수 */}
-          {purchases.length > 0 && (
-            <div className="mt-4 text-right text-gray-600" style={{ fontSize: '13px' }}>
-              총 <strong style={{ color: '#249689' }}>{purchases.length}</strong>건
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 구매 상세정보 모달 */}
-      {showModal && selectedPurchase && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="bg-white rounded-lg shadow-2xl p-6 max-w-xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-            style={{ borderRadius: '10px' }}
-          >
-            {/* 로고 + 타이틀 */}
-            <div className="flex items-center justify-center mb-6">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Logo" 
-                className="w-8 h-8 object-cover mr-2"
-                onError={(e) => e.target.style.display = 'none'}
-              />
-              <h3 className="font-bold" style={{ color: '#249689', fontSize: '24px' }}>
-                구매이력상세
-              </h3>
-            </div>
+      {/* 메인 컨텐츠 */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* 통계 카드 */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+            <div className="text-sm text-blue-600 mb-1">📦 총 판매건수</div>
+            <div className="text-2xl font-bold text-blue-700">{totalCount}건</div>
+          </div>
+          <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+            <div className="text-sm text-green-600 mb-1">📚 총 판매수량</div>
+            <div className="text-2xl font-bold text-green-700">{totalQuantity}권</div>
+          </div>
+          <div className="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-200">
+            <div className="text-sm text-yellow-600 mb-1">🏢 조회지점</div>
+            <div className="text-2xl font-bold text-yellow-700">{displayBranch}</div>
+          </div>
+        </div>
 
-            <div className="space-y-4">
-              {/* 판매정보 */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#f0f9ff', border: '2px solid #3b82f6' }}>
-                <h4 className="font-bold mb-3" style={{ color: '#1e40af', fontSize: '16px' }}>
-                  판매정보
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+        {/* 필터 섹션 */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex items-center gap-3">
+            {/* 지점명 드롭다운 (시스템관리자만 표시) */}
+            {showBranchFilter ? (
+              <select
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="all">전체 지점</option>
+                {branches.map((branch) => (
+                  <option key={branch.branch_name} value={branch.branch_name}>
+                    {branch.branch_name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg font-medium" style={{ color: '#249689' }}>
+                {user?.branch || '-'}
+              </div>
+            )}
+
+            <span className="text-sm font-medium text-gray-700 whitespace-nowrap">구매일자</span>
+
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+
+            <span className="text-gray-500">~</span>
+
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="이름, 연락처, 입금자명 검색"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+            />
+
+            <button
+              onClick={handleSearch}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2 whitespace-nowrap"
+            >
+              <Search size={18} />
+              검색
+            </button>
+
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2 whitespace-nowrap"
+            >
+              <RotateCcw size={18} />
+              초기화
+            </button>
+          </div>
+        </div>
+
+        {/* 테이블 */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">로딩 중...</p>
+            </div>
+          ) : filteredPurchases.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-500">조회된 구매이력이 없습니다.</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">실명</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">구매일자</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">지점</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">연락처</th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">수량</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">결제정보</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">주문내역</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredPurchases.map((purchase, idx) => (
+                  <tr key={purchase.id || idx} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm">{purchase.customer_name || '-'}</td>
+                    <td className="px-4 py-3 text-sm">{formatDate(purchase.created_at)}</td>
+                    <td className="px-4 py-3 text-sm">{purchase.user_branch || '-'}</td>
+                    <td className="px-4 py-3 text-sm">{formatPhone(purchase.phone)}</td>
+                    <td className="px-4 py-3 text-sm text-center">{purchase.quantity || 0}개</td>
+                    <td className="px-4 py-3 text-sm">
+                      <div>
+                        <div className="font-medium">{purchase.payment_method || '-'}</div>
+                        {purchase.payment_method === '입금' && (
+                          <div className="text-gray-600 text-xs">
+                            {purchase.depositor && `${purchase.depositor} / `}
+                            {purchase.deposit_amount && `${purchase.deposit_amount.toLocaleString()}원`}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="max-w-xs truncate text-gray-600">
+                        {purchase.order_details || '-'}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-lg font-bold" style={{ color: '#249689' }}>
+            검색결과: {filteredPurchases.length.toLocaleString()}건
+          </div>
+        </div>
+      </div>
+
+      {/* 상세보기 모달 */}
+      {showModal && selectedPurchase && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-6 text-center" style={{ color: '#249689' }}>
+                🏢 구매이력상세
+              </h2>
+
+              {/* 판매 정보 */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold mb-3 text-gray-800">📋 판매 정보</h3>
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">구매일시</p>
-                    <p>{formatDateTime(selectedPurchase.created_at)}</p>
+                    <span className="text-sm text-gray-600">판매일자</span>
+                    <p className="font-medium">{formatDate(selectedPurchase.created_at)}</p>
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">지점</p>
-                    <p className="font-bold" style={{ color: '#249689' }}>{selectedPurchase.branch_name || '-'}</p>
+                    <span className="text-sm text-gray-600">판매 지점</span>
+                    <p className="font-medium">{selectedPurchase.user_branch || '-'}</p>
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">판매자</p>
-                    <p>{selectedPurchase.user_name || '-'}</p>
+                    <span className="text-sm text-gray-600">수량</span>
+                    <p className="font-medium">{selectedPurchase.quantity || 0}개</p>
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">판매수량</p>
-                    <p className="font-bold">{selectedPurchase.quantity || 0}권</p>
+                    <span className="text-sm text-gray-600">주문내역</span>
+                    <p className="font-medium">{selectedPurchase.order_details || '-'}</p>
                   </div>
                 </div>
               </div>
 
               {/* 구매자 정보 */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#f0fffe', border: '2px solid #249689' }}>
-                <h4 className="font-bold mb-3" style={{ color: '#249689', fontSize: '16px' }}>
-                  구매자 정보
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold mb-3 text-gray-800">👤 구매자 정보</h3>
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">이름</p>
-                    <p>{selectedPurchase.customer_name || '-'}</p>
+                    <span className="text-sm text-gray-600">이름</span>
+                    <p className="font-medium">{selectedPurchase.customer_name || '-'}</p>
                   </div>
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">나이</p>
-                    <p>{selectedPurchase.age ? `${selectedPurchase.age}세` : '-'}</p>
+                    <span className="text-sm text-gray-600">전화번호</span>
+                    <p className="font-medium">{formatPhone(selectedPurchase.phone)}</p>
                   </div>
-                  <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">전화번호</p>
-                    <p>{selectedPurchase.phone || selectedPurchase.customer_phone || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">이메일</p>
-                    <p className="break-all">{selectedPurchase.email || selectedPurchase.customer_email || '-'}</p>
-                  </div>
-                  {selectedPurchase.address && (
-                    <div className="col-span-2">
-                      <p className="font-bold text-xs text-gray-600 mb-1">주소</p>
-                      <p>{selectedPurchase.address}</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
               {/* 결제 정보 */}
-              <div className="p-4 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '2px solid #f59e0b' }}>
-                <h4 className="font-bold mb-3" style={{ color: '#92400e', fontSize: '16px' }}>
-                  결제 정보
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="mb-6">
+                <h3 className="text-lg font-bold mb-3 text-gray-800">💳 결제 정보</h3>
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                   <div>
-                    <p className="font-bold text-xs text-gray-600 mb-1">결제방법</p>
-                    <p className="font-bold">{selectedPurchase.payment_method || '-'}</p>
+                    <span className="text-sm text-gray-600">결제 방법</span>
+                    <p className="font-medium">{selectedPurchase.payment_method || '-'}</p>
                   </div>
-                  {selectedPurchase.depositor && (
-                    <div>
-                      <p className="font-bold text-xs text-gray-600 mb-1">입금자</p>
-                      <p>{selectedPurchase.depositor}</p>
-                    </div>
-                  )}
-                  {selectedPurchase.deposit_bank && (
-                    <div>
-                      <p className="font-bold text-xs text-gray-600 mb-1">입금기관</p>
-                      <p>{selectedPurchase.deposit_bank}</p>
-                    </div>
+                  {selectedPurchase.payment_method === '입금' && (
+                    <>
+                      <div>
+                        <span className="text-sm text-gray-600">입금자명</span>
+                        <p className="font-medium">{selectedPurchase.depositor || '-'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-600">입금액</span>
+                        <p className="font-bold text-lg" style={{ color: '#249689' }}>
+                          {selectedPurchase.deposit_amount ? `${selectedPurchase.deposit_amount.toLocaleString()}원` : '-'}
+                        </p>
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
 
-              {/* 주문 내역 */}
-              {selectedPurchase.order_details && (
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#f3f4f6', border: '2px solid #9ca3af' }}>
-                  <h4 className="font-bold mb-3" style={{ color: '#374151', fontSize: '16px' }}>
-                    주문 내역
-                  </h4>
-                  <p className="text-sm whitespace-pre-wrap">{selectedPurchase.order_details}</p>
-                </div>
-              )}
-
-              {/* 동일 구매자의 전체 구매이력 */}
-              {customerPurchases.length > 1 && (
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#fef2f2', border: '2px solid #ef4444' }}>
-                  <h4 className="font-bold mb-3" style={{ color: '#991b1b', fontSize: '16px' }}>
-                    📊 이 구매자의 전체 구매이력 ({customerPurchases.length}건)
-                  </h4>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {customerPurchases.map((purchase, index) => (
-                      <div
-                        key={purchase.id}
-                        className={`p-3 rounded-lg border-2 ${
-                          purchase.id === selectedPurchase.id 
-                            ? 'bg-yellow-50 border-yellow-400' 
-                            : 'bg-white border-gray-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <span className="font-bold text-sm" style={{ color: '#249689' }}>
-                            구매 #{index + 1}
-                            {purchase.id === selectedPurchase.id && (
-                              <span className="ml-2 text-xs px-2 py-0.5 bg-yellow-400 text-yellow-900 rounded">
-                                현재
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatDate(purchase.created_at)}
-                          </span>
-                        </div>
-                        <div className="text-xs space-y-1">
-                          <p><span className="font-bold">지점:</span> {purchase.branch_name || '-'}</p>
-                          <p><span className="font-bold">수량:</span> {purchase.quantity || '-'}권</p>
-                          <p><span className="font-bold">결제:</span> {purchase.payment_method || '-'}</p>
-                          {purchase.order_details && (
-                            <p className="mt-2 pt-2 border-t border-gray-200">
-                              <span className="font-bold">내역:</span> {purchase.order_details}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-red-200">
-                    <p className="text-sm font-bold text-center" style={{ color: '#991b1b' }}>
-                      총 구매수량: {customerPurchases.reduce((sum, p) => sum + (p.quantity || 0), 0)}권
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 출력과 닫기 버튼 - 최하단 우측 정렬 */}
-            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
-              {showPrintButton && (
+              {/* 버튼 */}
+              <div className="flex gap-3">
                 <button
-                  onClick={handlePrintDetails}
-                  className="px-6 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2"
-                  style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px', width: '120px', justifyContent: 'center' }}
+                  onClick={() => window.print()}
+                  className="flex-1 px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium"
                 >
-                  <Printer size={18} />
-                  출력
+                  🖨️ 출력
                 </button>
-              )}
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-6 py-2 font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
-                style={{ border: '2px solid #249689', backgroundColor: 'white', borderRadius: '10px', fontSize: '15px', color: '#249689', width: '120px', justifyContent: 'center' }}
-              >
-                <X size={18} />
-                닫기
-              </button>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                >
+                  ❌ 닫기
+                </button>
+              </div>
             </div>
           </div>
         </div>

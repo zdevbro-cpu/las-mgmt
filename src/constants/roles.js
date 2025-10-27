@@ -110,7 +110,8 @@ export const canManageSales = (user) => {
 
 export const canAccessEventDashboard = (user) => {
   if (!user) return false
-  return user.user_type === USER_TYPES.BRANCH_MANAGER ||
+  return user.user_type === USER_TYPES.STORE_MANAGER ||
+         user.user_type === USER_TYPES.BRANCH_MANAGER ||
          user.user_type === USER_TYPES.SYSTEM_ADMIN
 }
 

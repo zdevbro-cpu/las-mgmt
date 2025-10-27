@@ -91,7 +91,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               구매자정보
             </button>
 
-            {/* ⭐ 이벤트 관리 메뉴로 이동 */}
+            {/* ⭐ 이벤트 관리로 이동 */}
             <button
               onClick={() => {
                 console.log('🧭 Navigate to: AdminEventMenu')
@@ -101,7 +101,7 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               style={{ backgroundColor: '#dc2626', borderRadius: '10px', fontSize: '15px' }}
             >
               <BarChart3 size={20} />
-              이벤트 관리
+              이벤트관리
             </button>
 
             <button

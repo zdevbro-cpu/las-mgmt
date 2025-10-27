@@ -1,7 +1,34 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import { Search, RotateCcw, Download } from 'lucide-react'
 
-export default function AdminEventDashboard({ user, onBack }) {
+export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
+  // viewMode가 명시되지 않은 경우 from 경로를 보고 자동 결정
+  let determinedViewMode = viewMode
+  if (!determinedViewMode) {
+    // from 경로 기반 판단
+    if (from === '/system-admin' || from === 'SystemAdminDashboard') {
+      determinedViewMode = 'system'
+    } else if (from === '/admin' || from === 'AdminDashboard') {
+      determinedViewMode = 'admin'
+    } else if (from === '/dashboard' || from === 'Dashboard') {
+      determinedViewMode = 'user'
+    } else if (user?.user_type === '시스템관리자' || user?.role === 'system_admin' || user?.role === 'SystemAdmin') {
+      determinedViewMode = 'system'
+    } else if (user?.role === 'admin' || user?.role === 'manager' || 
+               user?.role === '점장' || user?.role === '지점관리자') {
+      determinedViewMode = 'admin'
+    } else {
+      determinedViewMode = 'user'
+    }
+  }
+  
+  console.log('🎯 ViewMode 결정:', determinedViewMode, '| User Role:', user?.role, '| User Type:', user?.user_type, '| From:', from)
+  
+  // viewMode: 'user' = 일반 유저 (본인 데이터만), 'admin' = 매장관리자 (전체 데이터), 'system' = 시스템관리자 (전체 데이터)
+  const showFullData = determinedViewMode === 'admin' || determinedViewMode === 'system'
+  const showTopRankings = determinedViewMode === 'admin' || determinedViewMode === 'system'
+
   const [stats, setStats] = useState({
     total: 0,
     thisWeek: 0,
@@ -134,6 +161,36 @@ export default function AdminEventDashboard({ user, onBack }) {
         .from('event_participants')
         .select('child_gender, child_age, event_name, created_at')
       
+      
+      // 권한별 필터링
+      if (determinedViewMode === 'user' && user?.referral_code) {
+        // 일반 유저: 본인이 추천한 데이터만
+        console.log('✅ [일반 유저] 필터 적용 - 추천코드:', user.referral_code)
+        statsQuery = statsQuery.eq('referrer_code', user.referral_code)
+      } else if (determinedViewMode === 'admin' && user?.branch) {
+        // 점장/지점관리자: 본인 지점의 모든 직원이 추천한 데이터
+        console.log('✅ [점장/지점관리자] 필터 적용 - 지점:', user.branch)
+        
+        // 1. 해당 지점의 모든 referral_code 가져오기
+        const { data: branchUsers } = await supabase
+          .from('users')
+          .select('referral_code')
+          .eq('branch', user.branch)
+          .not('referral_code', 'is', null)
+        
+        const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
+        console.log('✅ 지점 직원 수:', branchReferralCodes.length, '명')
+        
+        if (branchReferralCodes.length > 0) {
+          statsQuery = statsQuery.in('referrer_code', branchReferralCodes)
+        } else {
+          // 지점에 referral_code를 가진 직원이 없으면 빈 결과
+          statsQuery = statsQuery.eq('referrer_code', 'NONE')
+        }
+      } else if (determinedViewMode === 'system') {
+        // 시스템관리자: 모든 데이터 (필터 없음)
+        console.log('✅ [시스템관리자] 필터 없음 - 전체 데이터')
+      }
       // 이벤트 필터 적용
       if (selectedEvent) {
         console.log('✅ 이벤트 필터 적용:', selectedEvent)
@@ -143,6 +200,15 @@ export default function AdminEventDashboard({ user, onBack }) {
       const { data: allParticipants, error: statsError } = await statsQuery
 
       if (statsError) throw statsError
+
+      console.log('📊 통계용 데이터 로드:', allParticipants?.length, '명')
+      
+      // 🔍 디버깅: 데이터 샘플 확인
+      if (allParticipants && allParticipants.length > 0) {
+        console.log('🔍 샘플 데이터 3개:', allParticipants.slice(0, 3))
+      } else {
+        console.warn('⚠️ 통계 데이터가 비어있습니다!')
+      }
 
       const totalCount = allParticipants?.length || 0
       const maleCount = allParticipants?.filter(p => p.child_gender === '남').length || 0
@@ -204,6 +270,28 @@ export default function AdminEventDashboard({ user, onBack }) {
         .select('referrer_name, referrer_code')
         .not('referrer_code', 'is', null)
       
+      // 권한별 필터링
+      if (determinedViewMode === 'user' && user?.referral_code) {
+        // 일반 유저: 본인이 추천한 데이터만
+        referrerStatsQuery = referrerStatsQuery.eq('referrer_code', user.referral_code)
+      } else if (determinedViewMode === 'admin' && user?.branch) {
+        // 점장/지점관리자: 본인 지점의 모든 직원이 추천한 데이터
+        const { data: branchUsers } = await supabase
+          .from('users')
+          .select('referral_code')
+          .eq('branch', user.branch)
+          .not('referral_code', 'is', null)
+        
+        const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
+        
+        if (branchReferralCodes.length > 0) {
+          referrerStatsQuery = referrerStatsQuery.in('referrer_code', branchReferralCodes)
+        } else {
+          referrerStatsQuery = referrerStatsQuery.eq('referrer_code', 'NONE')
+        }
+      }
+      // 시스템관리자는 필터 없음
+      
       // 이벤트 필터 적용
       if (selectedEvent) {
         referrerStatsQuery = referrerStatsQuery.eq('event_name', selectedEvent)
@@ -215,6 +303,8 @@ export default function AdminEventDashboard({ user, onBack }) {
         console.error('❌ 추천인 통계 에러:', referrerError)
       }
 
+      // Top 12는 시스템 관리자만 계산
+      if (showTopRankings) {
       // 추천인 코드로 users 정보 가져오기
       const referrerCodes = [...new Set(referrerStats?.map(p => p.referrer_code).filter(Boolean))]
       let referrerUsersData = []
@@ -275,6 +365,11 @@ export default function AdminEventDashboard({ user, onBack }) {
 
       console.log('✅ Top 지점:', topBranchesList)
       setTopBranches(topBranchesList)
+      } else {
+        // 일반 유저는 Top 12 표시 안함
+        setTopReferrers([])
+        setTopBranches([])
+      }
 
       // 참가자 목록 로드
       console.log('👥 참가자 목록 로드 시작...')
@@ -308,6 +403,36 @@ export default function AdminEventDashboard({ user, onBack }) {
         console.log('✅ 이벤트 필터 적용:', selectedEvent)
         query = query.eq('event_name', selectedEvent)
       }
+      
+      // 권한별 필터링
+      if (determinedViewMode === 'user' && user?.referral_code) {
+        // 일반 유저: 본인이 추천한 데이터만
+        console.log('✅ [일반 유저] 필터 적용 - 추천코드:', user.referral_code)
+        query = query.eq('referrer_code', user.referral_code)
+      } else if (determinedViewMode === 'admin' && user?.branch) {
+        // 점장/지점관리자: 본인 지점의 모든 직원이 추천한 데이터
+        console.log('✅ [점장/지점관리자] 필터 적용 - 지점:', user.branch)
+        
+        // 1. 해당 지점의 모든 referral_code 가져오기
+        const { data: branchUsers } = await supabase
+          .from('users')
+          .select('referral_code')
+          .eq('branch', user.branch)
+          .not('referral_code', 'is', null)
+        
+        const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
+        console.log('✅ 지점 직원 수:', branchReferralCodes.length, '명')
+        
+        if (branchReferralCodes.length > 0) {
+          query = query.in('referrer_code', branchReferralCodes)
+        } else {
+          // 지점에 referral_code를 가진 직원이 없으면 빈 결과
+          query = query.eq('referrer_code', 'NONE')
+        }
+      } else if (determinedViewMode === 'system') {
+        // 시스템관리자: 모든 데이터 (필터 없음)
+        console.log('✅ [시스템관리자] 필터 없음 - 전체 데이터')
+      }
 
       // 필터 적용
       if (activeFilters.referrer) {
@@ -333,6 +458,15 @@ export default function AdminEventDashboard({ user, onBack }) {
       }
 
       console.log('✅ 참가자 기본 데이터 로드:', participantsData?.length, '명')
+      
+      // 🔍 디버깅: 어떤 referrer_code들이 있는지 확인
+      if (participantsData && participantsData.length > 0) {
+        const referrerCodesInData = participantsData.map(p => p.referrer_code)
+        console.log('🔍 DB에 있는 referrer_code 목록:', [...new Set(referrerCodesInData)])
+        console.log('🔍 샘플 데이터 3개:', participantsData.slice(0, 3))
+      } else {
+        console.warn('⚠️ 참가자 데이터가 비어있습니다!')
+      }
 
       // 2. 추천인 코드 목록 추출
       const referrerCodes = [...new Set(participantsData?.map(p => p.referrer_code).filter(Boolean))]
@@ -688,9 +822,10 @@ export default function AdminEventDashboard({ user, onBack }) {
           </div>
         </div>
 
-        {/* 추천지점 Top 12 */}
+        {/* Top 매장 - 시스템 관리자만 표시 */}
+        {determinedViewMode === 'system' && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h3 className="text-xl font-bold mb-6" style={{ color: '#249689' }}>🏢 추천지점 Top 12</h3>
+          <h3 className="text-xl font-bold mb-6" style={{ color: '#249689' }}>🏆 추천 매장 Top 12</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {topBranches.map((branch, idx) => (
               <div 
@@ -715,7 +850,7 @@ export default function AdminEventDashboard({ user, onBack }) {
                   {/* 왼쪽: 아이콘 + 정보 */}
                   <div className="flex items-center gap-2 flex-1">
                     <span style={{ fontSize: '20px' }}>
-                      {idx === 0 ? '👑' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏪'}
+                      {idx === 0 ? '🏅' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '🏪'}
                     </span>
                     <div className="flex-1">
                       <p className="font-bold text-sm" style={{ color: '#1f2937' }}>
@@ -739,13 +874,15 @@ export default function AdminEventDashboard({ user, onBack }) {
           {/* 데이터 없을 때 */}
           {topBranches.length === 0 && (
             <div className="text-center py-12 text-gray-500">
-              <p className="text-lg mb-2">🏢</p>
+              <p className="text-lg mb-2">🏪</p>
               <p>지점 데이터가 없습니다</p>
             </div>
           )}
         </div>
+        )}
 
-        {/* Top 추천인 */}
+        {/* Top 추천인 - 매장관리자/시스템관리자 표시 */}
+        {showTopRankings && (
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <h3 className="text-xl font-bold mb-6" style={{ color: '#249689' }}>🏆 추천인 Top 12</h3>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -804,87 +941,134 @@ export default function AdminEventDashboard({ user, onBack }) {
             </div>
           )}
         </div>
+        )}
+
 
         {/* 필터 */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold" style={{ color: '#249689' }}>🔍 검색 필터</h3>
-            <button
-              onClick={handleDownloadExcel}
-              className="px-6 py-2 text-white rounded-lg hover:opacity-90 font-bold"
-              style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
-            >
-              엑셀다운로드({formatNumber(participants.length)}명)
-            </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium mb-1">추천인지점</label>
-              <select
-                value={filters.branch}
-                onChange={(e) => handleFilterChange('branch', e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option value="">전체</option>
-                {branches.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">추천인</label>
-              <select
-                value={filters.referrer}
-                onChange={(e) => handleFilterChange('referrer', e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-              >
-                <option value="">전체</option>
-                {referrers.map(r => (
-                  <option key={r.referrer_code} value={r.referrer_code}>
-                    {r.referrer_name}({r.referrer_code})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">시작일</label>
-              <input
-                type="date"
-                value={filters.startDate}
-                onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">종료일</label>
-              <input
-                type="date"
-                value={filters.endDate}
-                onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-              />
-            </div>
-            <div>
-              <button
-                onClick={handleApplyFilters}
-                className="w-full px-6 py-2 text-white rounded-lg hover:opacity-90 font-bold"
-                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                검색
-              </button>
-            </div>
-            <div>
-              <button
-                onClick={handleResetFilters}
-                className="w-full px-6 py-2 border-2 rounded-lg hover:bg-gray-50 font-bold"
-                style={{ borderColor: '#249689', color: '#249689', borderRadius: '10px', fontSize: '15px' }}
-              >
-                초기화
-              </button>
-            </div>
-          </div>
-        </div>
+          {/* 검색필터 제목 */}
+          <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>🔍 검색 필터</h3>
 
+          {/* 필터 - 1줄 배치 */}
+          {showTopRankings ? (
+            // 매장관리자/시스템관리자 모드: 추천인 + 시작일 + 종료일 + 검색 + 초기화 + 엑셀다운로드
+            <div className="flex items-end gap-4">
+              {/* 좌측: 추천인, 시작일, 종료일 */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">추천인</label>
+                <select
+                  value={filters.referrer}
+                  onChange={(e) => handleFilterChange('referrer', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">전체</option>
+                  {referrers.map(r => (
+                    <option key={r.referrer_code} value={r.referrer_code}>
+                      {r.referrer_name}({r.referrer_code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ width: '160px' }}>
+                <label className="block text-sm font-medium mb-1">시작일</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div style={{ width: '160px' }}>
+                <label className="block text-sm font-medium mb-1">종료일</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              {/* 우측: 검색, 초기화, 엑셀다운로드 버튼 */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleApplyFilters}
+                  className="py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
+                >
+                  <Search size={18} />
+                  검색
+                </button>
+                <button
+                  onClick={handleResetFilters}
+                  className="py-2 border-2 rounded-lg hover:bg-gray-50 font-bold whitespace-nowrap flex items-center justify-center gap-2"
+                  style={{ borderColor: '#249689', color: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
+                >
+                  <RotateCcw size={18} />
+                  초기화
+                </button>
+                <button
+                  onClick={handleDownloadExcel}
+                  className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                  style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
+                >
+                  <Download size={18} />
+                  엑셀다운로드({formatNumber(participants.length)}명)
+                </button>
+              </div>
+            </div>
+          ) : (
+            // 일반업무(내 이벤트관리) 모드: 시작일 + 종료일 + 검색 + 초기화 + 엑셀다운로드
+            <div className="flex items-end gap-4">
+              {/* 좌측: 시작일, 종료일 */}
+              <div style={{ width: '160px' }}>
+                <label className="block text-sm font-medium mb-1">시작일</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div style={{ width: '160px' }}>
+                <label className="block text-sm font-medium mb-1">종료일</label>
+                <input
+                  type="date"
+                  value={filters.endDate}
+                  onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+
+              {/* 우측: 검색, 초기화, 엑셀다운로드 버튼 */}
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={handleApplyFilters}
+                  className="py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
+                >
+                  <Search size={18} />
+                  검색
+                </button>
+                <button
+                  onClick={handleResetFilters}
+                  className="py-2 border-2 rounded-lg hover:bg-gray-50 font-bold whitespace-nowrap flex items-center justify-center gap-2"
+                  style={{ borderColor: '#249689', color: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
+                >
+                  <RotateCcw size={18} />
+                  초기화
+                </button>
+                <button
+                  onClick={handleDownloadExcel}
+                  className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                  style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
+                >
+                  <Download size={18} />
+                  엑셀다운로드({formatNumber(participants.length)}명)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         {/* 참가자 목록 */}
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
@@ -905,7 +1089,9 @@ export default function AdminEventDashboard({ user, onBack }) {
                   <th className="px-3 py-2 text-left">추천인</th>
                   <th className="px-3 py-2 text-left">추천인코드</th>
                   <th className="px-3 py-2 text-left">지점</th>
-                  <th className="px-3 py-2 text-center">삭제</th>
+                  {determinedViewMode === 'system' && (
+                    <th className="px-3 py-2 text-center">삭제</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -919,14 +1105,16 @@ export default function AdminEventDashboard({ user, onBack }) {
                     <td className="px-3 py-3">{p.users?.name || p.referrer_name || '-'}</td>
                     <td className="px-3 py-3">{p.referrer_code || '-'}</td>
                     <td className="px-3 py-3">{p.users?.branch || '-'}</td>
-                    <td className="px-3 py-3 text-center">
-                      <button
-                        onClick={() => handleDeleteParticipant(p.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        🗑️
-                      </button>
-                    </td>
+                    {determinedViewMode === 'system' && (
+                      <td className="px-3 py-3 text-center">
+                        <button
+                          onClick={() => handleDeleteParticipant(p.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

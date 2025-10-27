@@ -64,6 +64,12 @@ export default function SalesManagement({ user, onNavigate }) {
       return false
     }
 
+    // 입금액은 항상 필수 (카드/입금 모두)
+    if (!formData.depositAmount?.trim()) {
+      alert('입금액을 입력해주세요')
+      return false
+    }
+
     // 배송이 필요한 경우 필수 입력 검증
     if (formData.needsShipping) {
       if (!formData.customerName?.trim()) {
@@ -80,14 +86,10 @@ export default function SalesManagement({ user, onNavigate }) {
       }
     }
 
-    // 입금인 경우 입금자명과 입금기관명 필수
+    // 입금인 경우 입금자명 필수
     if (formData.paymentMethod === '입금') {
       if (!formData.depositor?.trim()) {
         alert('입금자명을 입력해주세요')
-        return false
-      }
-      if (!formData.depositAmount?.trim()) {
-        alert('입금액을 입력해주세요')
         return false
       }
     }
@@ -173,11 +175,7 @@ export default function SalesManagement({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-gray-50 p-2">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-3">
-        <p className="text-center mb-2 font-bold" style={{ color: '#249689', fontSize: '15px' }}>
-          LAS Book을 신청합니다.
-        </p>
-        
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg" style={{ padding: '12px', paddingBottom: '24px' }}>
         <div className="flex flex-col items-center justify-center mb-2">
           <div className="flex items-center gap-1.5 mb-1">
             <img 
@@ -370,6 +368,21 @@ export default function SalesManagement({ user, onNavigate }) {
 
                 <div>
                   <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                    입금액 <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="depositAmount"
+                    value={formData.depositAmount}
+                    onChange={handleChange}
+                    placeholder="입금액"
+                    className="w-full px-2 py-1.5 border border-gray-300"
+                    style={{ borderRadius: '8px', fontSize: '15px', textAlign: 'right' }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
                     입금자명 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
                   <input
@@ -381,22 +394,6 @@ export default function SalesManagement({ user, onNavigate }) {
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
                     style={{ borderRadius: '8px', fontSize: '15px' }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                    입금액 {formData.paymentMethod === '입금' && <span style={{ color: '#ef4444' }}>*</span>}
-                  </label>
-                  <input
-                    type="text"
-                    name="depositAmount"
-                    value={formData.depositAmount}
-                    onChange={handleChange}
-                    placeholder="입금액"
-                    disabled={formData.paymentMethod === '카드'}
-                    className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-                    style={{ borderRadius: '8px', fontSize: '15px', textAlign: 'right' }}
                   />
                 </div>
               </div>
@@ -463,7 +460,7 @@ export default function SalesManagement({ user, onNavigate }) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2" style={{ marginTop: '20px', marginBottom: '24px' }}>
             <button
               onClick={handleSubmit}
               disabled={loading}

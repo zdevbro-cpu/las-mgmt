@@ -33,13 +33,15 @@ import AdminEventManager from './components/Admin/AdminEventManager'
 
 function AppContent() {
   const [user, setUser] = useState(null)
+  const [previousPath, setPreviousPath] = useState('/dashboard') // 🔥 이전 경로 추적
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
     console.log('Current User:', user)
     console.log('Current Path:', location.pathname)
-  }, [user, location])
+    console.log('Previous Path:', previousPath)
+  }, [user, location, previousPath])
 
   const handleAutoLogin = (userData) => {
     console.log('Auto login:', userData)
@@ -64,7 +66,7 @@ function AppContent() {
     }
   }
 
-  // onNavigate 함수 - 기존 컴포넌트와 호환성 유지
+  // 🔥 onNavigate 함수 - 이전 경로 추적 추가
   const handleNavigate = (page) => {
     console.log('Navigate to:', page)
     
@@ -80,7 +82,7 @@ function AppContent() {
       'AdminCustomers': '/admin/customers',
       'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
-      'AdminEventDashboard': '/admin/event',
+      'AdminEventDashboard': '/admin/event', // 🔥 이벤트 대시보드 통합
       'AdminEventManager': '/admin/event-manager',
       'MyInfo': '/myinfo',
       'MyQRCode': '/myqrcode',
@@ -102,6 +104,12 @@ function AppContent() {
       console.error('⌛ 알 수 없는 페이지:', page)
       navigate('/')
       return
+    }
+    
+    // 🔥 이전 경로 저장 (이벤트 대시보드로 이동하는 경우에만)
+    if (page === 'AdminEventDashboard' || page === 'adminEvent') {
+      setPreviousPath(location.pathname)
+      console.log('✅ 이전 경로 저장:', location.pathname)
     }
     
     console.log('✅ 이동:', page, '→', targetPath)
@@ -254,20 +262,33 @@ function AppContent() {
         } 
       />
       
-      {/* ⭐ 이벤트 대시보드 - 지점관리자/시스템관리자 전용 */}
+      {/* 🔥 이벤트 대시보드 - 모든 인증된 사용자 접근 가능 (조건부 데이터 표시) */}
       <Route 
         path="/admin/event" 
         element={
-          user && canAccessEventDashboard(user) ? (
+          user ? (
             <AdminEventDashboard 
               user={user} 
               onNavigate={handleNavigate}
               onLogout={handleLogout}
+              from={previousPath} // 🔥 이전 경로 전달
               onBack={() => {
-                if (user.user_type === '시스템관리자') {
+                console.log('🔙 AdminEventDashboard 뒤로가기')
+                console.log('   이전 경로:', previousPath)
+                
+                // 🔥 이전 경로가 저장되어 있으면 그곳으로, 없으면 기본값
+                if (previousPath && previousPath !== '/admin/event') {
+                  console.log('   → 저장된 경로로 이동:', previousPath)
+                  navigate(previousPath)
+                } else if (user.user_type === '시스템관리자') {
+                  console.log('   → 시스템관리자: /admin/event-menu')
                   navigate('/admin/event-menu')
-                } else {
+                } else if (canAccessManagement(user)) {
+                  console.log('   → 매장관리자: /admin')
                   navigate('/admin')
+                } else {
+                  console.log('   → 일반 직원: /dashboard')
+                  navigate('/dashboard')
                 }
               }}
             />
