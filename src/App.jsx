@@ -29,7 +29,8 @@ import EventLandingPage from './components/event/EventLandingPage'
 import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
 import AdminEventManager from './components/Admin/AdminEventManager'
-import ScrollToTop from './components/ScrollToTop'
+import ScrollToTop from '/components/ScrollToTop.jsx'
+
 
 function AppContent() {
   const [user, setUser] = useState(null)
