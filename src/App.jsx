@@ -28,8 +28,9 @@ import MyQRCode from './components/MyQRCode'
 import EventLandingPage from './components/event/EventLandingPage'
 import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
+import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
-import ScrollToTop from '/components/ScrollToTop.jsx'
+
 
 
 function AppContent() {
