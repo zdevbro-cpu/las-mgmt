@@ -30,6 +30,9 @@ export default function EventLandingPage() {
   
   // MP4 영상 파일 경로 (public 폴더 기준)
   const sampleVideoUrl = "/videos/mathletter.mp4"
+  
+  // 테스트용 공개 영상 (파일이 없을 때 임시로 사용 가능)
+  // const sampleVideoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
   // 🔒 무조건 추천인 링크 필수 - URL 파라미터 검증
   useEffect(() => {
@@ -74,16 +77,18 @@ export default function EventLandingPage() {
     validateAccess()
   }, [])
 
-  // 영상 프리로드
+  // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
   useEffect(() => {
     if (accessDenied) return
     
+    // 1. Link preload 태그 추가 (더 높은 우선순위)
     const preloadLink = document.createElement('link')
     preloadLink.rel = 'preload'
     preloadLink.as = 'video'
     preloadLink.href = sampleVideoUrl
     document.head.appendChild(preloadLink)
     
+    // 2. Video 태그로 프리로드
     const preloadVideo = document.createElement('video')
     preloadVideo.src = sampleVideoUrl
     preloadVideo.preload = 'auto'
@@ -93,21 +98,24 @@ export default function EventLandingPage() {
     preloadVideo.style.pointerEvents = 'none'
     document.body.appendChild(preloadVideo)
     
+    // 명시적으로 로드 시작
     preloadVideo.load()
     
+    // 로딩 상태 확인 (디버깅용)
     preloadVideo.addEventListener('loadeddata', () => {
       console.log('✅ 영상 프리로드 완료')
     })
     
     preloadVideo.addEventListener('error', (e) => {
       console.error('❌ 영상 로드 실패:', e)
+      console.error('파일 경로:', sampleVideoUrl)
     })
     
     return () => {
       document.head.removeChild(preloadLink)
       document.body.removeChild(preloadVideo)
     }
-  }, [accessDenied])
+  }, [])
 
   const handleReferrerCodeChange = (e) => {
     const value = e.target.value.toUpperCase()
@@ -230,6 +238,7 @@ export default function EventLandingPage() {
       return false
     }
 
+    // 추천인 코드 검증
     if (formData.referrerCode.trim()) {
       const validation = validateReferralCodeFormat(formData.referrerCode)
       if (!validation.isValid) {
@@ -243,7 +252,7 @@ export default function EventLandingPage() {
 
   const verifyReferralCodeExists = async (code) => {
     if (!code || code.trim() === '') {
-      return { exists: false, referrerId: null }
+      return { exists: true, referrerId: null }
     }
 
     try {
@@ -251,82 +260,111 @@ export default function EventLandingPage() {
         .from('users')
         .select('id, name, branch, referral_code')
         .eq('referral_code', code.trim().toUpperCase())
-        .single()
+        .maybeSingle()
 
-      if (error || !data) {
-        return { exists: false, referrerId: null, referrerName: null }
+      if (error) {
+        console.error('추천인 코드 확인 오류:', error)
+        return { exists: false, referrerId: null, error: '추천인 코드 확인 중 오류가 발생했습니다' }
       }
 
-      return { 
-        exists: true, 
-        referrerId: data.id,
-        referrerName: data.name,
-        referrerBranch: data.branch
+      if (!data) {
+        return { exists: false, referrerId: null, error: '존재하지 않는 고유번호입니다' }
       }
-    } catch (error) {
-      console.error('추천인 코드 검증 오류:', error)
-      return { exists: false, referrerId: null, referrerName: null }
+
+      console.log('✅ 고유번호 확인:', data.referral_code, '-', data.name, '(', data.branch, ')')
+      return { exists: true, referrerId: data.id, referrerName: data.name, referrerBranch: data.branch }
+    } catch (err) {
+      console.error('추천인 코드 확인 예외:', err)
+      return { exists: false, referrerId: null, error: '추천인 코드 확인 중 오류가 발생했습니다' }
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
+    
     if (!validateForm()) return
 
     setLoading(true)
 
     try {
-      let referrerId = null
+      const phoneOnly = formData.phone.replace(/[^\d]/g, '')
+      
+      const { data: existing } = await supabase
+        .from('event_participants')
+        .select('id')
+        .eq('phone', phoneOnly)
+        .maybeSingle()
+
+      let referrerCode = null
       if (formData.referrerCode.trim()) {
         const verification = await verifyReferralCodeExists(formData.referrerCode)
         if (!verification.exists) {
-          alert('존재하지 않는 추천인 코드입니다.')
+          alert(verification.error || '존재하지 않는 고유번호입니다')
           setLoading(false)
           return
         }
-        referrerId = verification.referrerId
+        referrerCode = formData.referrerCode.trim().toUpperCase()
       }
 
-      const { data, error } = await supabase
-        .from('event_applications')
-        .insert([{
-          parent_name: formData.parentName,
-          phone: formData.phone.replace(/[^\d]/g, ''),
-          child_gender: formData.childGender,
-          child_age: parseInt(formData.childAge),
-          inquiry: formData.inquiry || null,
-          referrer_code: formData.referrerCode.trim() || null,
-          referrer_id: referrerId,
-          privacy_agreed: formData.privacyAgreed,
-          marketing_agreed: formData.marketingAgreed
-        }])
-        .select()
+      const participantData = {
+        parent_name: formData.parentName.trim(),
+        phone: phoneOnly,
+        child_gender: formData.childGender,
+        child_age: parseInt(formData.childAge),
+        inquiry: formData.inquiry.trim() || null,
+        referrer_code: referrerCode,
+        privacy_agreed: formData.privacyAgreed,
+        marketing_agreed: formData.marketingAgreed,
+        created_at: new Date().toISOString()
+      }
 
-      if (error) throw error
+      if (existing) {
+        const { error: updateError } = await supabase
+          .from('event_participants')
+          .update(participantData)
+          .eq('id', existing.id)
+
+        if (updateError) throw updateError
+      } else {
+        const { error: insertError } = await supabase
+          .from('event_participants')
+          .insert([participantData])
+
+        if (insertError) throw insertError
+      }
 
       setSubmitted(true)
-      alert('신청이 완료되었습니다!')
-      
-      setFormData({
-        parentName: '',
-        phone: '',
-        childGender: '',
-        childAge: '',
-        inquiry: '',
-        referrerCode: isFromReferralLink ? formData.referrerCode : '',
-        privacyAgreed: false,
-        marketingAgreed: false
-      })
-
-    } catch (error) {
-      console.error('신청 오류:', error)
+    } catch (err) {
+      console.error('신청 오류:', err)
       alert('신청 중 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleClose = () => {
+    window.location.href = '/'
+  }
+
+  const handleShareAfterSubmit = () => {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?ref=${formData.referrerCode || 'SHARE'}`
+    
+    if (navigator.share) {
+      navigator.share({
+        title: '수학편지 신청',
+        text: '아이들의 인생을 수학으로 디자인하자!',
+        url: shareUrl
+      }).catch(err => console.log('공유 취소:', err))
+    } else {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        alert('링크가 복사되었습니다!')
+      }).catch(() => {
+        prompt('링크를 복사하세요:', shareUrl)
+      })
+    }
+  }
+
+  // 제출 완료 화면
   // 🔒 검증 중 화면
   if (isValidating) {
     return (
@@ -388,141 +426,128 @@ export default function EventLandingPage() {
     )
   }
 
-  // ✅ 정상 접근 - 신청 완료 화면
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#f0fffe' }}>
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
           <div className="mb-6">
-            <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center rounded-full" style={{ backgroundColor: '#d1fae5' }}>
-              <svg className="w-12 h-12" style={{ color: '#249689' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="font-bold mb-3" style={{ color: '#249689', fontSize: '24px' }}>
-              신청 완료!
+            <h2 className="font-bold mb-2" style={{ color: '#249689', fontSize: '24px' }}>
+              신청이 완료되었습니다!
             </h2>
-            <p className="text-gray-600" style={{ fontSize: '15px' }}>
-              수학편지 이벤트 신청이 완료되었습니다.
+            <p style={{ color: '#666', fontSize: '15px' }}>
+              소중한 참여 감사드립니다.<br/>
+              아이들의 인생을 수학으로 '디자인'하겠습니다!
             </p>
           </div>
-          
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-700 mb-3">
-              담당자가 곧 연락드릴 예정입니다.
-            </p>
-            {referrerName && (
-              <p className="text-xs text-gray-600">
-                추천인: <span className="font-bold">{referrerName}</span>
-              </p>
-            )}
+          <div className="space-y-3">
+            <button
+              onClick={handleShareAfterSubmit}
+              className="w-full py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: '#249689', fontSize: '16px' }}
+            >
+              친구에게 공유하기
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-full py-3 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+              style={{ color: '#000000', border: '2px solid #d1d5db', backgroundColor: 'white', fontSize: '16px' }}
+            >
+              닫기
+            </button>
           </div>
-
-          <button
-            onClick={() => {
-              setSubmitted(false)
-            }}
-            className="w-full py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: '#249689' }}
-          >
-            추가 신청하기
-          </button>
         </div>
       </div>
     )
   }
 
-  // ✅ 정상 접근 - 신청 폼
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#f0fffe' }}>
-      <div className="bg-white rounded-2xl shadow-lg p-6 max-w-md w-full">
+    <div className="min-h-screen bg-gray-50 p-2">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-3">
         
         {/* 헤더 */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-3">
-            <img 
-              src="/las-logo.png" 
-              alt="LAS Logo" 
-              className="h-16"
-              onError={(e) => {
-                e.target.style.display = 'none'
-              }}
-            />
+        <div className="mb-3">
+          <div className="bg-red-700 text-white text-center py-6 rounded-lg mb-1.5">
+            <h1 className="font-bold mb-1.5" style={{ fontSize: '20px' }}>
+              우리나라를 살리는
+            </h1>
+            <h2 className="font-bold" style={{ fontSize: '24px' }}>
+              수학 대중화 운동
+            </h2>
           </div>
-          <p className="text-sm mb-3" style={{ color: '#249689' }}>
-            LAS 매장관리 시스템에 오신것을 환영합니다.
-          </p>
-          <h1 className="font-bold mb-2" style={{ color: '#249689', fontSize: '32px' }}>
-            수학편지 신청
-          </h1>
-          
-          {referrerName && (
-            <div className="mt-3 p-3 rounded-lg" style={{ backgroundColor: '#e0f2f1' }}>
-              <p className="text-sm" style={{ color: '#249689' }}>
-                <span className="font-bold">{referrerName}</span>님의 추천으로 신청하시는군요! 🎉
-              </p>
-            </div>
-          )}
+          <div className="text-center py-1">
+            <p className="font-bold !mt-0" style={{ color: '#249689', fontSize: '18px' }}>
+              아이들의 인생을 수학으로 '디자인'하자!
+            </p>
+          </div>
         </div>
 
-        {/* 샘플 영상 섹션 */}
-        <div className="mb-6">
+        {/* 신청 폼 제목 */}
+        <div className="text-center mt-0 mb-2" style={{ marginTop: '-4px' }}>
+          <h2 className="font-bold" style={{ color: '#dc2626', fontSize: '28px', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: '900' }}>
+            수학편지 신청하기
+          </h2>
+          <h3 className="font-bold" style={{ color: '#249689', fontSize: '20px', fontFamily: "'Noto Sans KR', sans-serif", fontWeight: '900' }}>
+            (수학편지는 매일 무료로 보내드려요!!)
+          </h3>
+        </div>
+
+        {/* 샘플 영상 버튼 */}
+        <div className="text-center mb-4">
           <button
             onClick={() => setShowVideoModal(true)}
-            className="w-full relative overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow"
-            style={{ aspectRatio: '16/9' }}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold transition-all hover:opacity-90 hover:scale-105"
+            style={{ 
+              backgroundColor: '#3b82f6', 
+              color: 'white',
+              fontSize: '17px',
+              boxShadow: '0 4px 6px rgba(59, 130, 246, 0.3)'
+            }}
           >
-            <img 
-              src="/event-thumbnail.jpg" 
-              alt="수학편지 소개 영상" 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.target.style.display = 'none'
-                e.target.parentElement.style.backgroundColor = '#249689'
-              }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-              <div className="text-center text-white">
-                <div className="w-16 h-16 mx-auto mb-2 bg-white bg-opacity-80 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8" style={{ color: '#249689' }} fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                  </svg>
-                </div>
-                <p className="text-sm font-bold">소개 영상 보기</p>
-              </div>
-            </div>
+            {/* 플레이 아이콘 SVG */}
+            <svg 
+              width="26" 
+              height="26" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+              style={{ flexShrink: 0 }}
+            >
+              <circle cx="12" cy="12" r="10" fill="white" fillOpacity="0.2"/>
+              <path 
+                d="M10 8L16 12L10 16V8Z" 
+                fill="white"
+              />
+            </svg>
+            <span style={{ fontSize: '17px' }}>수학편지 샘플영상</span>
           </button>
         </div>
 
-        {/* 폼 */}
-        <div className="space-y-4">
+        <div className="space-y-2" style={{ marginTop: '16px' }}>
           {/* 학부모 이름 */}
           <div>
-            <label className="flex items-center gap-1 mb-2 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-              <svg className="w-5 h-5" style={{ color: '#249689' }} fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
-              학부모 이름 <span style={{ color: '#ef4444' }}>*</span>
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              학부모이름 *
             </label>
             <input
               type="text"
               name="parentName"
               value={formData.parentName}
               onChange={handleChange}
-              placeholder="이름을 입력해주세요"
+              placeholder="학부모님 이름을 입력해주세요"
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', fontSize: '15px' }}
-              required
             />
           </div>
 
           {/* 휴대전화 */}
           <div>
-            <label className="flex items-center gap-1 mb-2 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-              <svg className="w-5 h-5" style={{ color: '#249689' }} fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-              </svg>
-              휴대전화 <span style={{ color: '#ef4444' }}>*</span>
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              휴대전화 *
             </label>
             <input
               type="tel"
@@ -530,94 +555,114 @@ export default function EventLandingPage() {
               value={formData.phone}
               onChange={handlePhoneChange}
               placeholder="010-0000-0000"
-              maxLength="13"
+              maxLength={13}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', fontSize: '15px' }}
-              required
             />
           </div>
 
-          {/* 자녀 성별 & 연령 */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block mb-2 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-                자녀 성별 <span style={{ color: '#ef4444' }}>*</span>
+          {/* 자녀 성별 */}
+          <div>
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              자녀성별 *
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer flex-1">
+                <input
+                  type="radio"
+                  name="childGender"
+                  value="남"
+                  checked={formData.childGender === '남'}
+                  onChange={handleChange}
+                  className="w-5 h-5"
+                />
+                <span style={{ fontSize: '15px' }}>남</span>
               </label>
-              <select
-                name="childGender"
-                value={formData.childGender}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-                required
-              >
-                <option value="">선택</option>
-                <option value="male">남아</option>
-                <option value="female">여아</option>
-              </select>
+              <label className="flex items-center gap-2 cursor-pointer flex-1">
+                <input
+                  type="radio"
+                  name="childGender"
+                  value="여"
+                  checked={formData.childGender === '여'}
+                  onChange={handleChange}
+                  className="w-5 h-5"
+                />
+                <span style={{ fontSize: '15px' }}>여</span>
+              </label>
             </div>
+          </div>
 
-            <div>
-              <label className="block mb-2 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-                자녀 연령 <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <input
-                type="number"
-                name="childAge"
-                value={formData.childAge}
-                onChange={handleChange}
-                placeholder="나이"
-                min="1"
-                max="20"
-                className="w-full px-4 py-2 border border-gray-300"
-                style={{ borderRadius: '10px', fontSize: '15px' }}
-                required
-              />
-            </div>
+          {/* 자녀 연령 */}
+          <div>
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              자녀나이 *
+            </label>
+            <input
+              type="number"
+              name="childAge"
+              value={formData.childAge}
+              onChange={handleChange}
+              placeholder="자녀나이를 입력해주세요"
+              min="1"
+              max="20"
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', fontSize: '15px' }}
+            />
           </div>
 
           {/* 문의사항 */}
           <div>
-            <label className="block mb-2 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-              문의사항 (선택)
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              문의사항
             </label>
             <textarea
               name="inquiry"
               value={formData.inquiry}
               onChange={handleChange}
-              placeholder="궁금하신 점을 자유롭게 작성해주세요"
-              rows="3"
-              className="w-full px-4 py-2 border border-gray-300 resize-none"
+              placeholder="궁금한 사항이 있으시면 입력해주세요"
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', fontSize: '15px' }}
             />
           </div>
 
-          {/* 추천인 코드 (읽기 전용) */}
+          {/* 추천인 */}
           <div>
-            <label className="flex items-center justify-between mb-2">
-              <span className="flex items-center gap-1 font-semibold" style={{ color: '#000000', fontSize: '15px' }}>
-                <svg className="w-5 h-5" style={{ color: '#249689' }} fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                </svg>
-                추천인 코드
-              </span>
-              <button
-                type="button"
-                onClick={handleGenerateQR}
-                className="text-xs px-3 py-1 rounded-full text-white hover:opacity-90 transition-opacity"
-                style={{ backgroundColor: '#249689' }}
-              >
-                내 QR/링크 생성
-              </button>
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              추천인(자동입력)
             </label>
-            <input
-              type="text"
-              name="referrerCode"
-              value={formData.referrerCode}
-              readOnly
-              className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
-              style={{ borderRadius: '10px', fontSize: '15px' }}
-            />
+            {isFromReferralLink ? (
+              <>
+                <input
+                  type="text"
+                  name="referrerCode"
+                  value={referrerName ? `${referrerName}(${formData.referrerCode})` : formData.referrerCode}
+                  readOnly
+                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                <p className="mt-1 text-xs" style={{ color: '#249689' }}>
+                  ✓ 추천인 코드가 자동으로 입력되었습니다
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  name="referrerCode"
+                  value={formData.referrerCode}
+                  readOnly
+                  // placeholder="추천인 코드를 입력해주세요 (예: LAS1000)"
+                  className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                  style={{ borderRadius: '10px', fontSize: '15px' }}
+                />
+                {referralCodeError && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {referralCodeError}
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* 개인정보 동의 */}
@@ -693,6 +738,7 @@ export default function EventLandingPage() {
               추천 링크가 생성되었습니다!
             </h2>
             
+            {/* QR 코드 */}
             <div className="flex justify-center mb-4">
               <img 
                 src={qrCodeUrl} 
@@ -701,6 +747,7 @@ export default function EventLandingPage() {
               />
             </div>
 
+            {/* 링크 */}
             <div className="bg-gray-50 p-4 rounded-lg mb-4">
               <p className="text-sm text-gray-600 mb-2">생성된 링크:</p>
               <div className="bg-white p-3 rounded border border-gray-300 break-all text-sm">
@@ -708,6 +755,7 @@ export default function EventLandingPage() {
               </div>
             </div>
 
+            {/* 버튼 */}
             <div className="flex flex-col gap-2">
               <button
                 onClick={handleDownloadQR}
@@ -794,6 +842,7 @@ export default function EventLandingPage() {
             onClick={(e) => e.stopPropagation()}
             style={{ aspectRatio: '16/9' }}
           >
+            {/* 닫기 버튼 */}
             <button
               onClick={() => setShowVideoModal(false)}
               className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors z-10"
@@ -802,6 +851,7 @@ export default function EventLandingPage() {
               ✕
             </button>
             
+            {/* HTML5 Video 태그 */}
             <video
               className="w-full h-full rounded-lg"
               controls
@@ -810,8 +860,9 @@ export default function EventLandingPage() {
               controlsList="nodownload"
               onError={(e) => {
                 console.error('비디오 재생 오류:', e)
-                alert('영상을 불러올 수 없습니다.')
+                alert('영상을 불러올 수 없습니다. 파일 경로를 확인해주세요.\n경로: ' + sampleVideoUrl)
               }}
+              onLoadedData={() => console.log('영상 로드 완료')}
               style={{ 
                 border: 'none',
                 backgroundColor: '#000'
