@@ -31,7 +31,8 @@ export default function SalesManagement({ user, onNavigate }) {
   // 금액 포맷팅 함수
   const formatCurrency = (value) => {
     const numbers = value.replace(/[^\d]/g, '')
-    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    if (!numbers) return ''
+    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원'
   }
 
   const handleChange = (e) => {
@@ -395,7 +396,7 @@ export default function SalesManagement({ user, onNavigate }) {
                     placeholder="입금액"
                     disabled={formData.paymentMethod === '카드'}
                     className="w-full px-2 py-1.5 border border-gray-300 disabled:bg-gray-100 disabled:text-gray-400"
-                    style={{ borderRadius: '8px', fontSize: '15px' }}
+                    style={{ borderRadius: '8px', fontSize: '15px', textAlign: 'right' }}
                   />
                 </div>
               </div>
