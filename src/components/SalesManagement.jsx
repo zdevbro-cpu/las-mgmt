@@ -125,7 +125,7 @@ export default function SalesManagement({ user, onNavigate }) {
         payment_method: formData.paymentMethod || null,
         quantity: parseInt(formData.quantity),
         depositor: formData.depositor?.trim() || null,
-        deposit_amount: formData.depositAmount?.replace(/,/g, '') || null,
+        deposit_amount: formData.depositAmount ? parseInt(formData.depositAmount.replace(/[^\d]/g, '')) : null,
         order_details: formData.orderDetails?.trim() || null,
         age: formData.age ? parseInt(formData.age) : null,
         needs_shipping: formData.needsShipping,
