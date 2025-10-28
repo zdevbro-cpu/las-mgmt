@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // viewMode가 명시되지 않은 경우 from 경로를 보고 자동 결정
@@ -57,6 +57,10 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   const [branches, setBranches] = useState([])
   // 추천인 목록
   const [referrers, setReferrers] = useState([])
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(30)
 
   useEffect(() => {
     loadEvents()
@@ -241,7 +245,8 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       allParticipants?.forEach(p => {
         if (p.child_age) {
           const age = parseInt(p.child_age)
-          if (age >= 3 && age <= 7) {
+          // 연령 제한 제거 - 모든 연령 포함
+          if (!isNaN(age) && age > 0) {
             const ageKey = `${age}세`
             if (!ageGroups[ageKey]) {
               ageGroups[ageKey] = { age: age, male: 0, female: 0, total: 0 }
@@ -517,6 +522,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   }
 
   const handleApplyFilters = () => {
+    setCurrentPage(1)
     loadParticipants()
   }
 
@@ -529,6 +535,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     }
     setFilters(emptyFilters)
     // 빈 필터를 직접 전달하여 즉시 검색
+    setCurrentPage(1)
     loadParticipants(emptyFilters)
   }
 
@@ -604,6 +611,49 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     document.body.removeChild(link)
   }
 
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(participants.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentParticipants = participants.slice(startIndex, endIndex)
+
+  // 페이지 번호 배열 생성 (최대 10개 표시)
+  const getPageNumbers = () => {
+    const maxPages = 10
+    const pages = []
+    
+    if (totalPages <= maxPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      let start = Math.max(1, currentPage - 4)
+      let end = Math.min(totalPages, start + maxPages - 1)
+      
+      if (end - start < maxPages - 1) {
+        start = Math.max(1, end - maxPages + 1)
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+    }
+    
+    return pages
+  }
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // 페이지당 항목 수 변경 핸들러
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1)
+  }
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1073,14 +1123,30 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold" style={{ color: '#249689' }}>👥 참가자 목록</h3>
-            <div className="text-lg font-bold" style={{ color: '#249689' }}>
-              검색결과: {formatNumber(participants.length)}명
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">페이지당</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-sm font-medium"
+                  style={{ borderColor: '#249689' }}
+                >
+                  <option value="30">30개</option>
+                  <option value="50">50개</option>
+                  <option value="100">100개</option>
+                </select>
+              </div>
+              <div className="text-lg font-bold" style={{ color: '#249689' }}>
+                검색결과: {formatNumber(participants.length)}명
+              </div>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b-2" style={{ borderColor: '#249689' }}>
+                  <th className="px-3 py-2 text-left">No.</th>
                   <th className="px-3 py-2 text-left">신청일시</th>
                   <th className="px-3 py-2 text-left">학부모명</th>
                   <th className="px-3 py-2 text-left">연락처</th>
@@ -1095,8 +1161,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 </tr>
               </thead>
               <tbody>
-                {participants.map((p) => (
+                {currentParticipants.map((p, index) => (
                   <tr key={p.id} className="border-b hover:bg-gray-50">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-600">{startIndex + index + 1}</td>
                     <td className="px-3 py-3 text-sm">{new Date(p.created_at).toLocaleString('ko-KR')}</td>
                     <td className="px-3 py-3">{p.parent_name}</td>
                     <td className="px-3 py-3">{formatPhone(p.phone)}</td>
@@ -1123,6 +1190,88 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           {participants.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               참가자가 없습니다
+            </div>
+          )}
+
+          {/* 페이지네이션 */}
+          {participants.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              {/* 맨 처음 페이지 */}
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronsLeft size={20} />
+              </button>
+
+              {/* 이전 페이지 */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              {/* 페이지 번호 */}
+              {getPageNumbers().map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`min-w-[40px] px-3 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === page
+                      ? 'text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={
+                    currentPage === page
+                      ? { backgroundColor: '#249689' }
+                      : {}
+                  }
+                >
+                  {page}
+                </button>
+              ))}
+
+              {/* 다음 페이지 */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+
+              {/* 맨 마지막 페이지 */}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronsRight size={20} />
+              </button>
+
+              {/* 페이지 정보 */}
+              <span className="ml-4 text-sm text-gray-600">
+                {currentPage} / {totalPages} 페이지
+              </span>
             </div>
           )}
         </div>

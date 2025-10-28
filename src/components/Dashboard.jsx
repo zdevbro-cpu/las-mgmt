@@ -1,17 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User, BarChart3 } from 'lucide-react'
-import { isMonitoringAgent, isContractWorker } from '../constants/roles'
+import { isMonitoringAgent, isContractWorker, isOwner, canAccessManagement } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   // 모니터링요원 또는 계약근무 여부 확인
   const isMonitoring = isMonitoringAgent(user)
   const isContract = isContractWorker(user)
+  const isOwnerUser = isOwner(user)
 
   // 제한된 메뉴만 표시해야 하는 사용자
   const hasLimitedAccess = isMonitoring
 
   // 계약근무는 근무일지+판매관리+내정보만 가능
   const isContractUser = isContract
+
+  // 매장관리 접근 권한 체크 함수
+  const handleAdminDashboardClick = () => {
+    if (!canAccessManagement(user)) {
+      alert('❌ 접근 권한이 없습니다.\n\n매장관리는 점장 또는 지점관리자만 접근 가능합니다.')
+      return
+    }
+    onNavigate('AdminDashboard')
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -30,8 +40,8 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </h1>
           </div>
 
-          {/* 매장관리 배너 - 모니터링요원과 계약근무는 숨김 */}
-          {!hasLimitedAccess && !isContractUser && (
+          {/* 매장관리 배너 - 점장/지점관리자만 표시 */}
+          {canAccessManagement(user) && (
             <div className="mb-6">
               <div className="p-4 rounded-lg border-2" style={{ backgroundColor: '#f0f9ff', borderColor: '#0284c7' }}>
                 <div className="flex items-center justify-between gap-4">
@@ -47,7 +57,7 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                     </div>
                   </div>
                   <button
-                    onClick={() => onNavigate('AdminDashboard')}
+                    onClick={handleAdminDashboardClick}
                     className="px-4 py-2 bg-white border-2 rounded-lg hover:bg-gray-50 font-bold transition-colors text-sm whitespace-nowrap"
                     style={{ borderColor: '#0284c7', color: '#075985', borderRadius: '10px' }}
                   >
