@@ -240,19 +240,17 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         female: femaleCount
       })
 
-      // 연령 분포 계산 (3세~20세)
+      // 연령 분포 계산
       const ageGroups = {}
-      // 3세~20세 초기화
-      for (let age = 3; age <= 20; age++) {
-        ageGroups[`${age}세`] = { age: age, male: 0, female: 0, total: 0 }
-      }
-      
-      // 데이터 채우기
       allParticipants?.forEach(p => {
         if (p.child_age) {
           const age = parseInt(p.child_age)
-          if (!isNaN(age) && age >= 3 && age <= 20) {
+          // 연령 제한 제거 - 모든 연령 포함
+          if (!isNaN(age) && age > 0) {
             const ageKey = `${age}세`
+            if (!ageGroups[ageKey]) {
+              ageGroups[ageKey] = { age: age, male: 0, female: 0, total: 0 }
+            }
             ageGroups[ageKey].total++
             if (p.child_gender === '남') {
               ageGroups[ageKey].male++
@@ -442,11 +440,10 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       }
 
       // 필터 적용
-      // 추천인 필터는 더 이상 사용하지 않음 (지점 필터로 대체)
-      // if (activeFilters.referrer) {
-      //   console.log('✅ 추천인 필터 적용:', activeFilters.referrer)
-      //   query = query.eq('referrer_code', activeFilters.referrer)
-      // }
+      if (activeFilters.referrer) {
+        console.log('✅ 추천인 필터 적용:', activeFilters.referrer)
+        query = query.eq('referrer_code', activeFilters.referrer)
+      }
       if (activeFilters.startDate) {
         console.log('✅ 시작일 필터 적용:', activeFilters.startDate)
         // 시작일은 해당 날짜의 00:00:00부터
@@ -766,70 +763,45 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         </div>
 
         {/* 차트 영역 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* 연령 분포 차트 - 2/3 폭 */}
-          <div className="bg-white rounded-lg shadow-lg p-6 md:col-span-2">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>📊 연령 분포 (3세~20세)</h3>
-            <div className="grid grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* 연령 분포 차트 */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>📊 연령 분포</h3>
+            <div className="space-y-4">
               {ageDistribution.map((age, idx) => (
-                <div 
-                  key={idx} 
-                  className="bg-white border-2 border-gray-200 rounded-lg p-3 hover:border-teal-500 transition-all"
-                >
-                  {/* 상단: 연령과 총 인원 */}
+                <div key={idx}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-bold text-gray-700">{age.name}</span>
-                    <span className="text-xl font-bold" style={{ color: '#249689' }}>
-                      {age.total}
+                    <span className="font-semibold">{age.name}</span>
+                    <span className="text-sm text-gray-600">
+                      남 {age.male}명 / 여 {age.female}명 (총 {age.total}명)
                     </span>
                   </div>
-                  
-                  {/* 중간: 수평 스택 바 */}
-                  {age.total > 0 ? (
-                    <>
-                      <div className="flex rounded-md overflow-hidden h-5 mb-2">
-                        {age.male > 0 && (
-                          <div 
-                            className="bg-sky-400 flex items-center justify-center text-white text-xs font-bold transition-all duration-300"
-                            style={{ width: `${(age.male / age.total) * 100}%` }}
-                            title={`남학생 ${age.male}명`}
-                          >
-                            {age.male > 0 && age.male}
-                          </div>
-                        )}
-                        {age.female > 0 && (
-                          <div 
-                            className="bg-pink-400 flex items-center justify-center text-white text-xs font-bold transition-all duration-300"
-                            style={{ width: `${(age.female / age.total) * 100}%` }}
-                            title={`여학생 ${age.female}명`}
-                          >
-                            {age.female > 0 && age.female}
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* 하단: 라벨 */}
-                      <div className="flex justify-between text-xs text-gray-600">
-                        <span>👦 남학생</span>
-                        <span>👧 여학생</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-xs text-gray-400 text-center py-3">데이터 없음</div>
-                  )}
+                  <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden flex">
+                    <div 
+                      className="bg-sky-500 flex items-center justify-center text-white text-xs font-bold"
+                      style={{ width: `${(age.male / age.total) * 100}%` }}
+                    >
+                      {age.male > 0 && `${age.male}`}
+                    </div>
+                    <div 
+                      className="bg-pink-500 flex items-center justify-center text-white text-xs font-bold"
+                      style={{ width: `${(age.female / age.total) * 100}%` }}
+                    >
+                      {age.female > 0 && `${age.female}`}
+                    </div>
+                  </div>
                 </div>
               ))}
-              
               {ageDistribution.length === 0 && (
-                <div className="col-span-6 text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-gray-500">
                   <p>연령 데이터가 없습니다</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* 성별 비율 파이차트 - 1/3 폭 */}
-          <div className="bg-white rounded-lg shadow-lg p-6 md:col-span-1">
+          {/* 성별 비율 파이차트 */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>🎯 성별 비율</h3>
             <div className="flex items-center justify-center">
               <div className="relative w-64 h-64">
@@ -1029,20 +1001,20 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
           {/* 필터 - 1줄 배치 */}
           {showTopRankings ? (
-            // 매장관리자/시스템관리자 모드: 지점 + 시작일 + 종료일 + 검색 + 초기화 + 엑셀다운로드
+            // 매장관리자/시스템관리자 모드: 추천인 + 시작일 + 종료일 + 검색 + 초기화 + 엑셀다운로드
             <div className="flex items-end gap-4">
-              {/* 좌측: 지점, 시작일, 종료일 */}
+              {/* 좌측: 추천인, 시작일, 종료일 */}
               <div className="flex-1">
-                <label className="block text-sm font-medium mb-1">지점</label>
+                <label className="block text-sm font-medium mb-1">추천인</label>
                 <select
-                  value={filters.branch}
-                  onChange={(e) => handleFilterChange('branch', e.target.value)}
+                  value={filters.referrer}
+                  onChange={(e) => handleFilterChange('referrer', e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="">전체지점</option>
-                  {branches.map(branch => (
-                    <option key={branch} value={branch}>
-                      {branch}
+                  <option value="">전체</option>
+                  {referrers.map(r => (
+                    <option key={r.referrer_code} value={r.referrer_code}>
+                      {r.referrer_name}({r.referrer_code})
                     </option>
                   ))}
                 </select>
