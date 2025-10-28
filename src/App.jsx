@@ -68,7 +68,14 @@ function AppContent() {
 
   // 🔥 onNavigate 함수 - 이전 경로 추적 추가
   const handleNavigate = (page) => {
-    console.log('Navigate to:', page)
+    // 🔧 공백 제거 및 디버깅
+    const trimmedPage = typeof page === 'string' ? page.trim() : page
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🔄 handleNavigate 호출')
+    console.log('📌 원본 페이지:', `"${page}"`)
+    console.log('📌 정제된 페이지:', `"${trimmedPage}"`)
+    console.log('📌 페이지 타입:', typeof page)
     
     const pageMap = {
       'hero': '/',
@@ -76,7 +83,9 @@ function AppContent() {
       'signup': '/signup',
       'event': '/event',
       'Dashboard': '/dashboard',
+      'dashboard': '/dashboard', // 🔧 URL 경로도 지원
       'AdminDashboard': '/admin',
+      'admin': '/admin', // 🔧 URL 경로도 지원
       'AdminUsers': '/admin/users',
       'AdminWorkDiary': '/admin/workdiary',
       'AdminCustomers': '/admin/customers',
@@ -90,7 +99,9 @@ function AppContent() {
       'CustomerManagement': '/customers',
       'ShippingList': '/shipping',
       'PurchaseHistory': '/purchases',
+      'purchases': '/purchases', // 🔧 URL 경로도 지원
       'SystemAdminDashboard': '/system-admin',
+      'system-admin': '/system-admin', // 🔧 URL 경로도 지원
       'SystemAdminBranches': '/system-admin/branches',
       'SystemAdminUsers': '/system-admin/users',
       'SystemAdminCustomers': '/system-admin/customers',
@@ -99,22 +110,29 @@ function AppContent() {
       'Profile': '/profile'
     }
     
-    const targetPath = pageMap[page]
+    const targetPath = pageMap[trimmedPage]
+    console.log('🎯 매핑된 경로:', targetPath)
+    
     if (!targetPath) {
-      console.error('⌛ 알 수 없는 페이지:', page)
+      console.error('❌ 알 수 없는 페이지:', trimmedPage)
+      console.error('❌ 사용 가능한 페이지:', Object.keys(pageMap).join(', '))
+      console.error('❌ HeroPage(/)로 리다이렉트됨')
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
       navigate('/')
       return
     }
     
     // 🔥 이전 경로 저장 (이벤트 대시보드로 이동하는 경우에만)
-    if (page === 'AdminEventDashboard' || page === 'adminEvent') {
+    if (trimmedPage === 'AdminEventDashboard' || trimmedPage === 'adminEvent') {
       setPreviousPath(location.pathname)
       console.log('✅ 이전 경로 저장:', location.pathname)
     }
     
-    console.log('✅ 이동:', page, '→', targetPath)
+    console.log('✅ 성공:', trimmedPage, '→', targetPath)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     navigate(targetPath)
   }
+
 
   const handleLogin = (userData) => {
     console.log('Login:', userData)

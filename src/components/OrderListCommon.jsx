@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Printer, Download, Search, RotateCcw } from 'lucide-react'
+import { Printer, Download, Search, RotateCcw, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function OrderListCommon({ user, onNavigate, config }) {
@@ -11,6 +11,11 @@ export default function OrderListCommon({ user, onNavigate, config }) {
   const [loading, setLoading] = useState(false)
   const [selectedItems, setSelectedItems] = useState([])
   const [selectedBranch, setSelectedBranch] = useState('all')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // 시스템관리자 여부 확인
+  const isSystemAdmin = user?.user_type === '시스템관리자'
 
   useEffect(() => {
     if (config.showBranchFilter) {
@@ -166,6 +171,40 @@ export default function OrderListCommon({ user, onNavigate, config }) {
       return `${numbers.slice(0, 3)}-${numbers.slice(3, 6)}-${numbers.slice(6)}`
     }
     return phone
+  }
+
+  // 🔴 시스템관리자 전용: 삭제 확인 모달 열기
+  const handleDeleteClick = (purchase, e) => {
+    if (e) e.stopPropagation() // 체크박스 클릭 이벤트 방지
+    setDeleteTarget(purchase)
+    setShowDeleteModal(true)
+  }
+
+  // 🔴 시스템관리자 전용: 삭제 실행
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) throw error
+
+      alert('삭제되었습니다.')
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
+      
+      // 선택 항목에서 제거
+      setSelectedItems(prev => prev.filter(item => item.id !== deleteTarget.id))
+      
+      // 목록 새로고침
+      fetchAllPurchases()
+    } catch (error) {
+      console.error('삭제 실패:', error)
+      alert('삭제에 실패했습니다.')
+    }
   }
 
   const handlePrintInvoice = () => {
@@ -455,12 +494,17 @@ export default function OrderListCommon({ user, onNavigate, config }) {
                       {col}
                     </th>
                   ))}
+                  {isSystemAdmin && (
+                    <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '80px' }}>
+                      관리
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={config.tableColumns.length + 1} className="px-4 py-8 text-center" style={{ fontSize: '16px' }}>
+                    <td colSpan={config.tableColumns.length + (isSystemAdmin ? 2 : 1)} className="px-4 py-8 text-center" style={{ fontSize: '16px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -469,7 +513,7 @@ export default function OrderListCommon({ user, onNavigate, config }) {
                   </tr>
                 ) : purchases.length === 0 ? (
                   <tr>
-                    <td colSpan={config.tableColumns.length + 1} className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '16px' }}>
+                    <td colSpan={config.tableColumns.length + (isSystemAdmin ? 2 : 1)} className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '16px' }}>
                       <div>
                         <p className="mb-2">등록된 주문 내역이 없습니다</p>
                         <p className="text-sm">판매관리에서 판매 데이터를 추가하세요</p>
@@ -491,6 +535,17 @@ export default function OrderListCommon({ user, onNavigate, config }) {
                         />
                       </td>
                       {config.renderTableRow(purchase, formatDate, formatPhoneNumber)}
+                      {isSystemAdmin && (
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            onClick={(e) => handleDeleteClick(purchase, e)}
+                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded inline-flex items-center justify-center transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -505,6 +560,48 @@ export default function OrderListCommon({ user, onNavigate, config }) {
           )}
         </div>
       </div>
+
+      {/* 🔴 삭제 확인 모달 (시스템관리자 전용) */}
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" style={{ borderRadius: '10px' }}>
+            <h2 className="text-xl font-bold mb-4 text-center text-red-600">
+              ⚠️ 삭제 확인
+            </h2>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">정말로 이 주문 내역을 삭제하시겠습니까?</p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                <p><span className="font-semibold">고객명:</span> {deleteTarget.customer_name}</p>
+                <p><span className="font-semibold">주문일:</span> {formatDate(deleteTarget.created_at)}</p>
+                <p><span className="font-semibold">지점:</span> {deleteTarget.branch_name || '-'}</p>
+                <p><span className="font-semibold">주문내역:</span> {deleteTarget.order_details || '-'}</p>
+              </div>
+              <p className="text-red-600 text-sm mt-4 font-semibold">※ 삭제된 데이터는 복구할 수 없습니다.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                style={{ borderRadius: '10px' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+                style={{ borderRadius: '10px' }}
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

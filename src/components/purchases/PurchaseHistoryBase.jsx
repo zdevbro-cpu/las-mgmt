@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Search, RotateCcw, Eye } from 'lucide-react'
+import { ArrowLeft, Search, RotateCcw, Eye, Trash2 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 /**
@@ -29,6 +29,8 @@ export default function PurchaseHistoryBase({
   // 모달 상태
   const [showModal, setShowModal] = useState(false)
   const [selectedPurchase, setSelectedPurchase] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   // 통계 데이터
   const totalCount = filteredPurchases.length
@@ -149,6 +151,39 @@ export default function PurchaseHistoryBase({
     setShowModal(true)
   }
 
+  // 🔴 시스템관리자 전용: 삭제 확인 모달 열기
+  const handleDeleteClick = (purchase) => {
+    setDeleteTarget(purchase)
+    setShowDeleteModal(true)
+  }
+
+  // 🔴 시스템관리자 전용: 삭제 실행
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', deleteTarget.id)
+
+      if (error) throw error
+
+      alert('삭제되었습니다.')
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
+      
+      // 목록 새로고침
+      fetchPurchases()
+    } catch (error) {
+      console.error('삭제 실패:', error)
+      alert('삭제에 실패했습니다.')
+    }
+  }
+
+  // 시스템관리자 여부 확인
+  const isSystemAdmin = user?.user_type === '시스템관리자'
+
   // 포맷 함수들
   const formatDate = (dateString) => {
     if (!dateString) return '-'
@@ -180,7 +215,19 @@ export default function PurchaseHistoryBase({
           <div className="flex items-center justify-between relative">
             {/* 왼쪽: 나가기 버튼 */}
             <button
-              onClick={() => onNavigate(navigateBack)}
+              onClick={() => {
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+                console.log('🔙 PurchaseHistoryBase - 나가기 버튼 클릭됨')
+                console.log('📌 navigateBack 원본 값:', navigateBack)
+                console.log('📌 navigateBack 타입:', typeof navigateBack)
+                console.log('📌 navigateBack 길이:', navigateBack?.length)
+                console.log('📌 navigateBack 문자코드:', [...navigateBack].map(c => c.charCodeAt(0)))
+                console.log('📌 isAdminView:', isAdminView)
+                console.log('📌 title:', title)
+                console.log('📌 showBranchFilter:', showBranchFilter)
+                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+                onNavigate(navigateBack)
+              }}
               className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800"
             >
               <ArrowLeft size={20} />
@@ -313,6 +360,9 @@ export default function PurchaseHistoryBase({
                   <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">수량</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">결제정보</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">주문내역</th>
+                  {isSystemAdmin && (
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">관리</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -339,6 +389,17 @@ export default function PurchaseHistoryBase({
                         {purchase.order_details || '-'}
                       </div>
                     </td>
+                    {isSystemAdmin && (
+                      <td className="px-4 py-3 text-sm text-center">
+                        <button
+                          onClick={() => handleDeleteClick(purchase)}
+                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded inline-flex items-center justify-center transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -440,6 +501,46 @@ export default function PurchaseHistoryBase({
                   ❌ 닫기
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 삭제 확인 모달 (시스템관리자 전용) */}
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4 text-center text-red-600">
+              ⚠️ 삭제 확인
+            </h2>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">정말로 이 구매이력을 삭제하시겠습니까?</p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                <p><span className="font-semibold">고객명:</span> {deleteTarget.customer_name}</p>
+                <p><span className="font-semibold">구매일자:</span> {formatDate(deleteTarget.created_at)}</p>
+                <p><span className="font-semibold">지점:</span> {deleteTarget.user_branch}</p>
+                <p><span className="font-semibold">주문내역:</span> {deleteTarget.order_details || '-'}</p>
+              </div>
+              <p className="text-red-600 text-sm mt-4 font-semibold">※ 삭제된 데이터는 복구할 수 없습니다.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+              >
+                삭제
+              </button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Search, RotateCcw, Eye, Users, X } from 'lucide-react'
+import { ArrowLeft, Search, RotateCcw, Eye, Users, X, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export default function SystemAdminCustomers({ user, onNavigate }) {
@@ -8,6 +8,11 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
   const [searchValue, setSearchValue] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // 시스템관리자 여부 확인
+  const isSystemAdmin = user?.user_type === '시스템관리자'
 
   useEffect(() => {
     fetchCustomers()
@@ -135,6 +140,43 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
     setShowModal(true)
   }
 
+  // 🔴 시스템관리자 전용: 삭제 확인 모달 열기
+  const handleDeleteClick = (customer, e) => {
+    e.stopPropagation() // 행 클릭 이벤트 방지
+    setDeleteTarget(customer)
+    setShowDeleteModal(true)
+  }
+
+  // 🔴 시스템관리자 전용: 삭제 실행
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+
+    try {
+      // 해당 고객의 모든 구매 기록 삭제
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('customer_name', deleteTarget.customer_name)
+        .eq('phone', deleteTarget.phone)
+
+      if (error) throw error
+
+      alert('삭제되었습니다.')
+      setShowDeleteModal(false)
+      setDeleteTarget(null)
+      
+      // 목록 새로고침
+      if (searchValue.trim()) {
+        handleSearch()
+      } else {
+        fetchCustomers()
+      }
+    } catch (error) {
+      console.error('삭제 실패:', error)
+      alert('삭제에 실패했습니다.')
+    }
+  }
+
   const formatDate = (dateString) => {
     if (!dateString) return '-'
     const date = new Date(dateString)
@@ -234,12 +276,17 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                   <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689' }}>
                     이메일
                   </th>
+                  {isSystemAdmin && (
+                    <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '15px', borderBottom: '2px solid #249689', width: '80px' }}>
+                      관리
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center">
+                    <td colSpan={isSystemAdmin ? "6" : "5"} className="px-4 py-8 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -248,7 +295,7 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                   </tr>
                 ) : customers.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={isSystemAdmin ? "6" : "5"} className="px-4 py-8 text-center text-gray-500">
                       <Users size={48} className="mx-auto mb-2 opacity-30" />
                       <p className="mb-2">등록된 구매자 정보가 없습니다</p>
                       <p className="text-sm">판매 데이터가 생성되면 자동으로 표시됩니다</p>
@@ -288,6 +335,17 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
                       <td className="px-3 py-3" style={{ fontSize: '15px' }}>
                         {customer.email || '-'}
                       </td>
+                      {isSystemAdmin && (
+                        <td className="px-3 py-3 text-center">
+                          <button
+                            onClick={(e) => handleDeleteClick(customer, e)}
+                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded inline-flex items-center justify-center transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -358,6 +416,48 @@ export default function SystemAdminCustomers({ user, onNavigate }) {
               >
                 <X size={18} />
                 닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🔴 삭제 확인 모달 (시스템관리자 전용) */}
+      {showDeleteModal && deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6" style={{ borderRadius: '10px' }}>
+            <h2 className="text-xl font-bold mb-4 text-center text-red-600">
+              ⚠️ 삭제 확인
+            </h2>
+            
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">정말로 이 구매자의 모든 구매 기록을 삭제하시겠습니까?</p>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                <p><span className="font-semibold">이름:</span> {deleteTarget.customer_name}</p>
+                <p><span className="font-semibold">전화번호:</span> {deleteTarget.phone}</p>
+                <p><span className="font-semibold">이메일:</span> {deleteTarget.email || '-'}</p>
+                <p><span className="font-semibold">주소:</span> {deleteTarget.address || '-'}</p>
+              </div>
+              <p className="text-red-600 text-sm mt-4 font-semibold">※ 삭제된 데이터는 복구할 수 없습니다.</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-medium"
+                style={{ borderRadius: '10px' }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-medium"
+                style={{ borderRadius: '10px' }}
+              >
+                삭제
               </button>
             </div>
           </div>
