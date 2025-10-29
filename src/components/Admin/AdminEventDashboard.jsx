@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // viewMode가 명시되지 않은 경우 from 경로를 보고 자동 결정
@@ -57,6 +57,10 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   const [branches, setBranches] = useState([])
   // 추천인 목록
   const [referrers, setReferrers] = useState([])
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(30)
 
   useEffect(() => {
     loadEvents()
@@ -236,32 +240,34 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         female: femaleCount
       })
 
-      // 연령 분포 계산
-      const ageGroups = {}
+      // 연령 분포 계산 (1~20세, 4개 구간)
+      const ageRanges = [
+        { name: '1~5세 (유아)', min: 1, max: 5, male: 0, female: 0, total: 0 },
+        { name: '6~10세 (초등 저학년)', min: 6, max: 10, male: 0, female: 0, total: 0 },
+        { name: '11~15세 (초등 고학년~중학생)', min: 11, max: 15, male: 0, female: 0, total: 0 },
+        { name: '16~20세 (고등학생~성인)', min: 16, max: 20, male: 0, female: 0, total: 0 }
+      ]
+      
+      // 데이터 채우기
       allParticipants?.forEach(p => {
         if (p.child_age) {
           const age = parseInt(p.child_age)
-          if (age >= 3 && age <= 7) {
-            const ageKey = `${age}세`
-            if (!ageGroups[ageKey]) {
-              ageGroups[ageKey] = { age: age, male: 0, female: 0, total: 0 }
-            }
-            ageGroups[ageKey].total++
-            if (p.child_gender === '남') {
-              ageGroups[ageKey].male++
-            } else if (p.child_gender === '여') {
-              ageGroups[ageKey].female++
+          if (!isNaN(age) && age >= 1 && age <= 20) {
+            const rangeIndex = ageRanges.findIndex(r => age >= r.min && age <= r.max)
+            if (rangeIndex !== -1) {
+              ageRanges[rangeIndex].total++
+              if (p.child_gender === '남') {
+                ageRanges[rangeIndex].male++
+              } else if (p.child_gender === '여') {
+                ageRanges[rangeIndex].female++
+              }
             }
           }
         }
       })
 
-      const ageDistArray = Object.keys(ageGroups)
-        .map(key => ({ name: key, ...ageGroups[key] }))
-        .sort((a, b) => a.age - b.age)
-
-      console.log('✅ 연령 분포:', ageDistArray)
-      setAgeDistribution(ageDistArray)
+      console.log('✅ 연령 분포:', ageRanges)
+      setAgeDistribution(ageRanges)
 
       // 추천인별 통계
       console.log('🏆 추천인 통계 로드 중...')
@@ -513,10 +519,38 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   }
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value }
+      // 필터 변경 시 자동으로 검색 실행
+      setTimeout(() => {
+        setCurrentPage(1)
+        loadParticipants(newFilters)
+      }, 0)
+      return newFilters
+    })
+  }
+
+  // Top 카드 클릭 시 사용하는 핸들러 (다른 필터는 유지, 대립되는 필터만 초기화)
+  const handleCardFilterClick = (key, value) => {
+    setFilters(prev => {
+      const newFilters = { ...prev, [key]: value }
+      // 지점 카드 클릭 시 추천인 필터 초기화, 추천인 카드 클릭 시 지점 필터 초기화
+      if (key === 'branch') {
+        newFilters.referrer = ''
+      } else if (key === 'referrer') {
+        newFilters.branch = ''
+      }
+      // 자동으로 검색 실행
+      setTimeout(() => {
+        setCurrentPage(1)
+        loadParticipants(newFilters)
+      }, 0)
+      return newFilters
+    })
   }
 
   const handleApplyFilters = () => {
+    setCurrentPage(1)
     loadParticipants()
   }
 
@@ -529,6 +563,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     }
     setFilters(emptyFilters)
     // 빈 필터를 직접 전달하여 즉시 검색
+    setCurrentPage(1)
     loadParticipants(emptyFilters)
   }
 
@@ -604,6 +639,49 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     document.body.removeChild(link)
   }
 
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(participants.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentParticipants = participants.slice(startIndex, endIndex)
+
+  // 페이지 번호 배열 생성 (최대 10개 표시)
+  const getPageNumbers = () => {
+    const maxPages = 10
+    const pages = []
+    
+    if (totalPages <= maxPages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      let start = Math.max(1, currentPage - 4)
+      let end = Math.min(totalPages, start + maxPages - 1)
+      
+      if (end - start < maxPages - 1) {
+        start = Math.max(1, end - maxPages + 1)
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+    }
+    
+    return pages
+  }
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // 페이지당 항목 수 변경 핸들러
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(Number(value))
+    setCurrentPage(1)
+  }
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -714,34 +792,84 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
         {/* 차트 영역 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* 연령 분포 차트 */}
+          {/* 연령 분포 차트 - 50% 폭 */}
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>📊 연령 분포</h3>
+            <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>📊 연령 분포 (1~20세, 4개 구간)</h3>
             <div className="space-y-4">
-              {ageDistribution.map((age, idx) => (
-                <div key={idx}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold">{age.name}</span>
-                    <span className="text-sm text-gray-600">
-                      남 {age.male}명 / 여 {age.female}명 (총 {age.total}명)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden flex">
-                    <div 
-                      className="bg-sky-500 flex items-center justify-center text-white text-xs font-bold"
-                      style={{ width: `${(age.male / age.total) * 100}%` }}
-                    >
-                      {age.male > 0 && `${age.male}`}
+              {(() => {
+                // 최대값 계산 (바 차트 비율용)
+                const maxTotal = Math.max(...ageDistribution.map(a => a.total), 1)
+                
+                return ageDistribution.map((range, idx) => (
+                  <div key={idx}>
+                    {/* 연령대명 */}
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-gray-700">{range.name}</span>
+                      <span className="text-lg font-bold" style={{ color: '#249689' }}>
+                        총 {range.total}명
+                      </span>
                     </div>
-                    <div 
-                      className="bg-pink-500 flex items-center justify-center text-white text-xs font-bold"
-                      style={{ width: `${(age.female / age.total) * 100}%` }}
-                    >
-                      {age.female > 0 && `${age.female}`}
-                    </div>
+                    
+                    {range.total > 0 ? (
+                      <>
+                        {/* 남학생 바 */}
+                        <div className="mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-sky-600 font-semibold w-20">👦 남학생</span>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-sky-400 to-sky-500 h-full flex items-center justify-end pr-2 transition-all duration-500"
+                                  style={{ width: `${(range.male / maxTotal) * 100}%` }}
+                                >
+                                  {range.male > 0 && (
+                                    <span className="text-white text-xs font-bold">{range.male}명</span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-sm text-gray-600 w-12 text-right">
+                                {range.total > 0 ? `${((range.male / range.total) * 100).toFixed(0)}%` : '0%'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* 여학생 바 */}
+                        <div className="mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-pink-600 font-semibold w-20">👧 여학생</span>
+                            <div className="flex-1 flex items-center gap-2">
+                              <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                                <div 
+                                  className="bg-gradient-to-r from-pink-400 to-pink-500 h-full flex items-center justify-end pr-2 transition-all duration-500"
+                                  style={{ width: `${(range.female / maxTotal) * 100}%` }}
+                                >
+                                  {range.female > 0 && (
+                                    <span className="text-white text-xs font-bold">{range.female}명</span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-sm text-gray-600 w-12 text-right">
+                                {range.total > 0 ? `${((range.female / range.total) * 100).toFixed(0)}%` : '0%'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-sm text-gray-400 text-center py-2 bg-gray-50 rounded-lg">
+                        데이터 없음
+                      </div>
+                    )}
+                    
+                    {/* 구분선 (마지막 제외) */}
+                    {idx < ageDistribution.length - 1 && (
+                      <div className="border-b border-gray-200 mt-3"></div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))
+              })()}
+              
               {ageDistribution.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
                   <p>연령 데이터가 없습니다</p>
@@ -750,7 +878,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             </div>
           </div>
 
-          {/* 성별 비율 파이차트 */}
+          {/* 성별 비율 파이차트 - 50% 폭 */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-xl font-bold mb-4" style={{ color: '#249689' }}>🎯 성별 비율</h3>
             <div className="flex items-center justify-center">
@@ -830,7 +958,8 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             {topBranches.map((branch, idx) => (
               <div 
                 key={idx} 
-                className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 px-3 py-2 border-2 hover:scale-105"
+                onClick={() => handleCardFilterClick('branch', branch.branch)}
+                className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 px-3 py-2 border-2 hover:scale-105 cursor-pointer"
                 style={{ 
                   borderColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#249689',
                   backgroundColor: idx < 3 ? '#fffbf0' : 'white'
@@ -889,7 +1018,8 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             {topReferrers.map((ref, idx) => (
               <div 
                 key={idx} 
-                className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 px-3 py-2 border-2 hover:scale-105"
+                onClick={() => handleCardFilterClick('referrer', ref.code)}
+                className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 px-3 py-2 border-2 hover:scale-105 cursor-pointer"
                 style={{ 
                   borderColor: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#249689',
                   backgroundColor: idx < 3 ? '#fffbf0' : 'white'
@@ -951,9 +1081,24 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
           {/* 필터 - 1줄 배치 */}
           {showTopRankings ? (
-            // 매장관리자/시스템관리자 모드: 추천인 + 시작일 + 종료일 + 검색 + 초기화 + 엑셀다운로드
+            // 매장관리자/시스템관리자 모드: 지점 + 추천인 + 시작일 + 종료일 + 초기화 + 엑셀다운로드
             <div className="flex items-end gap-4">
-              {/* 좌측: 추천인, 시작일, 종료일 */}
+              {/* 좌측: 지점, 추천인, 시작일, 종료일 */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">지점</label>
+                <select
+                  value={filters.branch}
+                  onChange={(e) => handleFilterChange('branch', e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">전체지점</option>
+                  {branches.map(branch => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex-1">
                 <label className="block text-sm font-medium mb-1">추천인</label>
                 <select
@@ -988,16 +1133,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 />
               </div>
 
-              {/* 우측: 검색, 초기화, 엑셀다운로드 버튼 */}
+              {/* 우측: 초기화, 엑셀다운로드 버튼 */}
               <div className="flex gap-2">
-                <button
-                  onClick={handleApplyFilters}
-                  className="py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
-                >
-                  <Search size={18} />
-                  검색
-                </button>
+                {/* 검색 버튼 제거 - 자동 검색으로 대체 */}
                 <button
                   onClick={handleResetFilters}
                   className="py-2 border-2 rounded-lg hover:bg-gray-50 font-bold whitespace-nowrap flex items-center justify-center gap-2"
@@ -1039,16 +1177,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 />
               </div>
 
-              {/* 우측: 검색, 초기화, 엑셀다운로드 버튼 */}
+              {/* 우측: 초기화, 엑셀다운로드 버튼 */}
               <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={handleApplyFilters}
-                  className="py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center justify-center gap-2"
-                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px', width: '110px' }}
-                >
-                  <Search size={18} />
-                  검색
-                </button>
+                {/* 검색 버튼 제거 - 자동 검색으로 대체 */}
                 <button
                   onClick={handleResetFilters}
                   className="py-2 border-2 rounded-lg hover:bg-gray-50 font-bold whitespace-nowrap flex items-center justify-center gap-2"
@@ -1073,14 +1204,30 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold" style={{ color: '#249689' }}>👥 참가자 목록</h3>
-            <div className="text-lg font-bold" style={{ color: '#249689' }}>
-              검색결과: {formatNumber(participants.length)}명
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">페이지당</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => handleItemsPerPageChange(e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-sm font-medium"
+                  style={{ borderColor: '#249689' }}
+                >
+                  <option value="30">30개</option>
+                  <option value="50">50개</option>
+                  <option value="100">100개</option>
+                </select>
+              </div>
+              <div className="text-lg font-bold" style={{ color: '#249689' }}>
+                검색결과: {formatNumber(participants.length)}명
+              </div>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b-2" style={{ borderColor: '#249689' }}>
+                  <th className="px-3 py-2 text-left">No.</th>
                   <th className="px-3 py-2 text-left">신청일시</th>
                   <th className="px-3 py-2 text-left">학부모명</th>
                   <th className="px-3 py-2 text-left">연락처</th>
@@ -1095,8 +1242,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 </tr>
               </thead>
               <tbody>
-                {participants.map((p) => (
+                {currentParticipants.map((p, index) => (
                   <tr key={p.id} className="border-b hover:bg-gray-50">
+                    <td className="px-3 py-3 text-sm font-medium text-gray-600">{startIndex + index + 1}</td>
                     <td className="px-3 py-3 text-sm">{new Date(p.created_at).toLocaleString('ko-KR')}</td>
                     <td className="px-3 py-3">{p.parent_name}</td>
                     <td className="px-3 py-3">{formatPhone(p.phone)}</td>
@@ -1123,6 +1271,88 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           {participants.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               참가자가 없습니다
+            </div>
+          )}
+
+          {/* 페이지네이션 */}
+          {participants.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              {/* 맨 처음 페이지 */}
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronsLeft size={20} />
+              </button>
+
+              {/* 이전 페이지 */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+
+              {/* 페이지 번호 */}
+              {getPageNumbers().map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`min-w-[40px] px-3 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === page
+                      ? 'text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  style={
+                    currentPage === page
+                      ? { backgroundColor: '#249689' }
+                      : {}
+                  }
+                >
+                  {page}
+                </button>
+              ))}
+
+              {/* 다음 페이지 */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+
+              {/* 맨 마지막 페이지 */}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg transition-colors ${
+                  currentPage === totalPages
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <ChevronsRight size={20} />
+              </button>
+
+              {/* 페이지 정보 */}
+              <span className="ml-4 text-sm text-gray-600">
+                {currentPage} / {totalPages} 페이지
+              </span>
             </div>
           )}
         </div>
