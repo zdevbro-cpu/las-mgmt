@@ -41,8 +41,19 @@ export default function EventLandingPage() {
         const params = new URLSearchParams(window.location.search)
         const refCode = params.get('ref')
         
-        // ref 파라미터 없으면 무조건 차단
+        // 개발 환경 체크
+        const isDevelopment = process.env.NODE_ENV === 'development' || 
+                              window.location.hostname === 'localhost' ||
+                              window.location.hostname === '127.0.0.1'
+        
+        // ref 파라미터 없으면 차단 (개발 환경 제외)
         if (!refCode) {
+          if (isDevelopment) {
+            console.log('🔓 개발 환경: ref 없이 접근 허용')
+            setAccessDenied(false)
+            setIsValidating(false)
+            return
+          }
           console.log('❌ 접근 차단: ref 파라미터 없음')
           setAccessDenied(true)
           setIsValidating(false)
