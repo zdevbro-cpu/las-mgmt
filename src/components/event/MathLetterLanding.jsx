@@ -132,7 +132,7 @@ export default function MathLetterLanding() {
           gap: 12px;
           text-decoration: none;
           color: var(--primary);
-          font-weight: 500;
+          font-weight: 700;
           font-size: 1.5rem;
           transition: transform 0.3s ease;
           cursor: pointer;
@@ -298,7 +298,7 @@ export default function MathLetterLanding() {
 
         .hero-note {
           margin-top: 20px;
-          font-size: 0.95rem;
+          font-size: 1.1rem;
           color: var(--text-light);
         }
 
@@ -954,7 +954,7 @@ export default function MathLetterLanding() {
           <div className="nav-content">
             <div className="logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <img src="/images/logo.png" alt="라스북 로고" />
-              <span>LAS Book - 수학편지</span>
+              <span>수학편지</span>
             </div>
             <button className="cta-btn-nav" onClick={scrollToSubscribe}>무료 구독하기</button>
           </div>
