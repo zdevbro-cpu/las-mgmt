@@ -474,7 +474,7 @@ export default function MathLetterLanding() {
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          font-weight: 700;
+          font-weight: 600;
         }
 
         .why-description {
@@ -1053,8 +1053,8 @@ export default function MathLetterLanding() {
                 오랫동안 <strong>'연산'</strong>을 수학의 전부로 배워왔습니다.
               </p>
               <p className="why-emphasis">
-                하지만 수학의 본질은 계산이 아니라<br />
-                <span className="highlight-text">'세상을 관찰하고 이해하는 힘'</span>이에요.
+                하지만 수학의 본질은 <br />계산이 아니라<br />
+                <span className="highlight-text">'세상을 관찰하고 이해하는 힘'</span><br />이에요.
               </p>
               <p className="why-description">
                 라스북 수학편지는<br />
@@ -1089,8 +1089,8 @@ export default function MathLetterLanding() {
               <div className="step-icon">
                 <i className="fas fa-envelope-open-text"></i>
               </div>
-              <h3>매주 한 편의 수학편지 도착</h3>
-              <p>매주 자연·예술·과학과 연결된 수학 이야기가 이메일로 전달됩니다.</p>
+              <h3>매일 한 편의 수학편지 도착</h3>
+              <p>매일 자연·예술·과학과 연결된 수학 이야기가 이메일로 전달됩니다.</p>
             </div>
             <div className="step-arrow">
               <i className="fas fa-arrow-right"></i>
@@ -1161,8 +1161,7 @@ export default function MathLetterLanding() {
             <div className="cta-text">
               <h2 className="cta-title">수학은 계산이 아니라,<br />세상을 이해하는 언어입니다.</h2>
               <p className="cta-subtitle">
-                지금 구독하고,<br />
-                아이와 함께 <strong>'생각이 자라는 수학 시간'</strong>을<br />시작하세요.
+                지금 구독하고, 아이와 함께 <br /><strong>'생각이 자라는 수학 시간'</strong>을<br />시작하세요.
               </p>
               
               {/* Subscription Form */}
@@ -1183,7 +1182,7 @@ export default function MathLetterLanding() {
                 </div>
                 <p className="form-note">
                   <i className="fas fa-lock"></i>
-                  언제든지 구독을 취소할 수 있습니다. 개인정보는 안전하게 보호됩니다.
+                  언제든지 구독을 취소할 수 있습니다. <br />개인정보는 안전하게 보호됩니다.
                 </p>
               </form>
             </div>
