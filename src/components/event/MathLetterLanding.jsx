@@ -36,17 +36,15 @@ export default function MathLetterLanding() {
       const params = new URLSearchParams(window.location.search)
       const refCode = params.get('ref')
       
-      // Supabase에 이메일 저장 - 실제 DB 스키마에 맞춤
+      // Supabase에 이메일 저장
       const { data, error } = await supabase
         .from('event_participants')
         .insert([{
           email: trimmedEmail,
           referrer_code: refCode || null,
-          status: 'registered',  // ✅ DB에서 허용하는 값으로 수정
-          registration_status: 'OR',  // ✅ Online Registration
           event_name: '수학편지 구독',
-          privacy_agreed: true,
-          marketing_agreed: true
+          privacy_agree: true,
+          marketing_agree: true
         }])
         .select()
       
