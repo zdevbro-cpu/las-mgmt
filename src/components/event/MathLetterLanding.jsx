@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from './supabase' // Supabase 클라이언트 import
 
 export default function MathLetterLanding() {
   const [email, setEmail] = useState('')
@@ -33,62 +33,37 @@ export default function MathLetterLanding() {
     }
     
     try {
-      // ref 파라미터 확인
       const params = new URLSearchParams(window.location.search)
       const refCode = params.get('ref')
       
-      console.log('📧 이메일 저장 시도:', trimmedEmail)
-      console.log('🔗 추천인 코드:', refCode)
-      
-      // 🔥 Supabase event_participants 테이블에 이메일 저장
-      const insertData = {
-        email: trimmedEmail,
-        parent_name: '미입력',        // 필수 컬럼 - 임시값
-        phone: '000-0000-0000',      // 필수 컬럼 - 임시값
-        child_gender: '미정',         // 필수 컬럼 - 임시값
-        child_age: 0,                // 필수 컬럼 - 임시값
-        referrer_code: refCode || null,
-        status: 'email_only',        // 이메일만 입력된 상태
-        event_name: '수학편지 구독',
-        privacy_agree: true,
-        marketing_ag: true,
-        is_active: true
-      }
-      
-      console.log('💾 저장할 데이터:', insertData)
-      
+      // Supabase에 이메일 저장 - 실제 DB 스키마에 맞춤
       const { data, error } = await supabase
         .from('event_participants')
-        .insert([insertData])
+        .insert([{
+          email: trimmedEmail,
+          referrer_code: refCode || null,
+          status: 'email_registered',
+          event_name: '수학편지 구독',
+          privacy_agree: true,
+          marketing_agree: true
+        }])
         .select()
       
       if (error) {
-        console.error('❌ 이메일 저장 오류:', error)
-        console.error('❌ 오류 코드:', error.code)
-        console.error('❌ 오류 메시지:', error.message)
-        console.error('❌ 오류 상세:', error.details)
-        console.error('❌ 오류 힌트:', error.hint)
-        
-        alert(`이메일 저장 중 오류가 발생했습니다.\n\n오류 내용: ${error.message}\n\n개발자 도구 콘솔을 확인해주세요.`)
+        console.error('❌ 저장 오류:', error)
+        alert(`이메일 저장 중 오류가 발생했습니다.\n\n${error.message}`)
         return
       }
       
       console.log('✅ 이메일 저장 성공:', data)
-      
-      // localStorage에도 저장 (다음 페이지에서 활용)
       localStorage.setItem('mathLetterEmail', trimmedEmail)
       
       // 정보 입력 페이지로 이동
-      if (refCode) {
-        navigate(`/event?ref=${encodeURIComponent(refCode)}`)
-      } else {
-        navigate('/event')
-      }
+      navigate(refCode ? `/event?ref=${encodeURIComponent(refCode)}` : '/event')
       
     } catch (err) {
-      console.error('❌ 예상치 못한 오류:', err)
-      console.error('❌ 오류 스택:', err.stack)
-      alert(`오류가 발생했습니다.\n\n${err.message}\n\n개발자 도구 콘솔을 확인해주세요.`)
+      console.error('❌ 오류:', err)
+      alert(`오류가 발생했습니다.\n\n${err.message}`)
     }
   }
 

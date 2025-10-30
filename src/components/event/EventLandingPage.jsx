@@ -23,6 +23,7 @@ export default function EventLandingPage() {
   const [referralCodeError, setReferralCodeError] = useState('')
   const [referrerName, setReferrerName] = useState('')
   const [showVideoModal, setShowVideoModal] = useState(false)
+  const [savedEmail, setSavedEmail] = useState('') // ✅ localStorage의 이메일
   
   // 🔒 접근 제어 상태
   const [accessDenied, setAccessDenied] = useState(false)
@@ -86,6 +87,15 @@ export default function EventLandingPage() {
     }
     
     validateAccess()
+  }, [])
+
+  // ✅ localStorage에서 저장된 이메일 가져오기
+  useEffect(() => {
+    const email = localStorage.getItem('mathLetterEmail')
+    if (email) {
+      setSavedEmail(email)
+      console.log('✅ 저장된 이메일:', email)
+    }
   }, [])
 
   // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
@@ -317,7 +327,12 @@ export default function EventLandingPage() {
         referrerCode = formData.referrerCode.trim().toUpperCase()
       }
 
+      // localStorage에서 이메일 가져오기 (MathLetterLanding에서 저장한 값)
+      const savedEmail = localStorage.getItem('mathLetterEmail')
+      
       const participantData = {
+        email: savedEmail || null,  // ✅ 이메일 추가
+        event_name: '수학편지 구독',  // ✅ 이벤트명 추가
         parent_name: formData.parentName.trim(),
         phone: phoneOnly,
         child_gender: formData.childGender,
@@ -345,6 +360,9 @@ export default function EventLandingPage() {
       }
 
       setSubmitted(true)
+      
+      // ✅ 제출 완료 후 localStorage 정리
+      localStorage.removeItem('mathLetterEmail')
     } catch (err) {
       console.error('신청 오류:', err)
       alert('신청 중 오류가 발생했습니다. 다시 시도해주세요.')
@@ -539,6 +557,25 @@ export default function EventLandingPage() {
         </div>
 
         <div className="space-y-2" style={{ marginTop: '16px' }}>
+          {/* ✅ 저장된 이메일 표시 */}
+          {savedEmail && (
+            <div>
+              <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+                이메일
+              </label>
+              <input
+                type="email"
+                value={savedEmail}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 bg-gray-50"
+                style={{ borderRadius: '10px', fontSize: '15px', cursor: 'not-allowed' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                ✅ 이 이메일로 수학편지가 발송됩니다
+              </p>
+            </div>
+          )}
+          
           {/* 학부모 이름 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
