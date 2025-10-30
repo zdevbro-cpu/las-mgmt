@@ -44,7 +44,7 @@ export default function MathLetterLanding() {
           referrer_code: refCode || null,
           status: 'email_registered',
           event_name: '수학편지 구독',
-          privacy_agree: true,
+          privacy_agreed: true,
           marketing_agreed: true
         }])
         .select()
