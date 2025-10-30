@@ -463,7 +463,7 @@ export default function MathLetterLanding() {
         }
 
         .why-emphasis {
-          font-size: 1.5rem;
+          font-size: 1.3rem;
           line-height: 1.6;
           color: var(--text-dark);
           margin-bottom: 24px;
@@ -1054,7 +1054,7 @@ export default function MathLetterLanding() {
                 오랫동안 <strong>'연산'</strong>을 수학의 전부로 배워왔습니다.
               </p>
               <p className="why-emphasis">
-                하지만 수학의 본질은 <br />계산이 아니라<br />
+                하지만 수학의 본질은 계산이 아니라<br />
                 <span className="highlight-text">'세상을 관찰하고 이해하는 힘'</span><br />이에요.
               </p>
               <p className="why-description">
