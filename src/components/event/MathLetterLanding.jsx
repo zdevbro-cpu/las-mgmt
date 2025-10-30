@@ -981,7 +981,7 @@ export default function MathLetterLanding() {
               <i className="fas fa-envelope"></i>
               무료 구독하기
             </button>
-            <p className="hero-note">매주 한 통의 수학 이야기가 이메일로 도착합니다.</p>
+            <p className="hero-note">매일 한 통의 수학 이야기가 이메일로 도착합니다.</p>
           </div>
         </div>
         <div className="scroll-indicator" onClick={scrollToSubscribe}>
@@ -993,7 +993,7 @@ export default function MathLetterLanding() {
       <section className="about">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">라스북 수학편지는<br />무엇인가요?</h2>
+            <h2 className="section-title">라스북 수학편지란<br />무엇인가요?</h2>
           </div>
           <div className="about-content">
             <p className="lead-text">
@@ -1034,7 +1034,7 @@ export default function MathLetterLanding() {
       <section className="why">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">왜 이 편지를 읽어야 할까요?</h2>
+            <h2 className="section-title">왜 이 편지를 <br />읽어야 할까요?</h2>
           </div>
           <div className="why-content">
             <div className="why-visual">
@@ -1111,7 +1111,7 @@ export default function MathLetterLanding() {
       <section className="social-proof">
         <div className="container">
           <div className="section-header">
-            <h2 className="section-title">함께하는 가정들의 이야기</h2>
+            <h2 className="section-title">함께하는 가족의 이야기</h2>
           </div>
           <div className="testimonials">
             <div className="testimonial-item">
