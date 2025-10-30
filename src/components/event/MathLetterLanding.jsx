@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../../lib/supabase'
 
 export default function MathLetterLanding() {
   const [email, setEmail] = useState('')
@@ -21,7 +22,7 @@ export default function MathLetterLanding() {
   }
 
   // 구독 신청 처리
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault()
     
     const trimmedEmail = email.trim()
@@ -31,18 +32,45 @@ export default function MathLetterLanding() {
       return
     }
     
-    // 이메일을 localStorage에 저장
-    localStorage.setItem('mathLetterEmail', trimmedEmail)
-    
-    // 정보 입력 페이지로 이동
-    // ref 파라미터가 있으면 유지, 없으면 빈 값
-    const params = new URLSearchParams(window.location.search)
-    const refCode = params.get('ref')
-    
-    if (refCode) {
-      navigate(`/event?ref=${encodeURIComponent(refCode)}`)
-    } else {
-      navigate('/event')
+    try {
+      // ref 파라미터 확인
+      const params = new URLSearchParams(window.location.search)
+      const refCode = params.get('ref')
+      
+      // 🔥 Supabase event_participants 테이블에 이메일 저장
+      const { data, error } = await supabase
+        .from('event_participants')
+        .insert([
+          {
+            email: trimmedEmail,
+            referrer_code: refCode || null,
+            status: 'registered',
+            event_name: '수학편지 구독'
+          }
+        ])
+        .select()
+      
+      if (error) {
+        console.error('이메일 저장 오류:', error)
+        alert('이메일 저장 중 오류가 발생했습니다. 다시 시도해주세요.')
+        return
+      }
+      
+      console.log('✅ 이메일 저장 성공:', data)
+      
+      // localStorage에도 저장 (다음 페이지에서 활용)
+      localStorage.setItem('mathLetterEmail', trimmedEmail)
+      
+      // 정보 입력 페이지로 이동
+      if (refCode) {
+        navigate(`/event?ref=${encodeURIComponent(refCode)}`)
+      } else {
+        navigate('/event')
+      }
+      
+    } catch (err) {
+      console.error('예상치 못한 오류:', err)
+      alert('오류가 발생했습니다. 다시 시도해주세요.')
     }
   }
 
