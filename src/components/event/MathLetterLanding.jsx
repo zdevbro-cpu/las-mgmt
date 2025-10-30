@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabase'
+import { supabase } from './supabase' // Supabase 클라이언트 import
 
 export default function MathLetterLanding() {
   const [email, setEmail] = useState('')
@@ -42,10 +42,11 @@ export default function MathLetterLanding() {
         .insert([{
           email: trimmedEmail,
           referrer_code: refCode || null,
-          status: 'email_registered',
+          status: 'registered',  // ✅ DB에서 허용하는 값으로 수정
+          registration_status: 'OR',  // ✅ Online Registration
           event_name: '수학편지 구독',
-          privacy_agreed: true,
-          marketing_agreed: true
+          privacy_agree: true,
+          marketing_agree: true
         }])
         .select()
       
