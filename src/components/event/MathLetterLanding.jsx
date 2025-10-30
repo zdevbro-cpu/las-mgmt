@@ -45,7 +45,7 @@ export default function MathLetterLanding() {
           status: 'email_registered',
           event_name: '수학편지 구독',
           privacy_agree: true,
-          marketing_agree: true
+          marketing_agreed: true
         }])
         .select()
       
