@@ -1060,7 +1060,7 @@ export default function MathLetterLanding() {
               <p className="why-description">
                 라스북 수학편지는<br />
                 아이가 <strong>세상 속 수학</strong>을 발견하고,<br />
-                부모가 함께 그 의미를 이야기하도록 돕습니다.
+                부모가 함께 그 의미를 이야기하도록<br />돕습니다.
               </p>
             </div>
           </div>
