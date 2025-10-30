@@ -45,8 +45,8 @@ export default function MathLetterLanding() {
           status: 'registered',  // ✅ DB에서 허용하는 값으로 수정
           registration_status: 'OR',  // ✅ Online Registration
           event_name: '수학편지 구독',
-          privacy_agree: true,
-          marketing_agree: true
+          privacy_agreed: true,
+          marketing_agreed: true
         }])
         .select()
       
