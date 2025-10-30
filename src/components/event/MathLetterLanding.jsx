@@ -132,8 +132,8 @@ export default function MathLetterLanding() {
           gap: 12px;
           text-decoration: none;
           color: var(--primary);
-          font-weight: 600;
-          font-size: 1.25rem;
+          font-weight: 500;
+          font-size: 1.5rem;
           transition: transform 0.3s ease;
           cursor: pointer;
         }
@@ -832,7 +832,7 @@ export default function MathLetterLanding() {
           }
 
           .hero-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.3rem;
           }
 
           .section-title {
