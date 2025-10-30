@@ -912,7 +912,7 @@ export default function MathLetterLanding() {
           }
 
           .logo span {
-            display: none;
+            font-size: 0.85rem;
           }
 
           .cta-btn-nav {
@@ -954,7 +954,7 @@ export default function MathLetterLanding() {
           <div className="nav-content">
             <div className="logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <img src="/images/logo.png" alt="라스북 로고" />
-              <span>수학편지</span>
+              <span>LAS Book 수학편지</span>
             </div>
             <button className="cta-btn-nav" onClick={scrollToSubscribe}>무료 구독하기</button>
           </div>
@@ -982,7 +982,7 @@ export default function MathLetterLanding() {
               <i className="fas fa-envelope"></i>
               무료 구독하기
             </button>
-            <p className="hero-note">매일 한 통의 수학 이야기가 이메일로 도착합니다.</p>
+            <p className="hero-note">매일 한 통의 수학 이야기가<br />  이메일로 도착합니다.</p>
           </div>
         </div>
         <div className="scroll-indicator" onClick={scrollToSubscribe}>
