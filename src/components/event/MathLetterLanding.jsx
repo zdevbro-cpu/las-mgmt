@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from './supabase' // Supabase 클라이언트 import
+import { supabase } from '../../lib/supabase'
 
 export default function MathLetterLanding() {
   const [email, setEmail] = useState('')
