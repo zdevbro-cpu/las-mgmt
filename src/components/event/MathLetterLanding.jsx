@@ -1182,7 +1182,7 @@ export default function MathLetterLanding() {
                 </div>
                 <p className="form-note">
                   <i className="fas fa-lock"></i>
-                  언제든지 구독을 취소할 수 있습니다. <br />개인정보는 안전하게 보호됩니다.
+                  언제든지 구독을 취소할 수 있습니다.<br />개인정보는 안전하게 보호됩니다.
                 </p>
               </form>
             </div>
