@@ -131,7 +131,7 @@ export default function MathLetterLanding() {
           align-items: center;
           gap: 12px;
           text-decoration: none;
-          color: var(--text-dark);
+          color: var(--primary);
           font-weight: 700;
           font-size: 1.25rem;
           transition: transform 0.3s ease;
@@ -759,13 +759,15 @@ export default function MathLetterLanding() {
           box-shadow: var(--shadow-lg);
         }
 
-        .form-note {
-          font-size: 0.85rem;
-          color: var(--text-light);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
+       .form-note {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        display: flex;
+        flex-direction: column;  /* 추가 - 세로 방향 배치 */
+        align-items: center;      /* 이미 있었음 - 가로 중앙 정렬 */
+        gap: 8px;
+        text-align: center;       /* 추가 - 텍스트 중앙 정렬 */
+      }
 
         .form-note i {
           color: var(--primary);
@@ -1182,7 +1184,7 @@ export default function MathLetterLanding() {
                 </div>
                 <p className="form-note">
                   <i className="fas fa-lock"></i>
-                  언제든지 구독을 취소할 수 있습니다.<br />개인정보는 안전하게 보호됩니다.
+                    언제든지 구독을 취소할 수 있습니다.<br />개인정보는 안전하게 보호됩니다.
                 </p>
               </form>
             </div>
