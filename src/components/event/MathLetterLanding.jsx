@@ -132,7 +132,7 @@ export default function MathLetterLanding() {
           gap: 12px;
           text-decoration: none;
           color: var(--primary);
-          font-weight: 700;
+          font-weight: 600;
           font-size: 1.25rem;
           transition: transform 0.3s ease;
           cursor: pointer;
@@ -832,7 +832,7 @@ export default function MathLetterLanding() {
           }
 
           .hero-subtitle {
-            font-size: 1.1rem;
+            font-size: 1.5rem;
           }
 
           .section-title {
@@ -976,8 +976,7 @@ export default function MathLetterLanding() {
               더 중요합니다.
             </h1>
             <p className="hero-subtitle">
-              아이와 부모가 함께 읽는 무료 뉴스레터,<br />
-              <strong>'라스북 수학편지'</strong>로 수학의 진짜 의미를 발견하세요.
+              아이와 부모가 함께 읽는<br />무료 뉴스레터,<strong>'라스북 수학편지'</strong>로<br />수학의 진짜 의미를 발견하세요.
             </p>
             <button className="cta-btn-primary" onClick={scrollToSubscribe}>
               <i className="fas fa-envelope"></i>
