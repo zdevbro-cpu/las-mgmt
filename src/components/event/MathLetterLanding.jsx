@@ -1162,7 +1162,7 @@ export default function MathLetterLanding() {
               <h2 className="cta-title">수학은 계산이 아니라,<br />세상을 이해하는 언어입니다.</h2>
               <p className="cta-subtitle">
                 지금 구독하고,<br />
-                아이와 함께 <strong>'생각이 자라는 수학 시간'</strong>을 시작하세요.
+                아이와 함께 <strong>'생각이 자라는 수학 시간'</strong>을<br />시작하세요.
               </p>
               
               {/* Subscription Form */}
