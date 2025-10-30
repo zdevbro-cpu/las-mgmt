@@ -912,7 +912,7 @@ export default function MathLetterLanding() {
           }
 
           .logo span {
-            font-size: 2.0rem;
+            font-size: 1.8rem;
           }
 
           .cta-btn-nav {
