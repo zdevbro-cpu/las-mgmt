@@ -463,7 +463,7 @@ export default function MathLetterLanding() {
         }
 
         .why-emphasis {
-          font-size: 1.3rem;
+          font-size: 1.25rem;
           line-height: 1.6;
           color: var(--text-dark);
           margin-bottom: 24px;
