@@ -463,7 +463,7 @@ export default function MathLetterLanding() {
         }
 
         .why-emphasis {
-          font-size: 1.25rem;
+          font-size: 1.3rem;
           line-height: 1.6;
           color: var(--text-dark);
           margin-bottom: 24px;
@@ -478,7 +478,7 @@ export default function MathLetterLanding() {
         }
 
         .why-description {
-          font-size: 1.1rem;
+          font-size: 1.15rem;
           line-height: 1.8;
           color: var(--text-gray);
         }
