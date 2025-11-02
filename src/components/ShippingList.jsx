@@ -4,7 +4,7 @@ import OrderListCommon from './OrderListCommon'
 export default function ShippingList({ user, onNavigate }) {
   const config = {
     // 컨테이너 설정
-    containerClass: 'max-w-5xl mx-auto p-6',
+    containerClass: 'max-w-7xl mx-auto p-6',
     cardClass: 'bg-white rounded-lg shadow-lg p-6',
     headerClass: 'flex items-center justify-between mb-8',
     

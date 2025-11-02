@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LogOut, Users, FileText, ShoppingCart, UserCircle, Calendar } from 'lucide-react'
 import { LOGIN_MODES, canAccessEventDashboard } from '../constants/roles'
+import NoticeFloatingButton from './NoticeFloatingButton'
 
 export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMode }) {
   console.log('🎨 AdminDashboard 렌더링')
@@ -123,6 +124,18 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
 
             <button
               onClick={() => {
+                console.log('🧭 Navigate to: AdminNotice')
+                onNavigate('AdminNotice')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <FileText size={20} />
+              공지사항관리
+            </button>
+
+            <button
+              onClick={() => {
                 console.log('🧭 Navigate to: AdminUsers')
                 onNavigate('AdminUsers')
               }}
@@ -170,6 +183,9 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
             </button>
           </div>
         </div>
+      
+      {/* 공지사항 플로팅 버튼 */}
+      <NoticeFloatingButton onNavigate={onNavigate} />
       </div>
     </div>
   )

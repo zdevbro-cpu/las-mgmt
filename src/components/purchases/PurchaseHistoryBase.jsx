@@ -228,7 +228,8 @@ export default function PurchaseHistoryBase({
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
                 onNavigate(navigateBack)
               }}
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-800"
+              className="flex items-center gap-2 px-3 py-2 hover:opacity-80"
+              style={{ color: '#249689' }}
             >
               <ArrowLeft size={20} />
               <span>나가기</span>

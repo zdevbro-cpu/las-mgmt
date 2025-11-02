@@ -991,8 +991,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   {/* 오른쪽: 참가자 수 */}
                   <div className="text-right">
                     <p className="text-lg font-bold" style={{ color: '#249689' }}>
-                      {branch.count}<span className="text-xs ml-0.5">명</span>
+                      {branch.count}
                     </p>
+                    <p className="text-xs text-gray-500">명</p>
                   </div>
                 </div>
               </div>
@@ -1053,8 +1054,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   {/* 오른쪽: 참가자 수 */}
                   <div className="text-right">
                     <p className="text-lg font-bold" style={{ color: '#249689' }}>
-                      {ref.count}<span className="text-xs ml-0.5">명</span>
+                      {ref.count}
                     </p>
+                    <p className="text-xs text-gray-500">명</p>
                   </div>
                 </div>
               </div>

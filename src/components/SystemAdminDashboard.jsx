@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3 } from 'lucide-react'
+import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3, BookOpen } from 'lucide-react'
 
 export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
   return (
@@ -62,6 +62,15 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             >
               <Building2 size={20} />
               지점관리
+            </button>
+
+            <button
+              onClick={() => onNavigate('MathLetterManager')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <BookOpen size={20} />
+              수학편지관리
             </button>
 
             <button

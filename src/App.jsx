@@ -9,7 +9,9 @@ import Dashboard from './components/Dashboard'
 import AdminDashboard from './components/AdminDashboard'
 import AdminUsers from './components/AdminUsers'
 import AdminWorkDiary from './components/AdminWorkDiary'
+import AdminNotice from './components/AdminNotice'
 import AdminCustomers from './components/AdminCustomers'
+import NoticeViewOnly from './components/NoticeViewOnly'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
 import ShippingList from './components/ShippingList'
@@ -25,6 +27,7 @@ import MyInfo from './components/MyInfo'
 import MyQRCode from './components/MyQRCode'
 // ⭐ 수학편지 페이지 임포트 추가
 import MathLetterLanding from './components/event/MathLetterLanding'
+import MathLetterManager from './components/MathLetterManager'
 import EventLandingPage from './components/event/EventLandingPage'
 import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
@@ -50,7 +53,7 @@ function AppContent() {
     if (userData.user_type === '시스템관리자') {
       navigate('/system-admin')
     } else {
-      navigate('/dashboard')
+      navigate('/notice-view-only')
     }
   }
 
@@ -88,6 +91,8 @@ function AppContent() {
       'AdminUsers': '/admin/users',
       'AdminWorkDiary': '/admin/workdiary',
       'AdminCustomers': '/admin/customers',
+      'AdminNotice': '/admin/notice',
+      'NoticeViewOnly': '/notice-view-only',
       'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
       'AdminEventDashboard': '/admin/event',
@@ -106,6 +111,7 @@ function AppContent() {
       'SystemAdminCustomers': '/system-admin/customers',
       'SystemAdminPurchases': '/system-admin/purchases',
       'SystemAdminShipping': '/system-admin/shipping',
+      'MathLetterManager': '/system-admin/mathletter',
       'Profile': '/profile'
     }
     
@@ -139,7 +145,7 @@ function AppContent() {
     if (userData.user_type === '시스템관리자') {
       navigate('/system-admin')
     } else {
-      navigate('/dashboard')
+      navigate('/notice-view-only')
     }
   }
 
@@ -181,6 +187,21 @@ function AppContent() {
         {/* ⭐ 수학편지 정보 입력 페이지 - 공개 */}
         <Route path="/event" element={<EventLandingPage />} />
         
+        
+        {/* 공지사항 읽기 전용 - 일반업무 대시보드용 */}
+        <Route 
+          path="/notice-view-only" 
+          element={
+            user ? (
+              <NoticeViewOnly 
+                user={user} 
+                onNavigate={handleNavigate} 
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
         {/* 인증 필요 페이지 */}
         <Route 
           path="/dashboard" 
@@ -230,6 +251,17 @@ function AppContent() {
           element={
             user && canAccessManagement(user) ? (
               <AdminWorkDiary user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        
+        <Route 
+          path="/admin/notice" 
+          element={
+            user && canAccessManagement(user) ? (
+              <AdminNotice user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/login" replace />
             )
@@ -439,6 +471,17 @@ function AppContent() {
           element={
             user && user.user_type === '시스템관리자' ? (
               <SystemAdminShipping user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/system-admin" replace />
+            )
+          } 
+        />
+
+        <Route 
+          path="/system-admin/mathletter" 
+          element={
+            user && user.user_type === '시스템관리자' ? (
+              <MathLetterManager user={user} onBack={() => navigate('/system-admin')} />
             ) : (
               <Navigate to="/system-admin" replace />
             )
