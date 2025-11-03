@@ -34,6 +34,7 @@ import AdminEventMenu from './components/Admin/AdminEventMenu'
 import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 
+
 function AppContent() {
   const [user, setUser] = useState(null)
   const [previousPath, setPreviousPath] = useState('/dashboard')
@@ -481,7 +482,7 @@ function AppContent() {
           path="/system-admin/mathletter" 
           element={
             user && user.user_type === '시스템관리자' ? (
-              <MathLetterManager user={user} onBack={() => navigate('/system-admin')} />
+              <MathLetterManager user={user} onNavigate={handleNavigate} onBack={() => navigate('/system-admin')} />   
             ) : (
               <Navigate to="/system-admin" replace />
             )

@@ -61,6 +61,44 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(30)
+  const filteredParticipants = participants.filter(p => {
+    // 지점 필터 (p.users.branch 사용)
+    if (filters.branch && p.users?.branch !== filters.branch) return false
+    
+    // 추천인 필터
+    if (filters.referrer && p.referrer_code !== filters.referrer) return false
+    
+    // 날짜 필터
+    if (filters.startDate) {
+      const pDate = new Date(p.created_at)
+      const startDate = new Date(filters.startDate)
+      if (pDate < startDate) return false
+    }
+    if (filters.endDate) {
+      const pDate = new Date(p.created_at)
+      const endDate = new Date(filters.endDate)
+      endDate.setHours(23, 59, 59, 999)
+      if (pDate > endDate) return false
+    }
+    
+    return true
+  })
+
+  const filteredStats = {
+    total: filteredParticipants.length,
+    male: filteredParticipants.filter(p => p.child_gender === '남').length,
+    female: filteredParticipants.filter(p => p.child_gender === '여').length,
+    thisWeek: filteredParticipants.filter(p => {
+      const createdAt = new Date(p.created_at)
+      const now = new Date()
+      const dayOfWeek = now.getDay() // 0(일) ~ 6(토)
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // 월요일까지의 차이
+      const thisMonday = new Date(now)
+      thisMonday.setDate(now.getDate() - diff)
+      thisMonday.setHours(0, 0, 0, 0)
+      return createdAt >= thisMonday
+    }).length
+  }
 
   useEffect(() => {
     loadEvents()
@@ -156,26 +194,17 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
   const loadData = async () => {
     try {
-      console.log('🚀 데이터 로드 시작...')
       setLoading(true)
 
       // 통계 데이터 로드
-      console.log('📊 통계 데이터 로드 중...')
       let statsQuery = supabase
         .from('event_participants')
-        .select('child_gender, child_age, event_name, created_at')
-      
+        .select('*')
       
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
-        // 일반 유저: 본인이 추천한 데이터만
-        console.log('✅ [일반 유저] 필터 적용 - 추천코드:', user.referral_code)
         statsQuery = statsQuery.eq('referrer_code', user.referral_code)
       } else if (determinedViewMode === 'admin' && user?.branch) {
-        // 점장/지점관리자: 본인 지점의 모든 직원이 추천한 데이터
-        console.log('✅ [점장/지점관리자] 필터 적용 - 지점:', user.branch)
-        
-        // 1. 해당 지점의 모든 referral_code 가져오기
         const { data: branchUsers } = await supabase
           .from('users')
           .select('referral_code')
@@ -183,35 +212,34 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           .not('referral_code', 'is', null)
         
         const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
-        console.log('✅ 지점 직원 수:', branchReferralCodes.length, '명')
         
         if (branchReferralCodes.length > 0) {
           statsQuery = statsQuery.in('referrer_code', branchReferralCodes)
         } else {
-          // 지점에 referral_code를 가진 직원이 없으면 빈 결과
           statsQuery = statsQuery.eq('referrer_code', 'NONE')
         }
-      } else if (determinedViewMode === 'system') {
-        // 시스템관리자: 모든 데이터 (필터 없음)
-        console.log('✅ [시스템관리자] 필터 없음 - 전체 데이터')
       }
+      
       // 이벤트 필터 적용
       if (selectedEvent) {
-        console.log('✅ 이벤트 필터 적용:', selectedEvent)
         statsQuery = statsQuery.eq('event_name', selectedEvent)
       }
       
-      const { data: allParticipants, error: statsError } = await statsQuery
+      // 페이지네이션으로 모든 데이터 가져오기
+      let allParticipants = []
+      let from = 0
+      const pageSize = 1000
 
-      if (statsError) throw statsError
-
-      console.log('📊 통계용 데이터 로드:', allParticipants?.length, '명')
-      
-      // 🔍 디버깅: 데이터 샘플 확인
-      if (allParticipants && allParticipants.length > 0) {
-        console.log('🔍 샘플 데이터 3개:', allParticipants.slice(0, 3))
-      } else {
-        console.warn('⚠️ 통계 데이터가 비어있습니다!')
+      while (true) {
+        const { data: pageData, error: pageError } = await statsQuery.range(from, from + pageSize - 1)
+        
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+        
+        allParticipants = allParticipants.concat(pageData)
+        
+        if (pageData.length < pageSize) break
+        from += pageSize
       }
 
       const totalCount = allParticipants?.length || 0
@@ -220,8 +248,8 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
       // 이번주 참가자 계산 (월요일 기준)
       const now = new Date()
-      const dayOfWeek = now.getDay() // 0(일) ~ 6(토)
-      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // 월요일까지의 차이
+      const dayOfWeek = now.getDay()
+      const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1
       const thisMonday = new Date(now)
       thisMonday.setDate(now.getDate() - diff)
       thisMonday.setHours(0, 0, 0, 0)
@@ -230,8 +258,6 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         const createdAt = new Date(p.created_at)
         return createdAt >= thisMonday
       }).length || 0
-
-      console.log('✅ 통계:', { total: totalCount, thisWeek: thisWeekCount, male: maleCount, female: femaleCount })
 
       setStats({
         total: totalCount,
@@ -395,9 +421,6 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       // customFilters가 제공되면 사용, 없으면 현재 state의 filters 사용
       const activeFilters = customFilters !== null ? customFilters : filters
       
-      console.log('🔍 참가자 목록 로드 시작...')
-      console.log('📋 현재 필터:', activeFilters)
-      
       // 1. 참가자 데이터 먼저 가져오기
       let query = supabase
         .from('event_participants')
@@ -406,20 +429,13 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
       // 이벤트 필터 적용
       if (selectedEvent) {
-        console.log('✅ 이벤트 필터 적용:', selectedEvent)
         query = query.eq('event_name', selectedEvent)
       }
       
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
-        // 일반 유저: 본인이 추천한 데이터만
-        console.log('✅ [일반 유저] 필터 적용 - 추천코드:', user.referral_code)
         query = query.eq('referrer_code', user.referral_code)
       } else if (determinedViewMode === 'admin' && user?.branch) {
-        // 점장/지점관리자: 본인 지점의 모든 직원이 추천한 데이터
-        console.log('✅ [점장/지점관리자] 필터 적용 - 지점:', user.branch)
-        
-        // 1. 해당 지점의 모든 referral_code 가져오기
         const { data: branchUsers } = await supabase
           .from('users')
           .select('referral_code')
@@ -427,52 +443,43 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           .not('referral_code', 'is', null)
         
         const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
-        console.log('✅ 지점 직원 수:', branchReferralCodes.length, '명')
         
         if (branchReferralCodes.length > 0) {
           query = query.in('referrer_code', branchReferralCodes)
         } else {
-          // 지점에 referral_code를 가진 직원이 없으면 빈 결과
           query = query.eq('referrer_code', 'NONE')
         }
-      } else if (determinedViewMode === 'system') {
-        // 시스템관리자: 모든 데이터 (필터 없음)
-        console.log('✅ [시스템관리자] 필터 없음 - 전체 데이터')
       }
 
       // 필터 적용
       if (activeFilters.referrer) {
-        console.log('✅ 추천인 필터 적용:', activeFilters.referrer)
         query = query.eq('referrer_code', activeFilters.referrer)
       }
       if (activeFilters.startDate) {
-        console.log('✅ 시작일 필터 적용:', activeFilters.startDate)
-        // 시작일은 해당 날짜의 00:00:00부터
         query = query.gte('created_at', `${activeFilters.startDate}T00:00:00`)
       }
       if (activeFilters.endDate) {
-        console.log('✅ 종료일 필터 적용:', activeFilters.endDate)
-        // 종료일은 해당 날짜의 23:59:59까지
         query = query.lte('created_at', `${activeFilters.endDate}T23:59:59`)
       }
 
-      const { data: participantsData, error } = await query
+      // 모든 데이터를 가져오기 위해 페이지네이션 사용
+      let allData = []
+      let from = 0
+      const pageSize = 1000
 
-      if (error) {
-        console.error('❌ 쿼리 에러:', error)
-        throw error
+      while (true) {
+        const { data: pageData, error: pageError } = await query.range(from, from + pageSize - 1)
+        
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+        
+        allData = allData.concat(pageData)
+        
+        if (pageData.length < pageSize) break
+        from += pageSize
       }
 
-      console.log('✅ 참가자 기본 데이터 로드:', participantsData?.length, '명')
-      
-      // 🔍 디버깅: 어떤 referrer_code들이 있는지 확인
-      if (participantsData && participantsData.length > 0) {
-        const referrerCodesInData = participantsData.map(p => p.referrer_code)
-        console.log('🔍 DB에 있는 referrer_code 목록:', [...new Set(referrerCodesInData)])
-        console.log('🔍 샘플 데이터 3개:', participantsData.slice(0, 3))
-      } else {
-        console.warn('⚠️ 참가자 데이터가 비어있습니다!')
-      }
+      const participantsData = allData
 
       // 2. 추천인 코드 목록 추출
       const referrerCodes = [...new Set(participantsData?.map(p => p.referrer_code).filter(Boolean))]
@@ -489,7 +496,6 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           console.error('❌ Users 조회 에러:', usersError)
         } else {
           usersData = users || []
-          console.log('✅ 추천인 정보 로드:', usersData.length, '명')
         }
       }
 
@@ -505,12 +511,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       // 5. 지점 필터 적용 (users 정보를 가져온 후)
       let filteredData = enrichedData
       if (activeFilters.branch) {
-        console.log('✅ 지점 필터 적용:', activeFilters.branch)
         filteredData = enrichedData.filter(p => p.users?.branch === activeFilters.branch)
       }
 
-      console.log('✅ 최종 참가자 데이터:', filteredData.length, '명')
-      console.log('📦 데이터:', filteredData)
       setParticipants(filteredData)
     } catch (error) {
       console.error('❌ 참가자 목록 로드 실패:', error)
@@ -756,7 +759,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm mb-2">전체 참가자</p>
-                <p className="text-4xl font-bold">{stats.total}명</p>
+                <p className="text-4xl font-bold">{formatNumber(filteredStats.total)}명</p>
               </div>
               <div className="text-5xl">👥</div>
             </div>
@@ -765,7 +768,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm mb-2">이번주 참가자</p>
-                <p className="text-4xl font-bold">{stats.thisWeek}명</p>
+                <p className="text-4xl font-bold">{formatNumber(filteredStats.thisWeek)}명</p>
               </div>
               <div className="text-5xl">📅</div>
             </div>
@@ -774,7 +777,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sky-100 text-sm mb-2">남학생</p>
-                <p className="text-4xl font-bold">{stats.male}명</p>
+                <p className="text-4xl font-bold">{formatNumber(filteredStats.male)}명</p>
               </div>
               <div className="text-5xl">👦</div>
             </div>
@@ -783,7 +786,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-pink-100 text-sm mb-2">여학생</p>
-                <p className="text-4xl font-bold">{stats.female}명</p>
+                <p className="text-4xl font-bold">{formatNumber(filteredStats.female)}명</p>
               </div>
               <div className="text-5xl">👧</div>
             </div>
@@ -806,7 +809,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="font-bold text-gray-700">{range.name}</span>
                       <span className="text-lg font-bold" style={{ color: '#249689' }}>
-                        총 {range.total}명
+                        총 {formatNumber(range.total)}명
                       </span>
                     </div>
                     
@@ -823,7 +826,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                                   style={{ width: `${(range.male / maxTotal) * 100}%` }}
                                 >
                                   {range.male > 0 && (
-                                    <span className="text-white text-xs font-bold">{range.male}명</span>
+                                    <span className="text-white text-xs font-bold">{formatNumber(range.male)}명</span>
                                   )}
                                 </div>
                               </div>
@@ -845,7 +848,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                                   style={{ width: `${(range.female / maxTotal) * 100}%` }}
                                 >
                                   {range.female > 0 && (
-                                    <span className="text-white text-xs font-bold">{range.female}명</span>
+                                    <span className="text-white text-xs font-bold">{formatNumber(range.female)}명</span>
                                   )}
                                 </div>
                               </div>
@@ -914,7 +917,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 {/* 중앙 텍스트 */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <p className="text-3xl font-bold" style={{ color: '#249689' }}>{stats.total}</p>
+                    <p className="text-3xl font-bold" style={{ color: '#249689' }}>{formatNumber(stats.total)}</p>
                     <p className="text-sm text-gray-600">총 참가자</p>
                   </div>
                 </div>
@@ -928,7 +931,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   <span className="font-semibold">남학생</span>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-sky-600">{stats.male}명</p>
+                  <p className="font-bold text-sky-600">{formatNumber(stats.male)}명</p>
                   <p className="text-xs text-gray-600">
                     {stats.total > 0 ? ((stats.male / stats.total) * 100).toFixed(1) : 0}%
                   </p>
@@ -940,7 +943,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   <span className="font-semibold">여학생</span>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-pink-600">{stats.female}명</p>
+                  <p className="font-bold text-pink-600">{formatNumber(stats.female)}명</p>
                   <p className="text-xs text-gray-600">
                     {stats.total > 0 ? ((stats.female / stats.total) * 100).toFixed(1) : 0}%
                   </p>
@@ -991,7 +994,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   {/* 오른쪽: 참가자 수 */}
                   <div className="text-right">
                     <p className="text-lg font-bold" style={{ color: '#249689' }}>
-                      {branch.count}<span className="text-xs ml-0.5">명</span>
+                      {formatNumber(branch.count)}<span className="text-xs ml-0.5">명</span>
                     </p>
                   </div>
                 </div>
@@ -1053,7 +1056,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   {/* 오른쪽: 참가자 수 */}
                   <div className="text-right">
                     <p className="text-lg font-bold" style={{ color: '#249689' }}>
-                      {ref.count}<span className="text-xs ml-0.5">명</span>
+                      {formatNumber(ref.count)}<span className="text-xs ml-0.5">명</span>
                     </p>
                   </div>
                 </div>
