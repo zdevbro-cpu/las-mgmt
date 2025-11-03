@@ -101,7 +101,6 @@ const WeeklyScheduleGrid = ({ user }) => {
   const updateSchedule = async (userId, date, startTime, endTime) => {
     const branch_id = await getBranchId(user?.branch);
     const dateStr = typeof date === 'string' ? date : formatDate(date);
-    console.log("updateSchedule - dateStr:", dateStr, "key:", key);
     console.log('=== updateSchedule 시작 ===');
     console.log('userId:', userId);
     console.log('date:', dateStr);
@@ -113,6 +112,21 @@ const WeeklyScheduleGrid = ({ user }) => {
     
     if (!startTime && !endTime) {
       console.log('삭제 처리');
+      
+      // DB에서 삭제
+      const { error: deleteError } = await supabase
+        .from('duties')
+        .delete()
+        .eq('user_id', userId)
+        .eq('work_date', dateStr);
+      
+      if (deleteError) {
+        console.error('DB 삭제 에러:', deleteError);
+      } else {
+        console.log('DB에서 삭제 완료');
+      }
+      
+      // State에서 삭제
       setSchedules(prev => {
         const newSchedules = { ...prev };
         delete newSchedules[key];
@@ -187,8 +201,9 @@ const WeeklyScheduleGrid = ({ user }) => {
 
         if (selectError && selectError.code !== 'PGRST116') {
           console.error('조회 에러:', selectError);
-        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
         }
+
+        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
 
         if (existing) {
           const { error: updateError } = await supabase
@@ -697,9 +712,10 @@ const WeeklyScheduleGrid = ({ user }) => {
                   </button>
                   {(schedule.start_time || schedule.end_time) && (
                     <button
-                      onClick={() => {
-                        updateSchedule(editingCell.employeeId, editingCell.date, '', '');
+                      onClick={async () => {
+                        await updateSchedule(editingCell.employeeId, editingCell.date, '', '');
                         setEditingCell(null);
+                        await loadSchedules();
                       }}
                       className="px-4 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
                     >
