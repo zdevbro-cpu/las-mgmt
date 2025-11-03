@@ -36,25 +36,7 @@ export default function MathLetterLanding() {
       const params = new URLSearchParams(window.location.search)
       const refCode = params.get('ref')
       
-      // Supabase에 이메일 저장
-      const { data, error } = await supabase
-        .from('event_participants')
-        .insert([{
-          email: trimmedEmail,
-          referrer_code: refCode || null,
-          event_name: '수학편지 구독',
-          privacy_agreed: true,
-          marketing_agreed: true
-        }])
-        .select()
-      
-      if (error) {
-        console.error('❌ 저장 오류:', error)
-        alert(`이메일 저장 중 오류가 발생했습니다.\n\n${error.message}`)
-        return
-      }
-      
-      console.log('✅ 이메일 저장 성공:', data)
+      // localStorage에 이메일 저장
       localStorage.setItem('mathLetterEmail', trimmedEmail)
       
       // 정보 입력 페이지로 이동
