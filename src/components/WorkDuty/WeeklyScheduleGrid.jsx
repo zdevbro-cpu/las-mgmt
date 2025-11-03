@@ -23,6 +23,7 @@ const WeeklyScheduleGrid = ({ user }) => {
   const weekDates = getWeekDates(currentWeekStart);
 
   useEffect(() => {
+  console.log("weekDates:", weekDates.map(d => formatDate(d)));
     loadEmployees();
     loadAllEmployees();
     loadSchedules();
@@ -72,28 +73,35 @@ const WeeklyScheduleGrid = ({ user }) => {
   };
 
   const loadSchedules = async () => {
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setDate(weekStart.getDate() - 1);
     const weekEnd = new Date(currentWeekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setDate(weekEnd.getDate() + 7);
 
     const { data, error } = await supabase
       .from('duties')
       .select('*')
-      .gte('work_date', formatDate(currentWeekStart))
+      .gte('work_date', formatDate(weekStart))
       .lte('work_date', formatDate(weekEnd));
+    console.log("loadSchedules - 조회 범위:", formatDate(weekStart), "~", formatDate(weekEnd));
 
     if (!error && data) {
+    console.log("loadSchedules - 조회된 데이터:", data);
       const scheduleMap = {};
       data.forEach(duty => {
         const key = `${duty.user_id}_${duty.work_date}`;
+        console.log("키 생성:", duty.user_id, duty.work_date, "→", key);
         scheduleMap[key] = duty;
       });
       setSchedules(scheduleMap);
+      console.log("최종 scheduleMap:", scheduleMap);
     }
   };
 
   const updateSchedule = async (userId, date, startTime, endTime) => {
     const branch_id = await getBranchId(user?.branch);
     const dateStr = typeof date === 'string' ? date : formatDate(date);
+    console.log("updateSchedule - dateStr:", dateStr, "key:", key);
     console.log('=== updateSchedule 시작 ===');
     console.log('userId:', userId);
     console.log('date:', dateStr);
@@ -136,6 +144,7 @@ const WeeklyScheduleGrid = ({ user }) => {
     const start = new Date(`2000-01-01 ${startTime}`);
     const end = new Date(`2000-01-01 ${endTime}`);
     const work_hours = Math.round(((end - start) / (1000 * 60 * 60)) * 10) / 10;
+    console.log("work_hours 계산:", startTime, endTime, "=", work_hours, "시간");
 
     const updated = {
       user_id: userId,
@@ -165,18 +174,20 @@ const WeeklyScheduleGrid = ({ user }) => {
     );
 
     console.log('저장할 스케줄:', schedulesToSave);
+    console.log("전체 schedules 객체:", schedules);
 
     try {
       for (const schedule of schedulesToSave) {
-        const { data: existing, error: selectError } = await supabase
+        const { data: existingList, error: selectError } = await supabase
           .from('duties')
           .select('id')
           .eq('user_id', schedule.user_id)
           .eq('work_date', schedule.work_date)
-          .single();
+          .eq("work_date", schedule.work_date);
 
         if (selectError && selectError.code !== 'PGRST116') {
           console.error('조회 에러:', selectError);
+        const existing = existingList && existingList.length > 0 ? existingList[0] : null;
         }
 
         if (existing) {
@@ -277,6 +288,7 @@ const WeeklyScheduleGrid = ({ user }) => {
   const handleBarClick = (employeeId, date) => {
     console.log('바 클릭:', employeeId, formatDate(date));
     setEditingCell({ employeeId, date: formatDate(date) });
+    console.log("월요일 확인 - date 객체:", date, "요일:", date.getDay(), "포맷:", formatDate(date));
   };
 
   const timeOptions = Array.from({ length: 27 }, (_, i) => {
