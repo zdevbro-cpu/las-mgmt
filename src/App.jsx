@@ -33,6 +33,7 @@ import AdminEventDashboard from './components/Admin/AdminEventDashboard'
 import AdminEventMenu from './components/Admin/AdminEventMenu'
 import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
+import WeeklyScheduleGrid from './components/WorkDuty/WeeklyScheduleGrid'
 
 
 function AppContent() {
@@ -93,6 +94,7 @@ function AppContent() {
       'AdminWorkDiary': '/admin/workdiary',
       'AdminCustomers': '/admin/customers',
       'AdminNotice': '/admin/notice',
+      'WeeklyScheduleGrid': '/admin/schedule',
       'NoticeViewOnly': '/notice-view-only',
       'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
@@ -263,6 +265,17 @@ function AppContent() {
           element={
             user && canAccessManagement(user) ? (
               <AdminNotice user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        
+        <Route 
+          path="/admin/schedule" 
+          element={
+            user && canAccessManagement(user) ? (
+              <WeeklyScheduleGrid user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/login" replace />
             )
