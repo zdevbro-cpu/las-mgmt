@@ -11,7 +11,7 @@ import AdminUsers from './components/AdminUsers'
 import AdminWorkDiary from './components/AdminWorkDiary'
 import AdminNotice from './components/AdminNotice'
 import AdminCustomers from './components/AdminCustomers'
-import NoticeView from './components/NoticeView'
+import NoticeViewOnly from './components/NoticeViewOnly'
 import WorkDiary from './components/WorkDiary'
 import SalesManagement from './components/SalesManagement'
 import ShippingList from './components/ShippingList'
@@ -34,6 +34,7 @@ import AdminEventMenu from './components/Admin/AdminEventMenu'
 import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 
+
 function AppContent() {
   const [user, setUser] = useState(null)
   const [previousPath, setPreviousPath] = useState('/dashboard')
@@ -53,7 +54,7 @@ function AppContent() {
     if (userData.user_type === '시스템관리자') {
       navigate('/system-admin')
     } else {
-      navigate('/notice-view')
+      navigate('/notice-view-only')
     }
   }
 
@@ -92,6 +93,7 @@ function AppContent() {
       'AdminWorkDiary': '/admin/workdiary',
       'AdminCustomers': '/admin/customers',
       'AdminNotice': '/admin/notice',
+      'NoticeViewOnly': '/notice-view-only',
       'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
       'AdminEventDashboard': '/admin/event',
@@ -144,7 +146,7 @@ function AppContent() {
     if (userData.user_type === '시스템관리자') {
       navigate('/system-admin')
     } else {
-      navigate('/notice-view')
+      navigate('/notice-view-only')
     }
   }
 
@@ -187,15 +189,14 @@ function AppContent() {
         <Route path="/event" element={<EventLandingPage />} />
         
         
-        {/* 공지사항 확인 페이지 - 로그인 직후 */}
+        {/* 공지사항 읽기 전용 - 일반업무 대시보드용 */}
         <Route 
-          path="/notice-view" 
+          path="/notice-view-only" 
           element={
             user ? (
-              <NoticeView 
+              <NoticeViewOnly 
                 user={user} 
                 onNavigate={handleNavigate} 
-                onLogout={handleLogout} 
               />
             ) : (
               <Navigate to="/login" replace />
@@ -481,7 +482,7 @@ function AppContent() {
           path="/system-admin/mathletter" 
           element={
             user && user.user_type === '시스템관리자' ? (
-              <MathLetterManager user={user} onBack={() => navigate('/system-admin')} />
+              <MathLetterManager user={user} onNavigate={handleNavigate} onBack={() => navigate('/system-admin')} />   
             ) : (
               <Navigate to="/system-admin" replace />
             )

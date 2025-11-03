@@ -184,14 +184,14 @@ export default function AdminNotice({ user, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="w-full mx-auto px-3 py-4 sm:px-6 sm:py-6 max-w-2xl">
-        <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6">
+      <div className="w-full mx-auto px-3 py-4 max-w-md">
+        <div className="bg-white rounded-lg shadow-lg p-3">
           {/* 헤더 - 나가기와 타이틀 같은 줄 */}
           <div className="flex items-center justify-center relative mb-6">
-            {/* 나가기 버튼 - 절대 위치 왼쪽 */}
+            {/* 나가기 버튼 - 매장관리 대시보드로 */}
             <button
               onClick={() => onNavigate('AdminDashboard')}
-              className="absolute left-0 flex items-center gap-1 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="absolute left-0 flex items-center gap-1 px-2 py-1 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <ArrowLeft size={18} style={{ color: '#249689' }} />
               <span className="text-sm font-medium" style={{ color: '#249689' }}>나가기</span>
@@ -202,10 +202,10 @@ export default function AdminNotice({ user, onNavigate }) {
               <img 
                 src="/images/logo.png" 
                 alt="LAS Logo" 
-                className="w-8 h-8 sm:w-10 sm:h-10 object-cover"
+                className="w-8 h-8 object-cover"
                 onError={(e) => e.target.style.display = 'none'}
               />
-              <h2 className="font-bold text-lg sm:text-xl" style={{ color: '#249689' }}>
+              <h2 className="font-bold text-lg" style={{ color: '#249689' }}>
                 공지사항관리
               </h2>
             </div>
@@ -278,36 +278,29 @@ export default function AdminNotice({ user, onNavigate }) {
             )}
           </div>
 
-          {/* 일반업무 버튼 - 공지사항 바로 아래 */}
-          <button
-            onClick={() => onNavigate('AdminDashboard')}
-            className="w-full py-3 text-white font-bold rounded-lg hover:opacity-90 transition-opacity mb-4"
-            style={{ backgroundColor: '#249689' }}
-          >
-            일반업무
-          </button>
-
           {/* 공지사항 작성 버튼 - 관리자만 */}
           {isManager && !isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="w-full py-3 flex items-center justify-center gap-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: '#17a2b8' }}
-            >
-              <Plus size={18} />
-              공지사항 작성
-            </button>
+            <div className="mb-3">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="w-full py-3 flex items-center justify-center gap-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity text-sm"
+                style={{ backgroundColor: '#17a2b8' }}
+              >
+                <Plus size={18} />
+                공지사항 작성
+              </button>
+            </div>
           )}
 
           {/* 작성/수정 폼 */}
           {isEditing && isManager && (
-            <div className="mt-4 p-4 border-2 rounded-lg" style={{ borderColor: '#249689', backgroundColor: '#f0fdf4' }}>
-              <h3 className="font-bold mb-4 text-base" style={{ color: '#249689' }}>
+            <div className="mt-4 p-3 border-2 rounded-lg" style={{ borderColor: '#249689', backgroundColor: '#f0fdf4' }}>
+              <h3 className="font-bold mb-3 text-sm" style={{ color: '#249689' }}>
                 {editingNotice ? '공지사항 수정' : '새 공지사항 작성'}
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-3">
                 <div>
-                  <label className="block mb-2 font-bold text-sm" style={{ color: '#000000' }}>
+                  <label className="block mb-1 font-bold text-xs" style={{ color: '#000000' }}>
                     제목
                   </label>
                   <input
@@ -321,7 +314,7 @@ export default function AdminNotice({ user, onNavigate }) {
                 </div>
 
                 <div>
-                  <label className="block mb-2 font-bold text-sm" style={{ color: '#000000' }}>
+                  <label className="block mb-1 font-bold text-xs" style={{ color: '#000000' }}>
                     내용
                   </label>
                   <textarea

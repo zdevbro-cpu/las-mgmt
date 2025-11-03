@@ -579,7 +579,7 @@ export default function EventLandingPage() {
           {/* 학부모 이름 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              학부모이름 *
+              👤 학부모 이름 <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
               type="text"
@@ -595,7 +595,7 @@ export default function EventLandingPage() {
           {/* 휴대전화 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              휴대전화 *
+              📞 휴대전화 번호 <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
               type="tel"
@@ -612,7 +612,7 @@ export default function EventLandingPage() {
           {/* 자녀 성별 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              자녀성별 *
+              🎀 자녀 성별 <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer flex-1">
@@ -643,7 +643,7 @@ export default function EventLandingPage() {
           {/* 자녀 연령 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              자녀나이 *
+              🧒 자녀나이 <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
               type="number"
