@@ -333,7 +333,7 @@ export default function WorkDiary({ user, onNavigate }) {
           {/* 외근 시 내용 */}
           <div className="border-t pt-2">
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              외근 시 내용을 적어주세요
+              외근 기록
             </label>
             <textarea
               name="outContent"
@@ -349,7 +349,7 @@ export default function WorkDiary({ user, onNavigate }) {
           {/* 주인형 모집내용 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              주인형 모집내용을 적어주세요
+              주인형 모집내용
             </label>
             <textarea
               name="exemplaryContent"
@@ -365,7 +365,7 @@ export default function WorkDiary({ user, onNavigate }) {
           {/* 오늘 인상깊은 고객 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              오늘 인상깊은 고객에 대해 적어주세요
+              고객 상담내용
             </label>
             <textarea
               name="memorableCustomer"
@@ -381,13 +381,13 @@ export default function WorkDiary({ user, onNavigate }) {
           {/* 건의사항 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-              건의사항이 있으시면 적어주세요
+              특이사항
             </label>
             <textarea
               name="suggestions"
               value={formData.suggestions}
               onChange={handleChange}
-              placeholder="건의사항이 있으시면 적어주세요"
+              placeholder="특이사항이 있으시면 적어주세요"
               rows={3}
               className="w-full px-4 py-2 border border-gray-300"
               style={{ borderRadius: '10px', color: '#000000', fontSize: '15px' }}
