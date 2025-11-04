@@ -545,7 +545,7 @@ const WeeklyScheduleGrid = ({ user }) => {
                   </div>
                 );
               })}
-              <div className="font-bold text-base text-center">주간</div>
+              <div className="font-bold text-base text-center">주간합계</div>
             </div>
           </div>
 
@@ -780,7 +780,7 @@ const WeeklyScheduleGrid = ({ user }) => {
             {/* 일일계획합계 */}
             <div className="bg-blue-50 py-0.5 px-1 border-t-2 border-blue-600">
               <div className="grid grid-cols-9 gap-1 items-center">
-                <div className="text-center font-bold text-lg text-blue-600">일일계획합계</div>
+                <div className="text-center font-bold text-lg text-blue-600">일일계획 합계</div>
                 {weekDates.map((date, idx) => {
                   let dailyTotal = 0;
                   employees.forEach(emp => {
@@ -809,7 +809,7 @@ const WeeklyScheduleGrid = ({ user }) => {
             {/* 일일실적합계 */}
             <div className="bg-red-50 py-0.5 px-1 border-t-2 border-red-600">
               <div className="grid grid-cols-9 gap-1 items-center">
-                <div className="text-center font-bold text-lg text-red-600">일일실적합계</div>
+                <div className="text-center font-bold text-lg text-red-600">일일실적 합계</div>
                 {weekDates.map((date, idx) => {
                   let dailyDiaryTotal = 0;
                   employees.forEach(emp => {
@@ -829,7 +829,18 @@ const WeeklyScheduleGrid = ({ user }) => {
                 })}
                 <div className="text-center">
                   <span className="text-lg font-bold text-red-700">
-                    {Object.values(workDiaries).reduce((sum, d) => sum + (d.work_hours || 0), 0).toFixed(1)}h
+                    {(() => {
+                      let weeklyDiaryTotal = 0;
+                      weekDates.forEach(date => {
+                        employees.forEach(emp => {
+                          const key = `${emp.id}_${formatDate(date)}`;
+                          if (workDiaries[key]?.work_hours) {
+                            weeklyDiaryTotal += workDiaries[key].work_hours;
+                          }
+                        });
+                      });
+                      return weeklyDiaryTotal > 0 ? `${weeklyDiaryTotal.toFixed(1)}h` : '-';
+                    })()}
                   </span>
                 </div>
               </div>
