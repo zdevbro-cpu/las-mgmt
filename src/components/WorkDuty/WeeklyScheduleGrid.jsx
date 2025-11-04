@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Save, RefreshCw, Plus, Search, ArrowLeft } from 'lucide-react';
+import { Calendar, Save, RefreshCw, Plus, Search, ArrowLeft, Lightbulb, BookOpen } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { getWeekDates, formatDate } from '../../lib/dateUtils';
 
@@ -19,15 +19,20 @@ const WeeklyScheduleGrid = ({ user }) => {
   const [branches, setBranches] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [showBranchSelect, setShowBranchSelect] = useState(false);
+  const [workDiaries, setWorkDiaries] = useState({});
+  const [showDiaryModal, setShowDiaryModal] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [selectedDiaryDate, setSelectedDiaryDate] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
 
   const weekDates = getWeekDates(currentWeekStart);
 
   useEffect(() => {
-  console.log("weekDates:", weekDates.map(d => formatDate(d)));
     loadEmployees();
     loadAllEmployees();
     loadSchedules();
     loadBranches();
+    loadWorkDiaries();
   }, [currentWeekStart, selectedBranch]);
 
   const loadEmployees = async () => {
@@ -83,35 +88,46 @@ const WeeklyScheduleGrid = ({ user }) => {
       .select('*')
       .gte('work_date', formatDate(weekStart))
       .lte('work_date', formatDate(weekEnd));
-    console.log("loadSchedules - 조회 범위:", formatDate(weekStart), "~", formatDate(weekEnd));
 
     if (!error && data) {
-    console.log("loadSchedules - 조회된 데이터:", data);
       const scheduleMap = {};
       data.forEach(duty => {
         const key = `${duty.user_id}_${duty.work_date}`;
-        console.log("키 생성:", duty.user_id, duty.work_date, "→", key);
         scheduleMap[key] = duty;
       });
       setSchedules(scheduleMap);
-      console.log("최종 scheduleMap:", scheduleMap);
+    }
+  };
+
+  const loadWorkDiaries = async () => {
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setDate(weekStart.getDate() - 1);
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const { data, error } = await supabase
+      .from('work_diaries')
+      .select('*')
+      .gte('work_date', formatDate(weekStart))
+      .lte('work_date', formatDate(weekEnd));
+
+    if (!error && data) {
+      const diaryMap = {};
+      data.forEach(diary => {
+        const key = `${diary.user_id}_${diary.work_date}`;
+        diaryMap[key] = diary;
+      });
+      setWorkDiaries(diaryMap);
     }
   };
 
   const updateSchedule = async (userId, date, startTime, endTime) => {
     const branch_id = await getBranchId(user?.branch);
     const dateStr = typeof date === 'string' ? date : formatDate(date);
-    console.log('=== updateSchedule 시작 ===');
-    console.log('userId:', userId);
-    console.log('date:', dateStr);
-    console.log('startTime:', startTime);
-    console.log('endTime:', endTime);
     
     const key = `${userId}_${dateStr}`;
-    console.log('key:', key);
     
     if (!startTime && !endTime) {
-      console.log('삭제 처리');
       
       // DB에서 삭제
       const { error: deleteError } = await supabase
@@ -121,23 +137,19 @@ const WeeklyScheduleGrid = ({ user }) => {
         .eq('work_date', dateStr);
       
       if (deleteError) {
-        console.error('DB 삭제 에러:', deleteError);
       } else {
-        console.log('DB에서 삭제 완료');
       }
       
       // State에서 삭제
       setSchedules(prev => {
         const newSchedules = { ...prev };
         delete newSchedules[key];
-        console.log('삭제 후 schedules:', newSchedules);
         return newSchedules;
       });
       return;
     }
 
     if (!startTime || !endTime) {
-      console.log('시작 또는 종료 시간 없음 - 부분 업데이트');
       setSchedules(prev => {
         const current = prev[key] || {};
         const updated = {
@@ -149,7 +161,6 @@ const WeeklyScheduleGrid = ({ user }) => {
           branch_id,
           created_by: user?.id,
         };
-        console.log('부분 업데이트:', updated);
         return { ...prev, [key]: updated };
       });
       return;
@@ -158,7 +169,6 @@ const WeeklyScheduleGrid = ({ user }) => {
     const start = new Date(`2000-01-01 ${startTime}`);
     const end = new Date(`2000-01-01 ${endTime}`);
     const work_hours = Math.round(((end - start) / (1000 * 60 * 60)) * 10) / 10;
-    console.log("work_hours 계산:", startTime, endTime, "=", work_hours, "시간");
 
     const updated = {
       user_id: userId,
@@ -170,15 +180,12 @@ const WeeklyScheduleGrid = ({ user }) => {
       created_by: user?.id,
     };
 
-    console.log('전체 업데이트:', updated);
 
     setSchedules(prev => {
       const newSchedules = { ...prev, [key]: updated };
-      console.log('업데이트 후 schedules:', newSchedules);
       return newSchedules;
     });
     
-    console.log('=== updateSchedule 종료 ===');
   };
 
   const saveSchedules = async () => {
@@ -187,8 +194,6 @@ const WeeklyScheduleGrid = ({ user }) => {
       s.start_time && s.end_time && s.work_hours > 0
     );
 
-    console.log('저장할 스케줄:', schedulesToSave);
-    console.log("전체 schedules 객체:", schedules);
 
     try {
       for (const schedule of schedulesToSave) {
@@ -200,7 +205,6 @@ const WeeklyScheduleGrid = ({ user }) => {
           .eq("work_date", schedule.work_date);
 
         if (selectError && selectError.code !== 'PGRST116') {
-          console.error('조회 에러:', selectError);
         }
 
         const existing = existingList && existingList.length > 0 ? existingList[0] : null;
@@ -212,10 +216,8 @@ const WeeklyScheduleGrid = ({ user }) => {
             .eq('id', existing.id);
           
           if (updateError) {
-            console.error('업데이트 에러:', updateError);
             alert(`업데이트 실패: ${updateError.message}`);
           } else {
-            console.log('업데이트 성공:', schedule);
           }
         } else {
           const { error: insertError } = await supabase
@@ -223,10 +225,8 @@ const WeeklyScheduleGrid = ({ user }) => {
             .insert(schedule);
           
           if (insertError) {
-            console.error('삽입 에러:', insertError);
             alert(`삽입 실패: ${insertError.message}`);
           } else {
-            console.log('삽입 성공:', schedule);
           }
         }
       }
@@ -234,7 +234,6 @@ const WeeklyScheduleGrid = ({ user }) => {
       setLoading(false);
       alert('저장되었습니다.');
     } catch (error) {
-      console.error('저장 중 에러:', error);
       setLoading(false);
       alert(`저장 실패: ${error.message}`);
     }
@@ -301,9 +300,14 @@ const WeeklyScheduleGrid = ({ user }) => {
   };
 
   const handleBarClick = (employeeId, date) => {
-    console.log('바 클릭:', employeeId, formatDate(date));
     setEditingCell({ employeeId, date: formatDate(date) });
-    console.log("월요일 확인 - date 객체:", date, "요일:", date.getDay(), "포맷:", formatDate(date));
+  };
+
+  const handleRemoveEmployee = (employee) => {
+    if (window.confirm(`${employee.name}을(를) 목록에서 제거하시겠습니까?\n\n(사용자 정보는 삭제되지 않으며, 이 화면에서만 제거됩니다)`)) {
+      setEmployees(prev => prev.filter(emp => emp.id !== employee.id));
+      setContextMenu(null);
+    }
   };
 
   const timeOptions = Array.from({ length: 27 }, (_, i) => {
@@ -313,7 +317,10 @@ const WeeklyScheduleGrid = ({ user }) => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div 
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6"
+      onClick={() => setContextMenu(null)}
+    >
       <div className="max-w-[1400px] mx-auto">
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6 relative">
@@ -549,8 +556,18 @@ const WeeklyScheduleGrid = ({ user }) => {
               return (
                 <div key={employee.id} className="py-0.5 px-1 border-b border-gray-200 hover:bg-gray-50">
                   <div className="grid grid-cols-9 gap-1 items-center">
-                    <div className="text-center">
-                      <div className="font-bold text-lg text-teal-600">{employee.name}</div>
+                    <div 
+                      className="text-center"
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        setContextMenu({
+                          x: e.clientX,
+                          y: e.clientY,
+                          employee: employee
+                        });
+                      }}
+                    >
+                      <div className="font-bold text-lg text-teal-600 cursor-context-menu">{employee.name}</div>
                       {employee.isPartTime && (
                         <span className="text-xs text-purple-600">알바</span>
                       )}
@@ -559,52 +576,211 @@ const WeeklyScheduleGrid = ({ user }) => {
                     {weekDates.map((date, idx) => {
                       const key = `${employee.id}_${formatDate(date)}`;
                       const schedule = schedules[key] || {};
+                      const diary = workDiaries[key] || {};
                       const hasSchedule = schedule.start_time && schedule.end_time;
+                      const hasDiary = diary.start_time && diary.end_time;
 
                       return (
                         <div key={idx} className="relative">
+                          {/* 계획 (상단) */}
                           <div 
-                            className="h-10 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 relative"
+                            className="h-4 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 relative mb-1 group"
                             onClick={() => handleBarClick(employee.id, date)}
+                            title={hasSchedule ? `계획: ${schedule.start_time} ~ ${schedule.end_time}` : '계획 없음'}
                           >
                             {hasSchedule && (
-                              <div
-                                className="absolute h-full bg-gradient-to-r from-teal-400 to-teal-600 rounded flex flex-col items-center justify-center text-white font-bold pointer-events-none"
-                                style={{
-                                  left: `${timeToPercent(schedule.start_time)}%`,
-                                  width: `${timeToPercent(schedule.end_time) - timeToPercent(schedule.start_time)}%`,
-                                  minWidth: '20px'
-                                }}
-                              >
-                                <div className="text-xs leading-tight">{schedule.start_time}</div>
-                                <div className="text-xs leading-tight">{schedule.end_time}</div>
-                              </div>
+                              <>
+                                <div
+                                  className="absolute h-full rounded"
+                                  style={{
+                                    left: `${timeToPercent(schedule.start_time)}%`,
+                                    width: `${timeToPercent(schedule.end_time) - timeToPercent(schedule.start_time)}%`,
+                                    minWidth: '8px',
+                                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                                    boxShadow: '0 2px 4px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                  }}
+                                />
+                                {/* 호버 tooltip */}
+                                <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-10">
+                                  {schedule.start_time} ~ {schedule.end_time}
+                                </div>
+                              </>
                             )}
                             {!hasSchedule && (
-                              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                              <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-xs">
                                 +
                               </div>
+                            )}
+                          </div>
+
+                          {/* 실적 (하단) */}
+                          <div 
+                            className="h-4 bg-gray-100 rounded relative group"
+                            title={hasDiary ? `실적: ${diary.start_time} ~ ${diary.end_time}` : '실적 없음'}
+                          >
+                            {hasDiary && (
+                              <>
+                                <div
+                                  className="absolute h-full rounded"
+                                  style={{
+                                    left: `${timeToPercent(diary.start_time)}%`,
+                                    width: `${timeToPercent(diary.end_time) - timeToPercent(diary.start_time)}%`,
+                                    minWidth: '8px',
+                                    background: 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255,255,255,0.3)'
+                                  }}
+                                />
+                                {/* 호버 tooltip */}
+                                <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap z-10">
+                                  {diary.start_time} ~ {diary.end_time}
+                                </div>
+                              </>
                             )}
                           </div>
                         </div>
                       );
                     })}
 
-                    {/* 주간 합계 */}
-                    <div className="text-center">
-                      <span className="text-base font-bold text-teal-600">
-                        {weeklyTotal > 0 ? `${weeklyTotal.toFixed(1)}h` : '-'}
-                      </span>
+                    {/* 주간 영역 2x2 그리드 */}
+                    <div className="grid grid-cols-2 grid-rows-2 gap-1 border border-gray-300 rounded">
+                      {/* 좌상: 계획 합계 */}
+                      <div className="flex items-center justify-center bg-blue-50 p-1">
+                        <span className="text-sm font-bold text-blue-600">
+                          {weeklyTotal > 0 ? `${weeklyTotal.toFixed(1)}h` : '-'}
+                        </span>
+                      </div>
+                      
+                      {/* 우상: 전구 아이콘 */}
+                      <div className="flex items-center justify-center bg-gray-50 p-1">
+                        {(() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          
+                          // 오늘까지의 계획 합계
+                          let plannedUntilToday = 0;
+                          weekDates.forEach(date => {
+                            const dateObj = new Date(date);
+                            dateObj.setHours(0, 0, 0, 0);
+                            
+                            if (dateObj <= today) {
+                              const key = `${employee.id}_${formatDate(date)}`;
+                              const schedule = schedules[key];
+                              if (schedule?.work_hours) {
+                                plannedUntilToday += schedule.work_hours;
+                              }
+                            }
+                          });
+                          
+                          // 미래 계획 합계
+                          let plannedFuture = 0;
+                          weekDates.forEach(date => {
+                            const dateObj = new Date(date);
+                            dateObj.setHours(0, 0, 0, 0);
+                            
+                            if (dateObj > today) {
+                              const key = `${employee.id}_${formatDate(date)}`;
+                              const schedule = schedules[key];
+                              if (schedule?.work_hours) {
+                                plannedFuture += schedule.work_hours;
+                              }
+                            }
+                          });
+                          
+                          // 오늘까지의 실적 합계
+                          let actualUntilToday = 0;
+                          weekDates.forEach(date => {
+                            const dateObj = new Date(date);
+                            dateObj.setHours(0, 0, 0, 0);
+                            
+                            if (dateObj <= today) {
+                              const key = `${employee.id}_${formatDate(date)}`;
+                              const diary = workDiaries[key];
+                              if (diary?.work_hours) {
+                                actualUntilToday += diary.work_hours;
+                              }
+                            }
+                          });
+                          
+                          // 전구 색상 결정
+                          let bulbColor, bulbFill, bulbClass;
+                          
+                          if (plannedUntilToday === 0 && plannedFuture === 0) {
+                            // 케이스 3: 계획이 아예 없음
+                            bulbColor = 'text-yellow-500';
+                            bulbFill = '#eab308';
+                            bulbClass = 'yellow';
+                          } else if (plannedUntilToday === 0 && plannedFuture > 0) {
+                            // 케이스 4: 오늘까지 계획 없고 미래 계획만 있음
+                            bulbColor = 'text-gray-400';
+                            bulbFill = '#9ca3af';
+                            bulbClass = 'gray';
+                          } else if (actualUntilToday >= plannedUntilToday) {
+                            // 케이스 1: 실적 충분 (잘하고 있음)
+                            bulbColor = 'text-blue-500';
+                            bulbFill = '#3b82f6';
+                            bulbClass = 'blue';
+                          } else {
+                            // 케이스 2: 실적 부족 (주의 필요)
+                            bulbColor = 'text-red-500';
+                            bulbFill = '#ef4444';
+                            bulbClass = 'red';
+                          }
+                          
+                          return (
+                            <Lightbulb 
+                              size={20} 
+                              className={bulbColor} 
+                              fill={bulbFill}
+                            />
+                          );
+                        })()}
+                      </div>
+                      
+                      {/* 좌하: 실적 합계 */}
+                      <div className="flex items-center justify-center bg-red-50 p-1">
+                        <span className="text-sm font-bold text-red-600">
+                          {(() => {
+                            let weeklyDiaryTotal = 0;
+                            weekDates.forEach(date => {
+                              const key = `${employee.id}_${formatDate(date)}`;
+                              const diary = workDiaries[key];
+                              if (diary?.work_hours) {
+                                weeklyDiaryTotal += diary.work_hours;
+                              }
+                            });
+                            return weeklyDiaryTotal > 0 ? `${weeklyDiaryTotal.toFixed(1)}h` : '-';
+                          })()}
+                        </span>
+                      </div>
+                      
+                      {/* 우하: 책 아이콘 */}
+                      <div className="flex items-center justify-center bg-gray-50 p-1 cursor-pointer hover:bg-gray-100"
+                           onClick={() => {
+                             setSelectedEmployee(employee);
+                             const employeeDiaries = weekDates
+                               .map(date => ({
+                                 date,
+                                 diary: workDiaries[`${employee.id}_${formatDate(date)}`]
+                               }))
+                               .filter(item => item.diary);
+                             
+                             if (employeeDiaries.length > 0) {
+                               setSelectedDiaryDate(employeeDiaries[0].date);
+                               setShowDiaryModal(true);
+                             }
+                           }}>
+                        <BookOpen size={20} className="text-teal-600" />
+                      </div>
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            {/* 일일 합계 */}
-            <div className="bg-gray-100 py-0.5 px-1 border-t-2 border-teal-600">
+            {/* 일일계획합계 */}
+            <div className="bg-blue-50 py-0.5 px-1 border-t-2 border-blue-600">
               <div className="grid grid-cols-9 gap-1 items-center">
-                <div className="text-center font-bold text-lg text-teal-600">일일 합계</div>
+                <div className="text-center font-bold text-lg text-blue-600">일일계획합계</div>
                 {weekDates.map((date, idx) => {
                   let dailyTotal = 0;
                   employees.forEach(emp => {
@@ -616,15 +792,44 @@ const WeeklyScheduleGrid = ({ user }) => {
 
                   return (
                     <div key={idx} className="text-center">
-                      <span className="text-lg font-bold text-teal-600">
+                      <span className="text-lg font-bold text-blue-600">
                         {dailyTotal > 0 ? `${dailyTotal.toFixed(1)}h` : '-'}
                       </span>
                     </div>
                   );
                 })}
                 <div className="text-center">
-                  <span className="text-lg font-bold text-teal-700">
+                  <span className="text-lg font-bold text-blue-700">
                     {Object.values(schedules).reduce((sum, s) => sum + (s.work_hours || 0), 0).toFixed(1)}h
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 일일실적합계 */}
+            <div className="bg-red-50 py-0.5 px-1 border-t-2 border-red-600">
+              <div className="grid grid-cols-9 gap-1 items-center">
+                <div className="text-center font-bold text-lg text-red-600">일일실적합계</div>
+                {weekDates.map((date, idx) => {
+                  let dailyDiaryTotal = 0;
+                  employees.forEach(emp => {
+                    const key = `${emp.id}_${formatDate(date)}`;
+                    if (workDiaries[key]?.work_hours) {
+                      dailyDiaryTotal += workDiaries[key].work_hours;
+                    }
+                  });
+
+                  return (
+                    <div key={idx} className="text-center">
+                      <span className="text-lg font-bold text-red-600">
+                        {dailyDiaryTotal > 0 ? `${dailyDiaryTotal.toFixed(1)}h` : '-'}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="text-center">
+                  <span className="text-lg font-bold text-red-700">
+                    {Object.values(workDiaries).reduce((sum, d) => sum + (d.work_hours || 0), 0).toFixed(1)}h
                   </span>
                 </div>
               </div>
@@ -664,7 +869,6 @@ const WeeklyScheduleGrid = ({ user }) => {
                     value={schedule.start_time || ''}
                     onChange={(e) => {
                       const newValue = e.target.value;
-                      console.log('출근 시간 변경:', newValue);
                       updateSchedule(editingCell.employeeId, editingCell.date, newValue, schedule.end_time);
                     }}
                     className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none relative z-[2000]"
@@ -683,7 +887,6 @@ const WeeklyScheduleGrid = ({ user }) => {
                     value={schedule.end_time || ''}
                     onChange={(e) => {
                       const newValue = e.target.value;
-                      console.log('퇴근 시간 변경:', newValue);
                       updateSchedule(editingCell.employeeId, editingCell.date, schedule.start_time, newValue);
                     }}
                     className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-teal-500 focus:outline-none relative z-[2000]"
@@ -728,6 +931,163 @@ const WeeklyScheduleGrid = ({ user }) => {
           </div>
         );
       })()}
+
+      {/* 근무일지 보기 모달 */}
+      {showDiaryModal && selectedEmployee && (() => {
+        const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+        const employeeDiaries = weekDates
+          .map(date => ({
+            date,
+            diary: workDiaries[`${selectedEmployee.id}_${formatDate(date)}`]
+          }))
+          .filter(item => item.diary);
+
+        if (employeeDiaries.length === 0) return null;
+
+        const currentDiary = workDiaries[`${selectedEmployee.id}_${formatDate(selectedDiaryDate)}`];
+        
+        return (
+          <div 
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50"
+            onClick={() => setShowDiaryModal(false)}
+          >
+            <div 
+              className="bg-white rounded-xl shadow-2xl p-6 w-[600px] max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div className="mb-4">
+                <h3 className="text-xl font-bold text-teal-600 text-center mb-4">
+                  {selectedEmployee.name} 근무일지
+                </h3>
+
+                {/* 탭 */}
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {employeeDiaries.map(({ date, diary }) => {
+                    const isSelected = formatDate(date) === formatDate(selectedDiaryDate);
+                    return (
+                      <button
+                        key={formatDate(date)}
+                        onClick={() => setSelectedDiaryDate(date)}
+                        className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-colors ${
+                          isSelected 
+                            ? 'bg-teal-600 text-white' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {dayNames[date.getDay()]} {date.getMonth() + 1}/{date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 근무일지 내용 */}
+              {currentDiary && (
+                <div className="space-y-4">
+                  {/* 근무 시간 */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-700">근무 시간</span>
+                      <span className="text-lg font-bold text-teal-600">
+                        {currentDiary.start_time} ~ {currentDiary.end_time} ({currentDiary.work_hours}h)
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 일일 확인목록 */}
+                  {(currentDiary.daily_check_clean || currentDiary.daily_check_training || currentDiary.daily_check_list) && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-700 mb-2">일일 확인목록</h4>
+                      <div className="space-y-1">
+                        {currentDiary.daily_check_clean && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>매장 청결점검</span>
+                          </div>
+                        )}
+                        {currentDiary.daily_check_training && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>직원 업무교육</span>
+                          </div>
+                        )}
+                        {currentDiary.daily_check_list && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-green-600">✓</span>
+                            <span>직원 체크리스트 점검</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 외근 내용 */}
+                  {currentDiary.out_content && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-700 mb-2">외근 시 내용</h4>
+                      <p className="text-gray-600 whitespace-pre-wrap">{currentDiary.out_content}</p>
+                    </div>
+                  )}
+
+                  {/* 주인형 모집내용 */}
+                  {currentDiary.exemplary_content && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-700 mb-2">주인형 모집내용</h4>
+                      <p className="text-gray-600 whitespace-pre-wrap">{currentDiary.exemplary_content}</p>
+                    </div>
+                  )}
+
+                  {/* 인상깊은 고객 */}
+                  {currentDiary.memorable_customer && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-700 mb-2">오늘 인상깊은 고객</h4>
+                      <p className="text-gray-600 whitespace-pre-wrap">{currentDiary.memorable_customer}</p>
+                    </div>
+                  )}
+
+                  {/* 건의사항 */}
+                  {currentDiary.suggestions && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-700 mb-2">건의사항</h4>
+                      <p className="text-gray-600 whitespace-pre-wrap">{currentDiary.suggestions}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 닫기 버튼 */}
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setShowDiaryModal(false)}
+                  className="px-8 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-semibold"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 우클릭 컨텍스트 메뉴 */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[1100]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleRemoveEmployee(contextMenu.employee)}
+            className="w-full px-4 py-2 text-left hover:bg-red-50 text-red-600 font-medium transition-colors"
+          >
+            목록에서 제거
+          </button>
+        </div>
+      )}
     </div>
   );
 };
