@@ -335,7 +335,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                   {selectedDiary.out_content && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3" style={{ fontSize: '17px' }}>
-                        외근 시 내용
+                        외근 내용
                       </h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="whitespace-pre-wrap">
@@ -361,7 +361,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                   {selectedDiary.memorable_customer && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3" style={{ fontSize: '17px' }}>
-                        오늘 인상깊은 고객
+                        고객 상담내용
                       </h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="whitespace-pre-wrap">
@@ -374,7 +374,7 @@ export default function AdminWorkDiary({ user, onNavigate }) {
                   {selectedDiary.suggestions && (
                     <div className="mb-6">
                       <h3 className="font-bold mb-3" style={{ fontSize: '17px' }}>
-                        건의사항
+                        특이사항
                       </h3>
                       <div className="bg-gray-50 rounded-lg p-4">
                         <p className="whitespace-pre-wrap">
