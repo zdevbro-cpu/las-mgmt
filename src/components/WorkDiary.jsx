@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 // 30분 단위 시간 옵션 생성 (08:30 ~ 22:30)
 const generateTimeOptions = () => {
@@ -127,13 +128,14 @@ export default function WorkDiary({ user, onNavigate }) {
         suggestions: formData.suggestions.trim() || null
       }
 
-      console.log('근무일지 저장 데이터:', diaryData)
+      const { data, error } = await supabase
+        .from('work_diaries')
+        .insert([diaryData])
+        .select()
 
-      // 실제 환경에서는 supabase 호출
-      // const { data, error } = await supabase
-      //   .from('work_diaries')
-      //   .insert([diaryData])
-      //   .select()
+      if (error) {
+        throw error
+      }
 
       alert('근무일지가 제출되었습니다!')
       
