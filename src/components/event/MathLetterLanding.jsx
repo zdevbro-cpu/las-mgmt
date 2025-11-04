@@ -27,7 +27,8 @@ export default function MathLetterLanding() {
     
     const trimmedEmail = email.trim()
     
-    if (!isValidEmail(trimmedEmail)) {
+    // 이메일이 입력된 경우에만 유효성 검사
+    if (trimmedEmail && !isValidEmail(trimmedEmail)) {
       alert('올바른 이메일 주소를 입력해주세요.')
       return
     }
@@ -36,8 +37,28 @@ export default function MathLetterLanding() {
       const params = new URLSearchParams(window.location.search)
       const refCode = params.get('ref')
       
-      // localStorage에 이메일 저장
-      localStorage.setItem('mathLetterEmail', trimmedEmail)
+      // 이메일이 입력된 경우에만 DB에 저장
+      if (trimmedEmail) {
+        const { error } = await supabase
+          .from('math_letter_subscribers')
+          .insert([
+            { 
+              email: trimmedEmail,
+              referral_code: refCode || null,
+              subscribed_at: new Date().toISOString()
+            }
+          ])
+        
+        if (error) {
+          console.error('❌ DB 저장 오류:', error)
+          // DB 오류가 있어도 진행은 계속
+        } else {
+          console.log('✅ 이메일 DB 저장 완료:', trimmedEmail)
+        }
+        
+        // localStorage에 이메일 저장
+        localStorage.setItem('mathLetterEmail', trimmedEmail)
+      }
       
       // 정보 입력 페이지로 이동
       navigate(refCode ? `/event?ref=${encodeURIComponent(refCode)}` : '/event')
@@ -676,6 +697,7 @@ export default function MathLetterLanding() {
           font-size: 2rem;
           font-weight: 700;
           line-height: 1.4;
+
           color: var(--text-dark);
           margin-bottom: 20px;
         }
@@ -695,6 +717,15 @@ export default function MathLetterLanding() {
         /* Subscribe Form */
         .subscribe-form {
           margin-top: 40px;
+        }
+
+        .email-label {
+          display: block;
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--text-dark);
+          margin-bottom: 12px;
+          text-align: left;
         }
 
         .form-group {
@@ -1128,6 +1159,7 @@ export default function MathLetterLanding() {
               <div className="stat-number">100%</div>
               <div className="stat-label">무료</div>
             </div>
+                <label className="email-label">이메일 (선택)</label>
           </div>
         </div>
       </section>
@@ -1149,6 +1181,7 @@ export default function MathLetterLanding() {
               
               {/* Subscription Form */}
               <form className="subscribe-form" onSubmit={handleSubscribe}>
+                <label className="email-label">이메일 (선택)</label>
                 <div className="form-group">
                   <input 
                     type="email" 
@@ -1156,7 +1189,6 @@ export default function MathLetterLanding() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="email-input" 
                     placeholder="이메일 주소를 입력하세요"
-                    required
                   />
                   <button type="submit" className="submit-btn">
                     <i className="fas fa-paper-plane"></i>
