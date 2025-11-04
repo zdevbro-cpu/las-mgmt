@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // @components 로 별칭을 줬다면
+      '@components': path.resolve(__dirname, './src/components'),
+    },
+  },
   server: {
     port: 5173
   },
