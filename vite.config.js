@@ -1,5 +1,8 @@
+// vite.config.js
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'; // <--- 이 줄이 빠져있습니다!
 
 export default defineConfig({
   plugins: [react()],
