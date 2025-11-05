@@ -25,7 +25,6 @@ import SystemAdminPurchases from './components/purchases/SystemAdminPurchases'
 import SystemAdminShipping from './components/SystemAdminShipping'
 import MyInfo from './components/MyInfo'
 import MyQRCode from './components/MyQRCode'
-// ⭐ 수학편지 페이지 임포트 추가
 import MathLetterLanding from './components/event/MathLetterLanding'
 import MathLetterManager from './components/MathLetterManager'
 import EventLandingPage from './components/event/EventLandingPage'
@@ -34,6 +33,7 @@ import AdminEventMenu from './components/Admin/AdminEventMenu'
 import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 import WeeklyScheduleGrid from './components/WorkDuty/WeeklyScheduleGrid'
+import WeeklyScheduleView from './components/WorkDuty/WeeklyScheduleView'
 
 
 function AppContent() {
@@ -84,7 +84,7 @@ function AppContent() {
       'hero': '/',
       'login': '/login',
       'signup': '/signup',
-      'mathletter': '/mathletter', // ⭐ 수학편지 메인 랜딩 추가
+      'mathletter': '/mathletter',
       'event': '/event',
       'Dashboard': '/dashboard',
       'dashboard': '/dashboard',
@@ -95,6 +95,7 @@ function AppContent() {
       'AdminCustomers': '/admin/customers',
       'AdminNotice': '/admin/notice',
       'WeeklyScheduleGrid': '/admin/schedule',
+      'WeeklyScheduleView': '/admin/schedule-view',
       'NoticeViewOnly': '/notice-view-only',
       'AdminEventMenu': '/admin/event-menu',
       'adminEvent': '/admin/event',
@@ -179,19 +180,15 @@ function AppContent() {
   return (
     <>
       <Routes>
-        {/* 공개 페이지 */}
         <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
         <Route path="/login" element={<Login onNavigate={handleNavigate} onLogin={handleLogin} />} />
         <Route path="/signup" element={<Signup onNavigate={handleNavigate} />} />
         
-        {/* ⭐ 수학편지 메인 랜딩 페이지 - 공개 */}
         <Route path="/mathletter" element={<MathLetterLanding />} />
         
-        {/* ⭐ 수학편지 정보 입력 페이지 - 공개 */}
         <Route path="/event" element={<EventLandingPage />} />
         
         
-        {/* 공지사항 읽기 전용 - 일반업무 대시보드용 */}
         <Route 
           path="/notice-view-only" 
           element={
@@ -205,7 +202,7 @@ function AppContent() {
             )
           } 
         />
-        {/* 인증 필요 페이지 */}
+        
         <Route 
           path="/dashboard" 
           element={
@@ -244,7 +241,7 @@ function AppContent() {
             user && canAccessManagement(user) ? (
               <AdminUsers user={user} onNavigate={handleNavigate} />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/admin" replace />
             )
           } 
         />
@@ -255,29 +252,7 @@ function AppContent() {
             user && canAccessManagement(user) ? (
               <AdminWorkDiary user={user} onNavigate={handleNavigate} />
             ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-        
-        <Route 
-          path="/admin/notice" 
-          element={
-            user && canAccessManagement(user) ? (
-              <AdminNotice user={user} onNavigate={handleNavigate} />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          } 
-        />
-        
-        <Route 
-          path="/admin/schedule" 
-          element={
-            user && canAccessManagement(user) ? (
-              <WeeklyScheduleGrid user={user} onNavigate={handleNavigate} />
-            ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/admin" replace />
             )
           } 
         />
@@ -288,27 +263,55 @@ function AppContent() {
             user && canAccessManagement(user) ? (
               <AdminCustomers user={user} onNavigate={handleNavigate} />
             ) : (
-              <Navigate to="/login" replace />
+              <Navigate to="/admin" replace />
             )
           } 
         />
         
-        {/* ⭐ 이벤트 관리 메뉴 - 시스템관리자 전용 */}
         <Route 
-          path="/admin/event-menu" 
+          path="/admin/notice" 
           element={
-            user && user.user_type === '시스템관리자' ? (
-              <AdminEventMenu 
-                user={user} 
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-                onBack={() => navigate('/system-admin')}
-              />
+            user && canAccessManagement(user) ? (
+              <AdminNotice user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/admin" replace />
+            )
+          } 
+        />
+        
+        <Route 
+          path="/admin/schedule" 
+          element={
+            user && canAccessManagement(user) ? (
+              <WeeklyScheduleGrid user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/admin" replace />
+            )
+          } 
+        />
+        
+        <Route 
+          path="/admin/schedule-view" 
+          element={
+            user ? (
+              <WeeklyScheduleView user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/login" replace />
             )
           } 
         />
+        
+        <Route 
+          path="/admin/event-menu" 
+          element={
+            user && user.user_type === '시스템관리자' ? (
+              <AdminEventMenu user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        
         <Route 
           path="/admin/event-manager" 
           element={
@@ -323,7 +326,6 @@ function AppContent() {
           } 
         />
         
-        {/* 🔥 이벤트 대시보드 - 모든 인증된 사용자 접근 가능 */}
         <Route 
           path="/admin/event" 
           element={
@@ -424,7 +426,6 @@ function AppContent() {
           } 
         />
         
-        {/* 시스템 관리자 페이지 */}
         <Route 
           path="/system-admin" 
           element={
@@ -538,7 +539,6 @@ function AppContent() {
           } 
         />
         
-        {/* 404 처리 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <ScrollToTop />

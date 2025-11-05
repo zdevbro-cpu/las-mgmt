@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User, BarChart3 } from 'lucide-react'
+import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User, BarChart3, Calendar } from 'lucide-react'
 import { isMonitoringAgent, isContractWorker } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
@@ -101,6 +101,15 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
+                  onClick={() => onNavigate('WeeklyScheduleView')}
+                  className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                >
+                  <Calendar size={20} />
+                  근무일정표
+                </button>
+
+                <button
                   onClick={() => onNavigate('CustomerManagement')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -124,6 +133,15 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                 </button>
 
                 <button
+                  onClick={() => onNavigate('WeeklyScheduleView')}
+                  className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                >
+                  <Calendar size={20} />
+                  근무일정표
+                </button>
+
+                <button
                   onClick={() => onNavigate('CustomerManagement')}
                   className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
                   style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
@@ -131,6 +149,8 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   <ShoppingCart size={20} />
                   판매관리
                 </button>
+
+                
 
                 <button
                   onClick={() => onNavigate('ShippingList')}

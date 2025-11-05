@@ -4,8 +4,9 @@ import { Calendar, Save, RefreshCw, Plus, Search, ArrowLeft, Lightbulb, BookOpen
 import { supabase } from '../../lib/supabase';
 import { getWeekDates, formatDate } from '../../lib/dateUtils';
 
-const WeeklyScheduleGrid = ({ user }) => {
+const WeeklyScheduleView = ({ user }) => {
   const navigate = useNavigate();
+  const isReadOnly = true; // 읽기 전용 모드
   // 현재 주의 월요일 계산
   const getMondayOfWeek = (date) => {
     const d = new Date(date);
@@ -334,7 +335,7 @@ const WeeklyScheduleGrid = ({ user }) => {
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6 relative">
           <button
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium text-teal-600"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -348,7 +349,7 @@ const WeeklyScheduleGrid = ({ user }) => {
               className="w-12 h-12 object-contain"
             />
             <h1 className="text-3xl font-bold text-teal-600 leading-none -mt-2">
-              근무일정관리
+              근무일정표
             </h1>
           </div>
           
@@ -399,7 +400,8 @@ const WeeklyScheduleGrid = ({ user }) => {
                   setShowAddEmployee(!showAddEmployee);
                   setShowPartTimeInput(false);
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                disabled={isReadOnly}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 타지점 직원
@@ -410,7 +412,8 @@ const WeeklyScheduleGrid = ({ user }) => {
                   setShowPartTimeInput(!showPartTimeInput);
                   setShowAddEmployee(false);
                 }}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                disabled={isReadOnly}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="w-4 h-4" />
                 아르바이트
@@ -418,8 +421,8 @@ const WeeklyScheduleGrid = ({ user }) => {
 
               <button
                 onClick={saveSchedules}
-                disabled={loading}
-                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2 font-medium disabled:opacity-50"
+                disabled={loading || isReadOnly}
+                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -536,13 +539,11 @@ const WeeklyScheduleGrid = ({ user }) => {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
 
           {/* 현재 보는 지점 표시 */}
-          {selectedBranch && (
-            <div className="bg-orange-50 border-2 border-orange-500 px-4 py-2 mb-2 rounded-lg">
-              <span className="font-bold text-orange-700">
-                현재 보는 지점: {selectedBranch}
-              </span>
-            </div>
-          )}
+          <div className="bg-teal-50 border-2 border-teal-500 px-4 py-2 mb-2 rounded-lg">
+            <span className="font-bold text-teal-700">
+              {selectedBranch ? `현재 보는 지점: ${selectedBranch}` : `내 지점: ${user?.branch}`}
+            </span>
+          </div>
           <div className="bg-gradient-to-r from-teal-600 to-teal-500 text-white py-1 px-1">
             <div className="grid grid-cols-9 gap-1 items-center">
               <div className="font-bold text-base text-center">직원</div>
@@ -593,8 +594,8 @@ const WeeklyScheduleGrid = ({ user }) => {
                         <div key={idx} className="relative">
                           {/* 계획 (상단) */}
                           <div 
-                            className="h-4 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 relative mb-1 group"
-                            onClick={() => handleBarClick(employee.id, date)}
+                            className={`h-4 bg-gray-100 rounded relative mb-1 group ${!isReadOnly ? 'cursor-pointer hover:bg-gray-200' : ''}`}
+                            onClick={!isReadOnly ? () => handleBarClick(employee.id, date) : undefined}
                             title={hasSchedule ? `계획: ${schedule.start_time} ~ ${schedule.end_time}` : '계획 없음'}
                           >
                             {hasSchedule && (
@@ -1103,4 +1104,4 @@ const WeeklyScheduleGrid = ({ user }) => {
   );
 };
 
-export default WeeklyScheduleGrid;
+export default WeeklyScheduleView;

@@ -3,9 +3,9 @@ export const getWeekDates = (startDate) => {
   const dates = [];
   const start = new Date(startDate);
   
-  // 해당 주의 월요일로 이동
-  const day = start.getDay();
-  const diff = start.getDate() - day + (day === 0 ? -6 : 1);
+  // 해당 주의 월요일 찾기
+  const day = start.getDay(); // 0=일요일, 1=월요일, ..., 6=토요일
+  const diff = start.getDate() - day + (day === 0 ? -6 : 1); // 월요일로 이동
   start.setDate(diff);
   
   // 월요일부터 일요일까지 7일
@@ -26,10 +26,4 @@ export const formatDate = (date) => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-};
-
-// 시간을 HH:MM 형식으로 포맷
-export const formatTime = (time) => {
-  if (!time) return '';
-  return time.substring(0, 5);
 };
