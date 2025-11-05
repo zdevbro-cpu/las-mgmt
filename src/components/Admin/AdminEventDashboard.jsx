@@ -155,7 +155,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         .not('branch', 'is', null)
         .order('branch')
 
-      const uniqueBranches = [...new Set(branchData?.map(b => b.branch) || [])]
+      const uniqueBranches = [...new Set(branchData?.map(b => b.branch) || [])].sort()
       setBranches(uniqueBranches)
 
       // 추천인 목록 로드 - users 테이블에서 가져오기
@@ -375,12 +375,56 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
       // 추천지점별 통계 계산
       console.log('🏢 추천지점 통계 계산 중...')
-      const branchMap = {}
-      referrerStats?.forEach(p => {
-        const user = referrerUsersData.find(u => u.referral_code === p.referrer_code)
-        const branch = user?.branch || '-'
+      
+      // 모든 참가자의 추천인 코드를 가져오기 (권한 필터링 없이 전체 데이터)
+      let branchStatsQuery = supabase
+        .from('event_participants')
+        .select('referrer_code')
+        .not('referrer_code', 'is', null)
+      
+      // 이벤트 필터만 적용
+      if (selectedEvent) {
+        branchStatsQuery = branchStatsQuery.eq('event_name', selectedEvent)
+      }
+      
+      // 페이지네이션으로 모든 데이터 가져오기
+      let allBranchParticipants = []
+      let from = 0
+      const pageSize = 1000
+
+      while (true) {
+        const { data: pageData, error: pageError } = await branchStatsQuery.range(from, from + pageSize - 1)
         
-        if (branch !== '-') {
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+        
+        allBranchParticipants = allBranchParticipants.concat(pageData)
+        
+        if (pageData.length < pageSize) break
+        from += pageSize
+      }
+      
+      // 모든 참가자의 추천인 코드를 unique하게 추출
+      const uniqueBranchReferrerCodes = [...new Set(allBranchParticipants?.map(p => p.referrer_code).filter(Boolean))]
+      
+      // 해당 추천인들의 지점 정보 가져오기
+      let branchUsersData = []
+      if (uniqueBranchReferrerCodes.length > 0) {
+        const { data: users } = await supabase
+          .from('users')
+          .select('referral_code, branch')
+          .in('referral_code', uniqueBranchReferrerCodes)
+        
+        branchUsersData = users || []
+      }
+      
+      // 각 참가자를 지점별로 카운트
+      const branchMap = {}
+      allBranchParticipants?.forEach(p => {
+        const userInfo = branchUsersData.find(u => u.referral_code === p.referrer_code)
+        const branch = userInfo?.branch || '-'
+        
+        if (branch && branch !== '-') {
           if (!branchMap[branch]) {
             branchMap[branch] = {
               branch: branch,
