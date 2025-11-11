@@ -17,6 +17,7 @@ export default function MathLetterManager({ user, onNavigate, onBack }) {
     description: '',
     video_file: null,
     thumbnail_file: null,
+    pdf_file: null,
     duration: 0
   })
   const [bulkRegisterForm, setBulkRegisterForm] = useState({
@@ -169,6 +170,7 @@ export default function MathLetterManager({ user, onNavigate, onBack }) {
       description: '',
       video_file: null,
       thumbnail_file: null,
+      pdf_file: null,
       duration: 0
     })
     setShowRegisterModal(true)
@@ -202,6 +204,13 @@ export default function MathLetterManager({ user, onNavigate, onBack }) {
     const file = e.target.files[0]
     if (file) {
       setRegisterForm({ ...registerForm, thumbnail_file: file })
+    }
+  }
+
+  const handlePdfFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setRegisterForm({ ...registerForm, pdf_file: file })
     }
   }
 
@@ -672,6 +681,26 @@ export default function MathLetterManager({ user, onNavigate, onBack }) {
                   rows="4"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  수학편지 (선택)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handlePdfFileChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                {registerForm.pdf_file && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    {registerForm.pdf_file.name}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  * 수학편지 전송 시 PDF 파일이 포함됩니다
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

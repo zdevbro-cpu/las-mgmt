@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X } from 'lucide-react'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // viewMode가 명시되지 않은 경우 from 경로를 보고 자동 결정
@@ -61,6 +61,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(30)
+  
+  // 수학편지 발송 관련 상태
+  const [selectedParticipants, setSelectedParticipants] = useState([])
+  const [showMathLetterModal, setShowMathLetterModal] = useState(false)
+  
   const filteredParticipants = participants.filter(p => {
     // 지점 필터 (p.users.branch 사용)
     if (filters.branch && p.users?.branch !== filters.branch) return false
@@ -729,6 +734,46 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     setItemsPerPage(Number(value))
     setCurrentPage(1)
   }
+
+  // 전체 선택/해제
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedParticipants(currentParticipants.map(p => p.id))
+    } else {
+      setSelectedParticipants([])
+    }
+  }
+
+  // 개별 선택/해제
+  const handleSelectParticipant = (id) => {
+    if (selectedParticipants.includes(id)) {
+      setSelectedParticipants(selectedParticipants.filter(pid => pid !== id))
+    } else {
+      setSelectedParticipants([...selectedParticipants, id])
+    }
+  }
+
+  // 수학편지 발송 모달 열기
+  const handleOpenMathLetterModal = () => {
+    if (selectedParticipants.length === 0) {
+      alert('수학편지를 보낼 대상자를 선택해주세요.')
+      return
+    }
+    setShowMathLetterModal(true)
+  }
+
+  // 수학편지 발송 (실제 발송은 SMS API 연동 필요)
+  const handleSendMathLetter = async () => {
+    const selectedData = participants.filter(p => selectedParticipants.includes(p.id))
+    
+    // TODO: SMS API 연동하여 실제 발송
+    console.log('발송 대상:', selectedData)
+    
+    alert(`${selectedData.length}명에게 수학편지를 발송합니다.\n(SMS API 연동 필요)`)
+    setShowMathLetterModal(false)
+    setSelectedParticipants([])
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1190,6 +1235,15 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   초기화
                 </button>
                 <button
+                  onClick={handleOpenMathLetterModal}
+                  className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                  disabled={selectedParticipants.length === 0}
+                >
+                  <Mail size={18} />
+                  수학편지 보내기({selectedParticipants.length}명)
+                </button>
+                <button
                   onClick={handleDownloadExcel}
                   className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
                   style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
@@ -1234,6 +1288,15 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   초기화
                 </button>
                 <button
+                  onClick={handleOpenMathLetterModal}
+                  className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                  style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+                  disabled={selectedParticipants.length === 0}
+                >
+                  <Mail size={18} />
+                  수학편지 보내기({selectedParticipants.length}명)
+                </button>
+                <button
                   onClick={handleDownloadExcel}
                   className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
                   style={{ backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
@@ -1272,8 +1335,16 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2" style={{ borderColor: '#249689' }}>
+                  <th className="px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedParticipants.length === currentParticipants.length && currentParticipants.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 cursor-pointer"
+                    />
+                  </th>
                   <th className="px-3 py-2 text-left">No.</th>
-                  <th className="px-3 py-2 text-left">신청일시</th>
+                  <th className="px-3 py-2 text-left">신청인코드</th>
                   <th className="px-3 py-2 text-left">학부모명</th>
                   <th className="px-3 py-2 text-left">연락처</th>
                   <th className="px-3 py-2 text-left">자녀성별</th>
@@ -1289,8 +1360,16 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
               <tbody>
                 {currentParticipants.map((p, index) => (
                   <tr key={p.id} className="border-b hover:bg-gray-50">
+                    <td className="px-3 py-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedParticipants.includes(p.id)}
+                        onChange={() => handleSelectParticipant(p.id)}
+                        className="w-4 h-4 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-3 text-sm font-medium text-gray-600">{startIndex + index + 1}</td>
-                    <td className="px-3 py-3 text-sm">{new Date(p.created_at).toLocaleString('ko-KR')}</td>
+                    <td className="px-3 py-3 text-sm font-semibold" style={{ color: '#249689' }}>{p.subscriber_number || '-'}</td>
                     <td className="px-3 py-3">{p.parent_name}</td>
                     <td className="px-3 py-3">{formatPhone(p.phone)}</td>
                     <td className="px-3 py-3">{p.child_gender}</td>
@@ -1403,6 +1482,91 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         </div>
       </div>
       </div>
+
+      {/* 수학편지 발송 모달 */}
+      {showMathLetterModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 sm:px-6 sm:py-4">
+              <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2">
+                <img src="/images/logo.png" alt="LAS Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
+                <h2 className="text-xl sm:text-2xl font-bold" style={{ color: '#249689' }}>수학편지 발송</h2>
+              </div>
+            </div>
+
+            <div className="p-3 sm:p-6">
+              {/* 발송 대상자 목록 */}
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3" style={{ color: '#249689' }}>
+                  📬 발송 대상자 ({selectedParticipants.length}명)
+                </h3>
+                <div className="border border-gray-200 rounded-lg overflow-hidden max-h-64 sm:max-h-96 overflow-y-auto">
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700">No.</th>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700 hidden sm:table-cell">신청인코드</th>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700">학부모명</th>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700 hidden sm:table-cell">연락처</th>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700 hidden md:table-cell">자녀나이</th>
+                        <th className="px-2 py-2 text-left font-semibold text-gray-700">진도</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {participants
+                        .filter(p => selectedParticipants.includes(p.id))
+                        .map((p, index) => (
+                          <tr key={p.id} className="hover:bg-gray-50">
+                            <td className="px-2 py-2">{index + 1}</td>
+                            <td className="px-2 py-2 font-semibold hidden sm:table-cell" style={{ color: '#249689' }}>{p.subscriber_number || '-'}</td>
+                            <td className="px-2 py-2">{p.parent_name}</td>
+                            <td className="px-2 py-2 hidden sm:table-cell">{formatPhone(p.phone)}</td>
+                            <td className="px-2 py-2 hidden md:table-cell">{p.child_age}세</td>
+                            <td className="px-2 py-2">
+                              <span className="inline-block px-1.5 py-0.5 sm:px-2 sm:py-1 bg-teal-100 text-teal-800 rounded text-xs font-semibold">
+                                {p.current_math_letter || 'K2-01'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 안내 메시지 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
+                <h3 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">📱 발송 정보</h3>
+                <ul className="text-xs sm:text-sm text-blue-700 space-y-1 ml-4 list-disc">
+                  <li>수학편지와 동영상 링크가 문자로 발송됩니다</li>
+                  <li>각 참가자의 현재 진도에 맞는 수학편지가 발송됩니다</li>
+                  <li>발송 후 진도가 자동으로 업데이트됩니다</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 px-3 py-3 sm:px-6 sm:py-4 flex items-center justify-end gap-2 sm:gap-3 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowMathLetterModal(false)
+                }}
+                className="flex items-center gap-1 sm:gap-2 px-4 py-2 sm:px-6 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm sm:text-base"
+              >
+                <X className="w-4 h-4" />
+                취소
+              </button>
+              <button
+                onClick={handleSendMathLetter}
+                className="flex items-center gap-1 sm:gap-2 px-4 py-2 sm:px-6 text-white rounded-lg hover:opacity-90 transition-colors text-sm sm:text-base"
+                style={{ backgroundColor: '#249689' }}
+              >
+                <Mail className="w-4 h-4" />
+                발송
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
