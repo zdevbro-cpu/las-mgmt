@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X, BarChart3 } from 'lucide-react'
+import MathLetterStatsModal from './MathLetterStatsModal'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // viewMode가 명시되지 않은 경우 from 경로를 보고 자동 결정
@@ -28,6 +29,12 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // viewMode: 'user' = 일반 유저 (본인 데이터만), 'admin' = 매장관리자 (전체 데이터), 'system' = 시스템관리자 (전체 데이터)
   const showFullData = determinedViewMode === 'admin' || determinedViewMode === 'system'
   const showTopRankings = determinedViewMode === 'admin' || determinedViewMode === 'system'
+  
+  // 수학편지 통계 접근 권한 (점주는 제외)
+  const canViewMathLetterStats = 
+    user?.user_type === '시스템관리자' || 
+    user?.user_type === '점장' || 
+    user?.user_type === '지점관리자'
 
   const [stats, setStats] = useState({
     total: 0,
@@ -65,6 +72,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // 수학편지 발송 관련 상태
   const [selectedParticipants, setSelectedParticipants] = useState([])
   const [showMathLetterModal, setShowMathLetterModal] = useState(false)
+  
+  // 수학편지 통계 모달 상태
+  const [showMathLetterStatsModal, setShowMathLetterStatsModal] = useState(false)
   
   const filteredParticipants = participants.filter(p => {
     // 지점 필터 (p.users.branch 사용)
@@ -1251,6 +1261,16 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   <Download size={18} />
                   엑셀다운로드({formatNumber(participants.length)}명)
                 </button>
+                {canViewMathLetterStats && (
+                  <button
+                    onClick={() => setShowMathLetterStatsModal(true)}
+                    className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                    style={{ backgroundColor: '#FF6B6B', borderRadius: '10px', fontSize: '15px' }}
+                  >
+                    <BarChart3 size={18} />
+                    수학편지 통계
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -1304,6 +1324,16 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                   <Download size={18} />
                   엑셀다운로드({formatNumber(participants.length)}명)
                 </button>
+                {canViewMathLetterStats && (
+                  <button
+                    onClick={() => setShowMathLetterStatsModal(true)}
+                    className="px-4 py-2 text-white rounded-lg hover:opacity-90 font-bold whitespace-nowrap flex items-center gap-2"
+                    style={{ backgroundColor: '#FF6B6B', borderRadius: '10px', fontSize: '15px' }}
+                  >
+                    <BarChart3 size={18} />
+                    수학편지 통계
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1566,6 +1596,14 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 수학편지 통계 모달 */}
+      {showMathLetterStatsModal && (
+        <MathLetterStatsModal
+          user={user}
+          onClose={() => setShowMathLetterStatsModal(false)}
+        />
       )}
     </div>
   )

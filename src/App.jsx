@@ -34,7 +34,8 @@ import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 import WeeklyScheduleGrid from './components/WorkDuty/WeeklyScheduleGrid'
 import WeeklyScheduleView from './components/WorkDuty/WeeklyScheduleView'
-
+import MathLetterViewer from './components/MathLetterViewer'
+import MathLetterTokenGenerator from './components/MathLetterTokenGenerator'
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -183,6 +184,8 @@ function AppContent() {
         <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
         <Route path="/login" element={<Login onNavigate={handleNavigate} onLogin={handleLogin} />} />
         <Route path="/signup" element={<Signup onNavigate={handleNavigate} />} />
+        <Route path="/math-letter" element={<MathLetterViewer />} />
+        <Route path="/test-token" element={<MathLetterTokenGenerator />} />
         
         <Route path="/mathletter" element={<MathLetterLanding />} />
         
