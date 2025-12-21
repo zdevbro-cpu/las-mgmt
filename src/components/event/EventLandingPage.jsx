@@ -24,14 +24,14 @@ export default function EventLandingPage() {
   const [referrerName, setReferrerName] = useState('')
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [savedEmail, setSavedEmail] = useState('') // ✅ localStorage의 이메일
-  
+
   // 🔒 접근 제어 상태
   const [accessDenied, setAccessDenied] = useState(false)
   const [isValidating, setIsValidating] = useState(true)
-  
+
   // MP4 영상 파일 경로 (public 폴더 기준)
   const sampleVideoUrl = "/videos/mathletter.mp4"
-  
+
   // 테스트용 공개 영상 (파일이 없을 때 임시로 사용 가능)
   // const sampleVideoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
 
@@ -41,12 +41,12 @@ export default function EventLandingPage() {
       try {
         const params = new URLSearchParams(window.location.search)
         const refCode = params.get('ref')
-        
+
         // 개발 환경 체크
-        const isDevelopment = process.env.NODE_ENV === 'development' || 
-                              window.location.hostname === 'localhost' ||
-                              window.location.hostname === '127.0.0.1'
-        
+        const isDevelopment = process.env.NODE_ENV === 'development' ||
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1'
+
         // ref 파라미터 없으면 차단 (개발 환경 제외)
         if (!refCode) {
           if (isDevelopment) {
@@ -60,11 +60,11 @@ export default function EventLandingPage() {
           setIsValidating(false)
           return
         }
-        
+
         // ref 파라미터가 있으면 DB에서 검증
         console.log('🔍 추천인 코드 검증 중:', refCode)
         const verification = await verifyReferralCodeExists(refCode)
-        
+
         if (verification.exists && verification.referrerName) {
           // 유효한 추천인 코드
           console.log('✅ 유효한 추천인:', verification.referrerName)
@@ -77,7 +77,7 @@ export default function EventLandingPage() {
           console.log('❌ 접근 차단: 유효하지 않은 추천인 코드')
           setAccessDenied(true)
         }
-        
+
         setIsValidating(false)
       } catch (err) {
         console.error('❌ 접근 검증 오류:', err)
@@ -85,7 +85,7 @@ export default function EventLandingPage() {
         setIsValidating(false)
       }
     }
-    
+
     validateAccess()
   }, [])
 
@@ -101,14 +101,14 @@ export default function EventLandingPage() {
   // 영상 프리로드 - 페이지 로드 시 video 태그로 미리 로딩
   useEffect(() => {
     if (accessDenied) return
-    
+
     // 1. Link preload 태그 추가 (더 높은 우선순위)
     const preloadLink = document.createElement('link')
     preloadLink.rel = 'preload'
     preloadLink.as = 'video'
     preloadLink.href = sampleVideoUrl
     document.head.appendChild(preloadLink)
-    
+
     // 2. Video 태그로 프리로드
     const preloadVideo = document.createElement('video')
     preloadVideo.src = sampleVideoUrl
@@ -118,20 +118,20 @@ export default function EventLandingPage() {
     preloadVideo.style.position = 'absolute'
     preloadVideo.style.pointerEvents = 'none'
     document.body.appendChild(preloadVideo)
-    
+
     // 명시적으로 로드 시작
     preloadVideo.load()
-    
+
     // 로딩 상태 확인 (디버깅용)
     preloadVideo.addEventListener('loadeddata', () => {
       console.log('✅ 영상 프리로드 완료')
     })
-    
+
     preloadVideo.addEventListener('error', (e) => {
       console.error('❌ 영상 로드 실패:', e)
       console.error('파일 경로:', sampleVideoUrl)
     })
-    
+
     return () => {
       document.head.removeChild(preloadLink)
       document.body.removeChild(preloadVideo)
@@ -140,7 +140,7 @@ export default function EventLandingPage() {
 
   const handleReferrerCodeChange = (e) => {
     const value = e.target.value.toUpperCase()
-    
+
     setFormData(prev => ({
       ...prev,
       referrerCode: value
@@ -193,7 +193,7 @@ export default function EventLandingPage() {
     const baseUrl = window.location.origin + window.location.pathname
     const link = `${baseUrl}?ref=${encodeURIComponent(formData.referrerCode.trim())}`
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`
-    
+
     setReferralLink(link)
     setQrCodeUrl(qrUrl)
     setShowQRModal(true)
@@ -302,19 +302,22 @@ export default function EventLandingPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (!validateForm()) return
 
     setLoading(true)
 
     try {
       const phoneOnly = formData.phone.replace(/[^\d]/g, '')
-      
-      const { data: existing } = await supabase
+
+      const { data: existingList } = await supabase
         .from('event_participants')
         .select('id')
         .eq('phone', phoneOnly)
-        .maybeSingle()
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const existing = existingList && existingList.length > 0 ? existingList[0] : null
 
       let referrerCode = null
       if (formData.referrerCode.trim()) {
@@ -329,7 +332,7 @@ export default function EventLandingPage() {
 
       // localStorage에서 이메일 가져오기 (MathLetterLanding에서 저장한 값)
       const savedEmail = localStorage.getItem('mathLetterEmail')
-      
+
       const participantData = {
         email: savedEmail || null,  // ✅ 이메일 추가
         event_name: '수학편지 구독',  // ✅ 이벤트명 추가
@@ -360,7 +363,7 @@ export default function EventLandingPage() {
       }
 
       setSubmitted(true)
-      
+
       // ✅ 제출 완료 후 localStorage 정리
       localStorage.removeItem('mathLetterEmail')
     } catch (err) {
@@ -377,7 +380,7 @@ export default function EventLandingPage() {
 
   const handleShareAfterSubmit = () => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?ref=${formData.referrerCode || 'SHARE'}`
-    
+
     if (navigator.share) {
       navigator.share({
         title: '수학편지 신청',
@@ -427,7 +430,7 @@ export default function EventLandingPage() {
               추천인으로부터 받은 링크나 QR코드를 통해 다시 접속해주세요.
             </p>
           </div>
-          
+
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <p className="text-xs text-gray-600 mb-2">💡 올바른 접근 방법</p>
             <ul className="text-xs text-left space-y-1" style={{ color: '#666' }}>
@@ -469,7 +472,7 @@ export default function EventLandingPage() {
               신청이 완료되었습니다!
             </h2>
             <p style={{ color: '#666', fontSize: '15px' }}>
-              소중한 참여 감사드립니다.<br/>
+              소중한 참여 감사드립니다.<br />
               아이들의 인생을 수학으로 '디자인'하겠습니다!
             </p>
           </div>
@@ -497,7 +500,7 @@ export default function EventLandingPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-2">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-3">
-        
+
         {/* 헤더 */}
         <div className="mb-3">
           <div className="bg-red-700 text-white text-center py-6 rounded-lg mb-1.5">
@@ -530,25 +533,25 @@ export default function EventLandingPage() {
           <button
             onClick={() => setShowVideoModal(true)}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-bold transition-all hover:opacity-90 hover:scale-105"
-            style={{ 
-              backgroundColor: '#3b82f6', 
+            style={{
+              backgroundColor: '#3b82f6',
               color: 'white',
               fontSize: '17px',
               boxShadow: '0 4px 6px rgba(59, 130, 246, 0.3)'
             }}
           >
             {/* 플레이 아이콘 SVG */}
-            <svg 
-              width="26" 
-              height="26" 
-              viewBox="0 0 24 24" 
-              fill="none" 
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
               style={{ flexShrink: 0 }}
             >
-              <circle cx="12" cy="12" r="10" fill="white" fillOpacity="0.2"/>
-              <path 
-                d="M10 8L16 12L10 16V8Z" 
+              <circle cx="12" cy="12" r="10" fill="white" fillOpacity="0.2" />
+              <path
+                d="M10 8L16 12L10 16V8Z"
                 fill="white"
               />
             </svg>
@@ -557,7 +560,7 @@ export default function EventLandingPage() {
         </div>
 
         <div className="space-y-2" style={{ marginTop: '16px' }}>
-          
+
           {/* 학부모 이름 */}
           <div>
             <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
@@ -767,12 +770,12 @@ export default function EventLandingPage() {
             <h2 className="font-bold mb-4 text-center" style={{ color: '#249689', fontSize: '22px' }}>
               추천 링크가 생성되었습니다!
             </h2>
-            
+
             {/* QR 코드 */}
             <div className="flex justify-center mb-4">
-              <img 
-                src={qrCodeUrl} 
-                alt="QR Code" 
+              <img
+                src={qrCodeUrl}
+                alt="QR Code"
                 className="w-64 h-64 border-2 border-gray-300 rounded-lg"
               />
             </div>
@@ -827,23 +830,23 @@ export default function EventLandingPage() {
             <h2 className="font-bold mb-4 text-center" style={{ color: '#249689', fontSize: '22px' }}>
               개인정보 수집 및 이용 동의
             </h2>
-            
+
             <div className="space-y-4 text-sm text-gray-700">
               <div>
                 <h3 className="font-bold mb-2">1. 수집하는 개인정보 항목</h3>
                 <p>학부모 이름, 휴대전화 번호, 자녀 성별, 자녀 연령, 문의사항</p>
               </div>
-              
+
               <div>
                 <h3 className="font-bold mb-2">2. 개인정보의 수집 및 이용 목적</h3>
                 <p>이벤트 참여 확인, 당첨자 연락, 상품 배송, 마케팅 및 프로모션 정보 제공</p>
               </div>
-              
+
               <div>
                 <h3 className="font-bold mb-2">3. 개인정보의 보유 및 이용 기간</h3>
                 <p>이벤트 종료 후 3개월까지 보관 후 파기</p>
               </div>
-              
+
               <div>
                 <h3 className="font-bold mb-2">4. 동의 거부 권리 및 불이익</h3>
                 <p>귀하는 개인정보 수집 및 이용을 거부할 권리가 있으나, 거부 시 이벤트 참여가 제한될 수 있습니다.</p>
@@ -863,11 +866,11 @@ export default function EventLandingPage() {
 
       {/* 샘플 영상 모달 */}
       {showVideoModal && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
           onClick={() => setShowVideoModal(false)}
         >
-          <div 
+          <div
             className="relative bg-black rounded-lg shadow-2xl max-w-4xl w-full"
             onClick={(e) => e.stopPropagation()}
             style={{ aspectRatio: '16/9' }}
@@ -880,7 +883,7 @@ export default function EventLandingPage() {
             >
               ✕
             </button>
-            
+
             {/* HTML5 Video 태그 */}
             <video
               className="w-full h-full rounded-lg"
@@ -893,7 +896,7 @@ export default function EventLandingPage() {
                 alert('영상을 불러올 수 없습니다. 파일 경로를 확인해주세요.\n경로: ' + sampleVideoUrl)
               }}
               onLoadedData={() => console.log('영상 로드 완료')}
-              style={{ 
+              style={{
                 border: 'none',
                 backgroundColor: '#000'
               }}

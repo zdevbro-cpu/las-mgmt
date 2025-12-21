@@ -1,0 +1,361 @@
+table_name,column_name,data_type,is_nullable
+age_group_statistics,child_age_group,character varying,YES
+age_group_statistics,participant_count,bigint,YES
+age_group_statistics,male_count,bigint,YES
+age_group_statistics,female_count,bigint,YES
+age_group_statistics,avg_age,numeric,YES
+books,id,uuid,NO
+books,brname,text,NO
+books,name,text,NO
+books,title,text,YES
+books,birth_date,date,YES
+books,address,text,YES
+books,contact_method,text,YES
+books,author,text,YES
+books,payment_method,text,YES
+books,seller,text,YES
+books,buyer,text,YES
+books,payment_period,text,YES
+books,notes,text,YES
+books,user_id,uuid,YES
+books,created_at,timestamp with time zone,YES
+books,updated_at,timestamp with time zone,YES
+branches,id,uuid,NO
+branches,name,text,NO
+branches,manager_name,text,NO
+branches,address,text,YES
+branches,phone,text,YES
+branches,email,text,YES
+branches,notes,text,YES
+branches,is_active,boolean,YES
+branches,created_at,timestamp without time zone,YES
+branches,updated_at,timestamp without time zone,YES
+change_requests,id,integer,NO
+change_requests,user_id,text,NO
+change_requests,request_type,character varying,NO
+change_requests,current_value,character varying,YES
+change_requests,requested_value,character varying,NO
+change_requests,reason,text,YES
+change_requests,status,character varying,YES
+change_requests,created_at,timestamp with time zone,YES
+change_requests,processed_at,timestamp with time zone,YES
+change_requests,processed_by,text,YES
+duties,id,uuid,NO
+duties,branch_id,uuid,NO
+duties,user_id,text,NO
+duties,work_date,date,NO
+duties,start_time,time without time zone,NO
+duties,end_time,time without time zone,NO
+duties,work_hours,numeric,NO
+duties,is_support,boolean,YES
+duties,support_from_branch_id,uuid,YES
+duties,created_by,text,NO
+duties,created_at,timestamp with time zone,YES
+duties,updated_at,timestamp with time zone,YES
+email_send_logs,id,integer,NO
+email_send_logs,participant_id,uuid,YES
+email_send_logs,day_number,integer,YES
+email_send_logs,sent_at,timestamp without time zone,YES
+email_send_logs,status,character varying,YES
+email_send_logs,error_message,text,YES
+email_send_logs,email_to,character varying,YES
+event_participants,id,uuid,NO
+event_participants,parent_name,character varying,NO
+event_participants,phone,character varying,NO
+event_participants,child_gender,character varying,NO
+event_participants,child_age,integer,NO
+event_participants,child_age_group,character varying,YES
+event_participants,inquiry,text,YES
+event_participants,referrer_name,character varying,YES
+event_participants,referrer_code,character varying,YES
+event_participants,privacy_agreed,boolean,NO
+event_participants,marketing_agreed,boolean,YES
+event_participants,event_date,date,YES
+event_participants,registration_source,character varying,YES
+event_participants,ip_address,character varying,YES
+event_participants,user_agent,text,YES
+event_participants,created_at,timestamp with time zone,YES
+event_participants,updated_at,timestamp with time zone,YES
+event_participants,is_active,boolean,YES
+event_participants,status,character varying,YES
+event_participants,event_name,character varying,YES
+event_participants,email,character varying,YES
+event_participants,start_date,date,YES
+event_participants,current_day,integer,YES
+event_participants,last_sent_date,date,YES
+event_participants,assigned_staff_id,integer,YES
+event_participants,current_math_letter,character varying,YES
+event_participants,last_letter_sent_at,timestamp without time zone,YES
+event_participants,subscriber_number,character varying,YES
+event_participants_backup,id,uuid,YES
+event_participants_backup,parent_name,character varying,YES
+event_participants_backup,phone,character varying,YES
+event_participants_backup,child_gender,character varying,YES
+event_participants_backup,child_age,integer,YES
+event_participants_backup,child_age_group,character varying,YES
+event_participants_backup,inquiry,text,YES
+event_participants_backup,referrer_name,character varying,YES
+event_participants_backup,referrer_code,character varying,YES
+event_participants_backup,privacy_agreed,boolean,YES
+event_participants_backup,marketing_agreed,boolean,YES
+event_participants_backup,event_date,date,YES
+event_participants_backup,registration_source,character varying,YES
+event_participants_backup,ip_address,character varying,YES
+event_participants_backup,user_agent,text,YES
+event_participants_backup,created_at,timestamp with time zone,YES
+event_participants_backup,updated_at,timestamp with time zone,YES
+event_participants_backup,is_active,boolean,YES
+event_participants_backup,status,character varying,YES
+event_participants_backup,event_name,character varying,YES
+event_participants_backup,email,character varying,YES
+event_participants_backup,start_date,date,YES
+event_participants_backup,current_day,integer,YES
+event_participants_backup,last_sent_date,date,YES
+event_participants_backup,assigned_staff_id,integer,YES
+event_participants_backup,current_math_letter,character varying,YES
+event_participants_backup,last_letter_sent_at,timestamp without time zone,YES
+event_participants_backup,subscriber_number,character varying,YES
+event_referrals,id,uuid,NO
+event_referrals,user_event_image_id,uuid,YES
+event_referrals,referrer_user_id,text,YES
+event_referrals,referred_user_id,text,YES
+event_referrals,event_id,uuid,YES
+event_referrals,visited_at,timestamp with time zone,YES
+event_referrals,converted,boolean,YES
+event_settings,id,uuid,NO
+event_settings,event_name,character varying,NO
+event_settings,event_description,text,YES
+event_settings,start_date,date,NO
+event_settings,end_date,date,NO
+event_settings,is_active,boolean,YES
+event_settings,max_participants,integer,YES
+event_settings,current_participants,integer,YES
+event_settings,created_at,timestamp with time zone,YES
+event_settings,updated_at,timestamp with time zone,YES
+event_statistics,event_name,character varying,YES
+event_statistics,event_date,date,YES
+event_statistics,total_participants,bigint,YES
+event_statistics,male_count,bigint,YES
+event_statistics,female_count,bigint,YES
+event_statistics,avg_child_age,numeric,YES
+event_statistics,marketing_agreed_count,bigint,YES
+event_statistics,referred_count,bigint,YES
+events,id,uuid,NO
+events,name,character varying,NO
+events,description,text,YES
+events,landing_url,character varying,NO
+events,template_image_url,character varying,NO
+events,qr_position,jsonb,YES
+events,status,character varying,YES
+events,start_date,timestamp with time zone,YES
+events,end_date,timestamp with time zone,YES
+events,created_at,timestamp with time zone,YES
+events,updated_at,timestamp with time zone,YES
+math_letter_access_logs,id,uuid,NO
+math_letter_access_logs,participant_code,character varying,NO
+math_letter_access_logs,letter_id,integer,YES
+math_letter_access_logs,accessed_at,timestamp without time zone,YES
+math_letter_access_logs,user_agent,text,YES
+math_letter_access_logs,referrer_code,character varying,YES
+math_letters,id,integer,NO
+math_letters,day_number,integer,NO
+math_letters,title,character varying,YES
+math_letters,video_url,text,YES
+math_letters,thumbnail_url,text,YES
+math_letters,description,text,YES
+math_letters,duration,integer,YES
+math_letters,is_ready,boolean,YES
+math_letters,created_at,timestamp without time zone,YES
+math_letters,pdf_url,text,YES
+math_letters,series,text,YES
+notice_reads,id,uuid,NO
+notice_reads,notice_id,uuid,YES
+notice_reads,user_id,text,NO
+notice_reads,read_at,timestamp without time zone,YES
+notices,id,uuid,NO
+notices,title,character varying,NO
+notices,content,text,NO
+notices,notice_type,character varying,YES
+notices,branch,text,NO
+notices,author_id,text,NO
+notices,author_name,character varying,NO
+notices,author_role,character varying,YES
+notices,is_important,boolean,YES
+notices,created_at,timestamp with time zone,NO
+notices,updated_at,timestamp with time zone,NO
+referrer_statistics,referrer_code,character varying,YES
+referrer_statistics,referrer_name,character varying,YES
+referrer_statistics,total_referrals,bigint,YES
+referrer_statistics,active_referrals,bigint,YES
+referrer_statistics,registered_count,bigint,YES
+referrer_statistics,first_referral_date,timestamp with time zone,YES
+referrer_statistics,last_referral_date,timestamp with time zone,YES
+referrers,id,uuid,NO
+referrers,referrer_code,character varying,NO
+referrers,referrer_name,character varying,NO
+referrers,department,character varying,YES
+referrers,branch_name,character varying,YES
+referrers,phone,character varying,YES
+referrers,email,character varying,YES
+referrers,qr_code_url,text,YES
+referrers,total_referrals,integer,YES
+referrers,last_referral_date,date,YES
+referrers,is_active,boolean,YES
+referrers,created_at,timestamp with time zone,YES
+referrers,updated_at,timestamp with time zone,YES
+sales,id,uuid,NO
+sales,user_id,text,YES
+sales,user_name,text,YES
+sales,user_branch,text,YES
+sales,customer_name,text,YES
+sales,address,text,YES
+sales,phone,text,YES
+sales,email,text,YES
+sales,payment_method,text,YES
+sales,quantity,integer,YES
+sales,depositor,text,YES
+sales,deposit_amount,integer,YES
+sales,order_details,text,YES
+sales,created_at,timestamp with time zone,YES
+sales,customer_phone,character varying,YES
+sales,customer_email,character varying,YES
+sales,order_info,text,YES
+sales,branch_name,character varying,YES
+sales,age,integer,YES
+sales,needs_shipping,boolean,YES
+sales,marketing_agreed,boolean,YES
+sales,privacy_agreed,boolean,YES
+sales_backup,id,text,NO
+sales_backup,user_id,text,YES
+sales_backup,user_name,text,YES
+sales_backup,user_branch,text,YES
+sales_backup,customer_name,text,YES
+sales_backup,address,text,YES
+sales_backup,phone,text,YES
+sales_backup,email,text,YES
+sales_backup,payment_method,text,YES
+sales_backup,quantity,integer,YES
+sales_backup,depositor,text,YES
+sales_backup,deposit_bank,text,YES
+sales_backup,order_details,text,YES
+sales_backup,created_at,timestamp with time zone,YES
+sales_backup,customer_phone,character varying,YES
+sales_backup,customer_email,character varying,YES
+sales_backup,order_info,text,YES
+sales_backup,branch_name,character varying,YES
+sales_backup,age,integer,YES
+sales_backup,needs_shipping,boolean,YES
+user_event_images,id,uuid,NO
+user_event_images,user_id,text,YES
+user_event_images,event_id,uuid,YES
+user_event_images,referral_code,character varying,NO
+user_event_images,referral_link,character varying,NO
+user_event_images,generated_image_url,character varying,YES
+user_event_images,qr_code_url,character varying,YES
+user_event_images,created_at,timestamp with time zone,YES
+users,id,text,NO
+users,instance_id,uuid,YES
+users,email,text,NO
+users,id,uuid,NO
+users,password,text,NO
+users,aud,character varying,YES
+users,name,text,NO
+users,role,character varying,YES
+users,email,character varying,YES
+users,branch,text,NO
+users,encrypted_password,character varying,YES
+users,phone,text,NO
+users,user_type,text,NO
+users,email_confirmed_at,timestamp with time zone,YES
+users,status,text,YES
+users,invited_at,timestamp with time zone,YES
+users,confirmation_token,character varying,YES
+users,created_at,timestamp with time zone,YES
+users,confirmation_sent_at,timestamp with time zone,YES
+users,approved_at,timestamp with time zone,YES
+users,password_changed_at,text,YES
+users,recovery_token,character varying,YES
+users,recovery_sent_at,timestamp with time zone,YES
+users,is_branch_manager,boolean,YES
+users,referral_code,character varying,YES
+users,email_change_token_new,character varying,YES
+users,ssn,text,YES
+users,email_change,character varying,YES
+users,email_change_sent_at,timestamp with time zone,YES
+users,bank_name,text,YES
+users,last_sign_in_at,timestamp with time zone,YES
+users,account_number,text,YES
+users,raw_app_meta_data,jsonb,YES
+users,account_holder,text,YES
+users,raw_user_meta_data,jsonb,YES
+users,is_super_admin,boolean,YES
+users,created_at,timestamp with time zone,YES
+users,updated_at,timestamp with time zone,YES
+users,phone,text,YES
+users,phone_confirmed_at,timestamp with time zone,YES
+users,phone_change,text,YES
+users,phone_change_token,character varying,YES
+users,phone_change_sent_at,timestamp with time zone,YES
+users,confirmed_at,timestamp with time zone,YES
+users,email_change_token_current,character varying,YES
+users,email_change_confirm_status,smallint,YES
+users,banned_until,timestamp with time zone,YES
+users,reauthentication_token,character varying,YES
+users,reauthentication_sent_at,timestamp with time zone,YES
+users,is_sso_user,boolean,NO
+users,deleted_at,timestamp with time zone,YES
+users,is_anonymous,boolean,NO
+v_age_group_statistics,child_age_group,character varying,YES
+v_age_group_statistics,participant_count,bigint,YES
+v_age_group_statistics,male_count,bigint,YES
+v_age_group_statistics,female_count,bigint,YES
+v_age_group_statistics,avg_age,numeric,YES
+v_daily_registration_statistics,registration_date,date,YES
+v_daily_registration_statistics,total_registrations,bigint,YES
+v_daily_registration_statistics,unique_referrers,bigint,YES
+v_daily_registration_statistics,male_count,bigint,YES
+v_daily_registration_statistics,female_count,bigint,YES
+v_referrer_statistics,referrer_code,character varying,YES
+v_referrer_statistics,referrer_name,character varying,YES
+v_referrer_statistics,department,character varying,YES
+v_referrer_statistics,branch_name,character varying,YES
+v_referrer_statistics,total_participants,bigint,YES
+v_referrer_statistics,male_count,bigint,YES
+v_referrer_statistics,female_count,bigint,YES
+v_referrer_statistics,avg_child_age,numeric,YES
+v_referrer_statistics,last_registration_date,timestamp with time zone,YES
+work_diaries,id,text,NO
+work_diaries,user_id,text,YES
+work_diaries,work_date,date,NO
+work_diaries,start_time,time without time zone,YES
+work_diaries,end_time,time without time zone,YES
+work_diaries,work_hours,numeric,YES
+work_diaries,sales,numeric,YES
+work_diaries,notes,text,YES
+work_diaries,created_at,timestamp with time zone,YES
+work_diaries,updated_at,timestamp with time zone,YES
+work_diaries,branch_name,text,YES
+work_diaries,user_name,text,YES
+work_diaries,daily_check_clean,boolean,YES
+work_diaries,daily_check_training,boolean,YES
+work_diaries,daily_check_list,boolean,YES
+work_diaries,out_content,text,YES
+work_diaries,exemplary_content,text,YES
+work_diaries,memorable_customer,text,YES
+work_diaries,suggestions,text,YES
+work_logs,id,uuid,NO
+work_logs,user_id,uuid,YES
+work_logs,start_date,date,NO
+work_logs,start_time,time without time zone,NO
+work_logs,end_date,date,NO
+work_logs,end_time,time without time zone,NO
+work_logs,work_hours,numeric,YES
+work_logs,check_clean,boolean,YES
+work_logs,check_training,boolean,YES
+work_logs,check_checklist,boolean,YES
+work_logs,outdoor,text,YES
+work_logs,model,text,YES
+work_logs,customer,text,YES
+work_logs,suggestion,text,YES
+work_logs,created_at,timestamp with time zone,YES
+work_logs,updated_at,timestamp with time zone,YES
