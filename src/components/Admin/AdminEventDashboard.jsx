@@ -493,18 +493,20 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       if (determinedViewMode === 'user' && user?.referral_code) {
         query = query.eq('referrer_code', user.referral_code)
       } else if (determinedViewMode === 'admin' && user?.branch) {
-        const { data: branchUsers } = await supabase
-          .from('users')
-          .select('referral_code')
-          .eq('branch', user.branch)
-          .not('referral_code', 'is', null)
+        if (!activeFilters.branch) {
+          const { data: branchUsers } = await supabase
+            .from('users')
+            .select('referral_code')
+            .eq('branch', user.branch)
+            .not('referral_code', 'is', null)
 
-        const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
+          const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
 
-        if (branchReferralCodes.length > 0) {
-          query = query.in('referrer_code', branchReferralCodes)
-        } else {
-          query = query.eq('referrer_code', 'NONE')
+          if (branchReferralCodes.length > 0) {
+            query = query.in('referrer_code', branchReferralCodes)
+          } else {
+            query = query.eq('referrer_code', 'NONE')
+          }
         }
       }
 
