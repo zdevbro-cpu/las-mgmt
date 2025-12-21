@@ -510,6 +510,8 @@ function AppContent() {
           } 
         />
 
+        
+
         <Route 
           path="/profile" 
           element={
