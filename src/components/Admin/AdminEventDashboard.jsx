@@ -676,6 +676,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
     const headers = [
       '신청일시',
+      '신청자코드',
       '학부모명',
       '연락처',
       '자녀성별',
@@ -689,6 +690,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
 
     const rows = participants.map(p => [
       new Date(p.created_at).toLocaleString('ko-KR'),
+      p.subscriber_number || '',
       p.parent_name || '',
       p.phone || '',
       p.child_gender || '',
@@ -1270,6 +1272,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                     />
                   </th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청일시</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청자코드</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">학부모명</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">연락처</th>
                   <th className="px-8 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">자녀정보</th>
@@ -1292,6 +1295,9 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                       {new Date(participant.created_at).toLocaleDateString('ko-KR')}
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {participant.subscriber_number || '-'}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{participant.parent_name}</div>
@@ -1335,7 +1341,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                 ))}
                 {currentParticipants.length === 0 && (
                   <tr>
-                    <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
+                    <td colSpan="10" className="px-6 py-10 text-center text-gray-500">
                       데이터가 없습니다
                     </td>
                   </tr>
