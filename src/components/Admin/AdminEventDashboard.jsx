@@ -69,6 +69,20 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(30)
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
+    const applyMobileItemsPerPage = () => {
+      if (mediaQuery.matches) {
+        setItemsPerPage(200)
+        setCurrentPage(1)
+      }
+    }
+
+    applyMobileItemsPerPage()
+    mediaQuery.addEventListener('change', applyMobileItemsPerPage)
+    return () => mediaQuery.removeEventListener('change', applyMobileItemsPerPage)
+  }, [])
+
   // 수학편지 발송 관련 상태
   const [selectedParticipants, setSelectedParticipants] = useState([])
   const [showMathLetterModal, setShowMathLetterModal] = useState(false)
