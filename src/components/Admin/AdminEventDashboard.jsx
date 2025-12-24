@@ -1261,7 +1261,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           <div className="flex justify-end gap-2">
             <button
               onClick={() => setShowMathLetterModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
+              className="hidden items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
             >
               <MessageCircle className="w-4 h-4" />
               수학편지 발송
