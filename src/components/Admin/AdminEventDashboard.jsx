@@ -1254,21 +1254,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mb-4">
-          <button
-            onClick={() => setShowMathLetterModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
-          >
-            <MessageCircle className="w-4 h-4" />
-            수학편지 발송
-          </button>
-          <button
-            onClick={handleDownloadExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            엑셀 다운로드
-          </button>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            검색 결과 <span className="font-medium">{formatNumber(participants.length)}</span>건
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowMathLetterModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
+            >
+              <MessageCircle className="w-4 h-4" />
+              수학편지 발송
+            </button>
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              엑셀 다운로드
+            </button>
+          </div>
         </div>
 
         {/* 테이블 */}
