@@ -1290,14 +1290,14 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                       className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청일시</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청자코드</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">학부모명</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청자코드</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청일시</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">연락처</th>
                   <th className="px-8 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">자녀정보</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">추천인</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">지점</th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide">진도</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide hidden">진도</th>
                   <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide">관리</th>
                 </tr>
               </thead>
@@ -1312,14 +1312,14 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                         className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                       />
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(participant.created_at).toLocaleDateString('ko-KR')}
+                    <td className="px-6 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{participant.parent_name}</div>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                       {participant.subscriber_number || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{participant.parent_name}</div>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(participant.created_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                       {formatPhone(participant.phone)}
@@ -1336,7 +1336,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                       {participant.users?.branch || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-center">
+                    <td className="px-6 py-3 whitespace-nowrap text-center hidden">
                       {participant.lastSentDay ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {participant.lastSentDay}일차 완료
