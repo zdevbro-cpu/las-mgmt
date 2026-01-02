@@ -318,6 +318,11 @@ export default function EventLandingPage() {
         .limit(1)
 
       const existing = existingList && existingList.length > 0 ? existingList[0] : null
+      if (existing) {
+        alert('이미 신청된 전화번호입니다. 기존 링크로 이용해주세요.')
+        setLoading(false)
+        return
+      }
 
       let referrerCode = null
       if (formData.referrerCode.trim()) {
@@ -347,20 +352,11 @@ export default function EventLandingPage() {
         created_at: new Date().toISOString()
       }
 
-      if (existing) {
-        const { error: updateError } = await supabase
-          .from('event_participants')
-          .update(participantData)
-          .eq('id', existing.id)
+      const { error: insertError } = await supabase
+        .from('event_participants')
+        .insert([participantData])
 
-        if (updateError) throw updateError
-      } else {
-        const { error: insertError } = await supabase
-          .from('event_participants')
-          .insert([participantData])
-
-        if (insertError) throw insertError
-      }
+      if (insertError) throw insertError
 
       setSubmitted(true)
 
