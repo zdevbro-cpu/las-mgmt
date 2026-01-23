@@ -12,7 +12,8 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     name: '',
     address: '',
     manager_name: '',
-    phone: ''
+    phone: '',
+    show_on_map: true
   })
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     setLoading(true)
     try {
       console.log('Fetching branches...')
-      
+
       const { data, error } = await supabase
         .from('branches')
         .select('*')
@@ -36,12 +37,12 @@ export default function SystemAdminBranches({ user, onNavigate }) {
 
       console.log('Branches loaded:', data)
       console.log('Number of branches:', data?.length)
-      
+
       if (data && data.length > 0) {
         console.log('First branch:', data[0])
         console.log('Branch columns:', Object.keys(data[0]))
       }
-      
+
       setBranches(data || [])
     } catch (err) {
       console.error('Load branches error:', err)
@@ -52,11 +53,11 @@ export default function SystemAdminBranches({ user, onNavigate }) {
   }
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    console.log(`Form change: ${name} = ${value}`)
+    const { name, value, type, checked } = e.target
+    console.log(`Form change: ${name} = ${type === 'checkbox' ? checked : value}`)
     setFormData({
       ...formData,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     })
   }
 
@@ -67,7 +68,8 @@ export default function SystemAdminBranches({ user, onNavigate }) {
       name: '',
       address: '',
       manager_name: '',
-      phone: ''
+      phone: '',
+      show_on_map: true
     })
     setShowModal(true)
   }
@@ -80,7 +82,8 @@ export default function SystemAdminBranches({ user, onNavigate }) {
       name: branch.name || '',
       address: branch.address || '',
       manager_name: branch.manager_name || '',
-      phone: branch.phone || ''
+      phone: branch.phone || '',
+      show_on_map: branch.show_on_map ?? true
     })
     setShowModal(true)
   }
@@ -95,12 +98,13 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     try {
       if (modalMode === 'create') {
         console.log('Creating branch:', formData)
-        
+
         const insertData = {
           name: formData.name.trim(),
-          manager_name: formData.manager_name.trim() || null
+          manager_name: formData.manager_name.trim() || null,
+          show_on_map: formData.show_on_map
         }
-        
+
         if (formData.address.trim()) insertData.address = formData.address.trim()
         if (formData.phone.trim()) insertData.phone = formData.phone.trim()
 
@@ -118,12 +122,13 @@ export default function SystemAdminBranches({ user, onNavigate }) {
         alert('지점이 생성되었습니다!')
       } else {
         console.log('Updating branch:', formData)
-        
+
         const updateData = {
           name: formData.name.trim(),
-          manager_name: formData.manager_name.trim() || null
+          manager_name: formData.manager_name.trim() || null,
+          show_on_map: formData.show_on_map
         }
-        
+
         if (formData.address.trim()) updateData.address = formData.address.trim()
         if (formData.phone.trim()) updateData.phone = formData.phone.trim()
 
@@ -160,7 +165,7 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     setLoading(true)
     try {
       console.log('Deleting branch:', branch.id)
-      
+
       const { error } = await supabase
         .from('branches')
         .delete()
@@ -182,6 +187,26 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     }
   }
 
+  const handleToggleMapping = async (branch, newValue) => {
+    try {
+      const { error } = await supabase
+        .from('branches')
+        .update({ show_on_map: newValue })
+        .eq('id', branch.id)
+
+      if (error) throw error
+
+      setBranches(branches.map(b =>
+        b.id === branch.id ? { ...b, show_on_map: newValue } : b
+      ))
+    } catch (err) {
+      console.error('Toggle mapping error:', err)
+      alert('지도 표시 상태 변경 중 오류가 발생했습니다.')
+      // Revert optimization if needed or just let the user retry
+      fetchBranches()
+    }
+  }
+
   const handleExcelDownload = () => {
     if (branches.length === 0) {
       alert('다운로드할 지점 데이터가 없습니다.')
@@ -189,14 +214,15 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     }
 
     try {
-      const headers = ['지점명', '지점주소', '지점장', '연락처']
+      const headers = ['지점명', '지점주소', '지점장', '연락처', '지도표시']
       const csvContent = [
         headers.join(','),
         ...branches.map(branch => [
           branch.name || '',
           branch.address || '',
           branch.manager_name || '',
-          branch.phone || ''
+          branch.phone || '',
+          branch.show_on_map ? '표시' : '숨김'
         ].map(field => `"${field}"`).join(','))
       ].join('\n')
 
@@ -204,7 +230,7 @@ export default function SystemAdminBranches({ user, onNavigate }) {
       const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
-      
+
       link.setAttribute('href', url)
       link.setAttribute('download', `지점정보_${new Date().toISOString().split('T')[0]}.csv`)
       link.style.visibility = 'hidden'
@@ -232,9 +258,9 @@ export default function SystemAdminBranches({ user, onNavigate }) {
               나가기
             </button>
             <div className="flex items-center gap-1.5">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Logo" 
+              <img
+                src="/images/logo.png"
+                alt="LAS Logo"
                 className="w-10 h-10 object-cover"
                 onError={(e) => e.target.style.display = 'none'}
               />
@@ -277,19 +303,22 @@ export default function SystemAdminBranches({ user, onNavigate }) {
             <table className="w-full border-collapse">
               <thead>
                 <tr style={{ backgroundColor: '#f3f4f6' }}>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '160px' }}>
                     지점명
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-left font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
                     지점주소
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-center font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '100px', whiteSpace: 'nowrap' }}>
                     지점장
                   </th>
-                  <th className="px-3 py-3 text-left font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689' }}>
+                  <th className="px-3 py-3 text-center font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '140px' }}>
                     연락처
                   </th>
-                  <th className="px-3 py-3 text-center font-bold" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '120px' }}>
+                  <th className="px-3 py-3 text-center font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '100px' }}>
+                    지도표시
+                  </th>
+                  <th className="px-3 py-3 text-center font-bold align-middle" style={{ fontSize: '16px', borderBottom: '2px solid #249689', width: '120px' }}>
                     관리
                   </th>
                 </tr>
@@ -297,7 +326,7 @@ export default function SystemAdminBranches({ user, onNavigate }) {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center" style={{ fontSize: '16px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center" style={{ fontSize: '16px' }}>
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2" style={{ borderColor: '#249689' }}></div>
                         로딩 중...
@@ -306,7 +335,7 @@ export default function SystemAdminBranches({ user, onNavigate }) {
                   </tr>
                 ) : branches.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '16px' }}>
+                    <td colSpan="6" className="px-4 py-8 text-center text-gray-500" style={{ fontSize: '16px' }}>
                       <div>
                         <Building2 size={48} className="mx-auto mb-2 opacity-30" />
                         <p className="mb-2">등록된 지점이 없습니다</p>
@@ -320,19 +349,29 @@ export default function SystemAdminBranches({ user, onNavigate }) {
                       key={branch.id}
                       className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-3 py-3 font-bold" style={{ fontSize: '14px', color: '#249689' }}>
+                      <td className="px-3 py-3 font-bold align-middle" style={{ fontSize: '14px', color: '#249689', whiteSpace: 'nowrap' }}>
                         {branch.name}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
+                      <td className="px-3 py-3 align-middle" style={{ fontSize: '14px' }}>
                         {branch.address || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
+                      <td className="px-3 py-3 text-center align-middle" style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>
                         {branch.manager_name || '-'}
                       </td>
-                      <td className="px-3 py-3" style={{ fontSize: '14px' }}>
+                      <td className="px-3 py-3 text-center align-middle" style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>
                         {branch.phone || '-'}
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-3 text-center align-middle">
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={branch.show_on_map ?? true}
+                            onChange={(e) => handleToggleMapping(branch, e.target.checked)}
+                            className="w-4 h-4 text-[#249689] rounded focus:ring-[#249689] border-gray-300 cursor-pointer accent-[#249689]"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center align-middle">
                         <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openEditModal(branch)}
@@ -457,6 +496,19 @@ export default function SystemAdminBranches({ user, onNavigate }) {
                   className="w-full px-4 py-2 border border-gray-300"
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
+              </div>
+              <div className="flex items-center gap-2 mt-4">
+                <input
+                  type="checkbox"
+                  id="show_on_map"
+                  name="show_on_map"
+                  checked={formData.show_on_map}
+                  onChange={handleChange}
+                  className="w-4 h-4 text-[#249689] rounded focus:ring-[#249689] border-gray-300 cursor-pointer accent-[#249689]"
+                />
+                <label htmlFor="show_on_map" className="font-bold cursor-pointer" style={{ color: '#000000', fontSize: '15px' }}>
+                  지도에 표시
+                </label>
               </div>
             </div>
 
