@@ -218,9 +218,25 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         participantsQuery = participantsQuery.eq('event_name', selectedEvent)
       }
 
-      const { data: participantsData } = await participantsQuery
+      // 페이지네이션을 적용하여 전체 참가자 데이터 조회
+      let allParticipantsData = []
+      let filterFrom = 0
+      const filterPageSize = 1000
 
-      const usedReferrerCodes = new Set(participantsData?.map(p => p.referrer_code) || [])
+      while (true) {
+        const { data: pageData, error: pageError } = await participantsQuery
+          .range(filterFrom, filterFrom + filterPageSize - 1)
+
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+
+        allParticipantsData = allParticipantsData.concat(pageData)
+
+        if (pageData.length < filterPageSize) break
+        filterFrom += filterPageSize
+      }
+
+      const usedReferrerCodes = new Set(allParticipantsData.map(p => p.referrer_code).filter(Boolean))
 
       const uniqueReferrers = usersData?.filter(u => usedReferrerCodes.has(u.referral_code))
         .map(u => ({
@@ -368,7 +384,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         referrerStatsQuery = referrerStatsQuery.eq('event_name', selectedEvent)
       }
 
-      const { data: referrerStats, error: referrerError } = await referrerStatsQuery
+      // 페이지네이션을 적용하여 전체 데이터 조회
+      let allReferrerData = []
+      let referrerFrom = 0
+      const referrerPageSize = 1000
+
+      while (true) {
+        const { data: pageData, error: pageError } = await referrerStatsQuery
+          .range(referrerFrom, referrerFrom + referrerPageSize - 1)
+
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+
+        allReferrerData = allReferrerData.concat(pageData)
+
+        if (pageData.length < referrerPageSize) break
+        referrerFrom += referrerPageSize
+      }
+
+      const referrerStats = allReferrerData
+      const referrerError = null
 
       if (referrerError) {
         console.error('▶ 추천인별 통계 에러:', referrerError)
