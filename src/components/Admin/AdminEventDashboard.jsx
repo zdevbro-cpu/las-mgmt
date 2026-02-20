@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X, BarChart3, Send, MessageCircle, Trash2, Users, Calendar, Trophy, Medal, Award, User, Store } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X, BarChart3, Send, MessageCircle, Trash2, Users, Calendar, Trophy, Medal, Award, User, Store, Edit2 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import MathLetterStatsModal from './MathLetterStatsModal'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
@@ -158,6 +159,83 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     return phone;
   }
 
+  // 전화번호 8자리 마스킹 함수 (010-****-****) - 지점장용
+  const formatPhoneMasked = (phone) => {
+    if (!phone) return '';
+    const cleaned = phone.toString().replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})\d{4}\d{4}/, '$1-****-****'); // 가운데, 끝 4자리 마스킹 -> 010-****-**** 형식으로 요청됨
+    } else if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})\d{3}\d{4}/, '$1-***-****');
+    }
+    return phone.replace(/./g, '*');
+  }
+
+  // 엑셀 다운로드 핸들러
+  const handleDownloadExcel = () => {
+    const dataToExport = participants.map(p => {
+      // 지점장(admin)은 연락처 마스킹
+      const phoneDisplay = determinedViewMode === 'admin'
+        ? formatPhoneMasked(p.phone)
+        : formatPhone(p.phone);
+
+      return {
+        '신청일시': new Date(p.created_at).toLocaleString(),
+        '부모님 성함': p.parent_name,
+        '연락처': phoneDisplay,
+        '자녀 나이': p.child_age,
+        '자녀 성별': p.child_gender,
+        '추천인 코드': p.referrer_code,
+        '추천인 이름': p.referrer_name || p.users?.name || '-',
+        '지점': p.users?.branch || '-',
+        '진도': p.nextDay ? `${p.nextDay}일차 발송 예정` : '미발송',
+        '문의사항': p.inquiry || '-'
+      }
+    })
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "참가자목록")
+
+    // 파일명 생성
+    const dateStr = new Date().toISOString().split('T')[0]
+    XLSX.writeFile(wb, `수학편지_참가자목록_${dateStr}.xlsx`)
+  }
+
+  // 수정 관련 상태 및 핸들러
+  const [editingParticipant, setEditingParticipant] = useState(null)
+
+  const handleEditClick = (participant) => {
+    setEditingParticipant({ ...participant })
+  }
+
+  const handleUpdateParticipant = async () => {
+    if (!editingParticipant) return
+
+    try {
+      const { error } = await supabase
+        .from('event_participants')
+        .update({
+          parent_name: editingParticipant.parent_name,
+          phone: editingParticipant.phone,
+          child_age: editingParticipant.child_age,
+          child_gender: editingParticipant.child_gender,
+          inquiry: editingParticipant.inquiry
+        })
+        .eq('id', editingParticipant.id)
+
+      if (error) throw error
+
+      alert('수정되었습니다.')
+      setEditingParticipant(null)
+      // 데이터 다시 로드
+      loadParticipants()
+    } catch (error) {
+      console.error('수정 실패:', error)
+      alert('수정 중 오류가 발생했습니다.')
+    }
+  }
+
   const loadEvents = async () => {
     try {
       const { data, error } = await supabase
@@ -200,49 +278,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       const uniqueBranches = [...new Set(branchData?.map(b => b.branch) || [])].sort()
       setBranches(uniqueBranches)
 
-      // 추천인 목록 로드 - users 테이블에서 가져오기
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('name, referral_code')
-        .not('referral_code', 'is', null)
-        .order('name')
-
-      // event_participants에 실제 사용된 추천인만 필터링
-      let participantsQuery = supabase
-        .from('event_participants')
-        .select('referrer_code, event_name')
-        .not('referrer_code', 'is', null)
-
-      // 이벤트 필터 적용
-      if (selectedEvent) {
-        participantsQuery = participantsQuery.eq('event_name', selectedEvent)
-      }
-
-      // 페이지네이션을 적용하여 전체 참가자 데이터 조회
-      let allParticipantsData = []
-      let filterFrom = 0
-      const filterPageSize = 1000
-
-      while (true) {
-        const { data: pageData, error: pageError } = await participantsQuery
-          .range(filterFrom, filterFrom + filterPageSize - 1)
-
-        if (pageError) throw pageError
-        if (!pageData || pageData.length === 0) break
-
-        allParticipantsData = allParticipantsData.concat(pageData)
-
-        if (pageData.length < filterPageSize) break
-        filterFrom += filterPageSize
-      }
-
-      const usedReferrerCodes = new Set(allParticipantsData.map(p => p.referrer_code).filter(Boolean))
-
-      const uniqueReferrers = usersData?.filter(u => usedReferrerCodes.has(u.referral_code))
-        .map(u => ({
-          referrer_name: u.name,
-          referrer_code: u.referral_code
-        })) || []
+      setReferrers([]) // 추천인 목록 로드 안 함
 
       setReferrers(uniqueReferrers)
     } catch (error) {
@@ -258,6 +294,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       let statsQuery = supabase
         .from('event_participants')
         .select('*')
+
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        statsQuery = statsQuery.is('deleted_at', null)
+      }
 
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
@@ -360,6 +401,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         .select('referrer_name, referrer_code')
         .not('referrer_code', 'is', null)
 
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        referrerStatsQuery = referrerStatsQuery.is('deleted_at', null)
+      }
+
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
         referrerStatsQuery = referrerStatsQuery.eq('referrer_code', user.referral_code)
@@ -455,6 +501,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           .select('referrer_code')
           .not('referrer_code', 'is', null)
 
+        // 시스템 관리자가 아니면 삭제된 데이터 제외
+        if (determinedViewMode !== 'system') {
+          branchStatsQuery = branchStatsQuery.is('deleted_at', null)
+        }
+
         if (selectedEvent) {
           branchStatsQuery = branchStatsQuery.eq('event_name', selectedEvent)
         }
@@ -535,6 +586,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         .select('*')
         .order('created_at', { ascending: false })
 
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        query = query.is('deleted_at', null)
+      }
+
       if (selectedEvent) {
         query = query.eq('event_name', selectedEvent)
       }
@@ -560,7 +616,23 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       }
 
       if (activeFilters.referrer) {
-        query = query.eq('referrer_code', activeFilters.referrer)
+        // 이름으로 매칭되는 추천인 코드 찾기
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('referral_code')
+          .ilike('name', `%${activeFilters.referrer}%`)
+
+        const nameMatchCodes = usersData?.map(u => u.referral_code).filter(Boolean) || []
+
+        // 검색 조건: (이름으로 찾은 코드들 중 하나) OR (referrer_code 자체가 검색어를 포함)
+        const conditions = []
+        if (nameMatchCodes.length > 0) {
+          const codesStr = nameMatchCodes.map(c => `"${c}"`).join(',')
+          conditions.push(`referrer_code.in.(${codesStr})`)
+        }
+        conditions.push(`referrer_code.ilike.%${activeFilters.referrer}%`)
+
+        query = query.or(conditions.join(','))
       }
 
       if (activeFilters.branch) {
@@ -699,80 +771,22 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   }
 
   const handleDeleteParticipant = async (id) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
-
     try {
       const { error } = await supabase
         .from('event_participants')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
 
       if (error) throw error
 
-      alert('삭제되었습니다.')
       loadData()
     } catch (error) {
-      console.error('삭제 실패:', error)
-      alert('삭제에 실패했습니다.')
+      console.error('숨김 처리 실패:', error)
+      alert('숨김 처리에 실패했습니다.')
     }
   }
 
-  const handleDownloadExcel = () => {
-    if (participants.length === 0) {
-      alert('다운로드할 데이터가 없습니다.')
-      return
-    }
 
-    const headers = [
-      '신청일시',
-      '신청자코드',
-      '학부모명',
-      '연락처',
-      '자녀성별',
-      '자녀나이',
-      '추천인',
-      '추천인코드',
-      '지점',
-      '문의사항',
-      '진도(최근발송)'
-    ]
-
-    const rows = participants.map(p => [
-      new Date(p.created_at).toLocaleString('ko-KR'),
-      p.subscriber_number || '',
-      p.parent_name || '',
-      p.phone || '',
-      p.child_gender || '',
-      p.child_age || '',
-      p.users?.name || p.referrer_name || '',
-      p.referrer_code || '',
-      p.users?.branch || '',
-      p.inquiry || '',
-      p.lastSentDay ? `${p.lastSentDay}일차` : '미발송'
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-
-    const today = new Date()
-    const dateStr = today.getFullYear() +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      String(today.getDate()).padStart(2, '0')
-
-    link.setAttribute('href', url)
-    link.setAttribute('download', `이벤트참가자목록_${dateStr}.xls`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   const totalPages = Math.ceil(participants.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -1233,21 +1247,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
               </div>
             )}
 
-            {/* 추천인 필터 */}
+            {/* 추천인 검색 */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">추천인</label>
-              <select
-                value={filters.referrer}
-                onChange={(e) => handleFilterChange('referrer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="">전체 추천인</option>
-                {referrers.map(referrer => (
-                  <option key={referrer.referrer_code} value={referrer.referrer_code}>
-                    {referrer.referrer_name}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-gray-500 mb-1">추천인 검색</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={filters.referrer}
+                  onChange={(e) => handleFilterChange('referrer', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 pr-8"
+                  placeholder="추천인 이름 입력"
+                />
+                {filters.referrer && (
+                  <button
+                    onClick={() => handleFilterChange('referrer', '')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 날짜 필터 */}
@@ -1338,7 +1357,10 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {currentParticipants.map((participant) => (
-                  <tr key={participant.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={participant.id}
+                    className={`hover:bg-gray-50 transition-colors ${participant.deleted_at ? 'bg-red-50 opacity-70' : ''}`}
+                  >
                     <td className="px-6 py-3">
                       <input
                         type="checkbox"
@@ -1357,7 +1379,10 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                       {new Date(participant.created_at).toLocaleDateString('ko-KR')}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {formatPhone(participant.phone)}
+                      {determinedViewMode === 'admin'
+                        ? formatPhoneMasked(participant.phone)
+                        : formatPhone(participant.phone)
+                      }
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{participant.child_age}세 / {participant.child_gender}</div>
@@ -1383,13 +1408,24 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                       )}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDeleteParticipant(participant.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                        title="삭제"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleEditClick(participant)}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {determinedViewMode !== 'user' && (
+                          <button
+                            onClick={() => handleDeleteParticipant(participant.id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1480,6 +1516,93 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             user={user}
             onClose={() => setShowMathLetterStatsModal(false)}
           />
+        )}
+
+        {/* 참가자 정보 수정 모달 */}
+        {editingParticipant && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Edit2 className="w-6 h-6 text-teal-600" />
+                  참가자 정보 수정
+                </h2>
+                <button
+                  onClick={() => setEditingParticipant(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">&times;</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">학부모명</label>
+                  <input
+                    type="text"
+                    value={editingParticipant.parent_name || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, parent_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
+                  <input
+                    type="text"
+                    value={editingParticipant.phone || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    placeholder="010-0000-0000"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">자녀 나이</label>
+                    <input
+                      type="number"
+                      value={editingParticipant.child_age || ''}
+                      onChange={(e) => setEditingParticipant({ ...editingParticipant, child_age: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">자녀 성별</label>
+                    <select
+                      value={editingParticipant.child_gender || ''}
+                      onChange={(e) => setEditingParticipant({ ...editingParticipant, child_gender: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="남">남</option>
+                      <option value="여">여</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">문의사항</label>
+                  <textarea
+                    value={editingParticipant.inquiry || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, inquiry: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => setEditingParticipant(null)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleUpdateParticipant}
+                    className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700"
+                  >
+                    저장하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 수학편지 발송 모달 */}

@@ -46,10 +46,10 @@ const generateReferralCode = async (userType) => {
 // 전화번호 포맷팅 함수
 const formatPhoneNumber = (phone) => {
   if (!phone) return ''
-  
+
   // 숫자만 추출
   const numbers = phone.replace(/[^0-9]/g, '')
-  
+
   // 포맷 적용
   if (numbers.length <= 3) {
     return numbers
@@ -129,7 +129,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
     try {
       const targetUser = users.find(u => u.id === userId)
       let referralCode = null
-      
+
       if (targetUser) {
         referralCode = await generateReferralCode(targetUser.user_type)
       }
@@ -155,7 +155,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
       } else {
         alert('직원이 승인되었습니다!')
       }
-      
+
       fetchUsers()
     } catch (err) {
       console.error('승인 오류:', err)
@@ -172,7 +172,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
     try {
       const { error } = await supabase
         .from('users')
-        .delete()
+        .delete() // 거부 시 완전 삭제
         .eq('id', userId)
 
       if (error) throw error
@@ -189,7 +189,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
 
   const handlePasswordReset = async (targetUser) => {
     const tempPassword = 'las0000'
-    
+
     if (!window.confirm(
       `${targetUser.name}(${targetUser.email})님의 비밀번호를 초기화하시겠습니까?\n\n초기화 비밀번호: ${tempPassword}\n\n※ 직원에게 유선으로 전달해주세요.`
     )) {
@@ -232,7 +232,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    
+
     // 전화번호 필드인 경우 자동 포맷 적용
     if (name === 'phone') {
       setFormData({
@@ -287,7 +287,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
     try {
       const { error } = await supabase
         .from('users')
-        .delete()
+        .delete() // 시스템 관리자는 완전 삭제
         .eq('id', userId)
 
       if (error) throw error
@@ -303,8 +303,8 @@ export default function SystemAdminUsers({ user, onNavigate }) {
   }
 
   const handleCheckboxChange = (userId) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
@@ -318,9 +318,9 @@ export default function SystemAdminUsers({ user, onNavigate }) {
 
     try {
       setLoading(true)
-      
+
       const selectedData = users.filter(u => selectedUsers.includes(u.id))
-      
+
       const excelData = await Promise.all(selectedData.map(async (u) => {
         // 날짜가 없으면 자동 설정: 가입일 ~ 오늘
         const effectiveStartDate = startDate || new Date(u.created_at).toISOString().split('T')[0]
@@ -343,7 +343,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
         }, 0) || 0
 
         const maskedSSN = u.ssn ? u.ssn.substring(0, 6) + '-*******' : '-'
-        const maskedAccount = u.account_number 
+        const maskedAccount = u.account_number
           ? u.account_number.substring(0, u.account_number.length - 4) + '****'
           : '-'
 
@@ -365,16 +365,16 @@ export default function SystemAdminUsers({ user, onNavigate }) {
       const ws = XLSX.utils.json_to_sheet(excelData)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '직원목록')
-      
-      const dateRange = startDate && endDate 
+
+      const dateRange = startDate && endDate
         ? `${startDate}_${endDate}`
         : `전체기간_${new Date().toISOString().split('T')[0]}`
-      
+
       const fileName = `직원목록_${dateRange.replace(/-/g, '')}.xlsx`
       XLSX.writeFile(wb, fileName)
-      
 
-      
+
+
     } catch (error) {
       console.error('엑셀 다운로드 오류:', error)
       alert('엑셀 파일 생성 중 오류가 발생했습니다.')
@@ -385,17 +385,17 @@ export default function SystemAdminUsers({ user, onNavigate }) {
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesBranch = !filterBranch || u.branch === filterBranch
     const matchesUserType = filterUserType === 'all' || u.user_type === filterUserType
-    
+
     let matchesDate = true
     if (startDate || endDate) {
       const createdDate = new Date(u.created_at)
       if (startDate) matchesDate = matchesDate && createdDate >= new Date(startDate)
       if (endDate) matchesDate = matchesDate && createdDate <= new Date(endDate)
     }
-    
+
     return matchesSearch && matchesBranch && matchesUserType && matchesDate
   })
 
@@ -424,11 +424,11 @@ export default function SystemAdminUsers({ user, onNavigate }) {
               <ArrowLeft size={20} />
               나가기
             </button>
-            
+
             <div className="flex items-center gap-3">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Book" 
+              <img
+                src="/images/logo.png"
+                alt="LAS Book"
                 className="h-10"
               />
               <h1 className="text-2xl font-bold" style={{ color: '#249689' }}>
@@ -445,7 +445,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
           <h2 className="text-lg font-bold mb-4" style={{ color: '#249689' }}>
             검색 조건
           </h2>
-          
+
           <div className="flex gap-4">
             {/* 이름/이메일 검색 */}
             <div className="flex-1">
@@ -558,7 +558,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
             </div>
             <button
               onClick={handleExcelDownload}
-              
+
               className="flex items-center gap-2 px-6 py-2 text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: '#249689', fontSize: '15px', borderRadius: '10px' }}
             >
@@ -612,7 +612,10 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {paginatedUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
+                    <tr
+                      key={u.id}
+                      className={`hover:bg-gray-50 ${u.deleted_at ? 'bg-red-50 opacity-70' : ''}`}
+                    >
                       <td className="px-4 py-3">
                         <input
                           type="checkbox"
@@ -707,7 +710,7 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                 >
                   이전
                 </button>
-                
+
                 <div className="flex gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -720,16 +723,15 @@ export default function SystemAdminUsers({ user, onNavigate }) {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-1 border rounded ${
-                          currentPage === pageNum
-                            ? 'text-white font-bold'
-                            : 'hover:bg-gray-50'
-                        }`}
+                        className={`px-3 py-1 border rounded ${currentPage === pageNum
+                          ? 'text-white font-bold'
+                          : 'hover:bg-gray-50'
+                          }`}
                         style={{
                           fontSize: '14px',
                           backgroundColor: currentPage === pageNum ? '#249689' : 'white',
@@ -774,9 +776,9 @@ export default function SystemAdminUsers({ user, onNavigate }) {
             {/* 로고 + 타이틀 */}
             <div className="flex flex-col items-center mb-6">
               <div className="flex items-center gap-2 mb-2">
-                <img 
-                  src="/images/logo.png" 
-                  alt="LAS Logo" 
+                <img
+                  src="/images/logo.png"
+                  alt="LAS Logo"
                   className="w-10 h-10 object-cover"
                   onError={(e) => e.target.style.display = 'none'}
                 />
