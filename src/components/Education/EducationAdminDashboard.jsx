@@ -14,6 +14,8 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
   const [editingId, setEditingId] = useState(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [filterReferrerId, setFilterReferrerId] = useState('');
+  const [scannedParticipant, setScannedParticipant] = useState(null);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
 
   useEffect(() => {
     fetchEducations();
@@ -140,9 +142,26 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
 
   // Use a ref to keep track of the latest applications state without triggering useEffect re-runs
   const applicationsRef = React.useRef(applications);
+  const showAttendanceModalRef = React.useRef(false); // Ref for scanner callback
+
   useEffect(() => {
     applicationsRef.current = applications;
   }, [applications]);
+
+  // Sync ref with state
+  useEffect(() => {
+    showAttendanceModalRef.current = showAttendanceModal;
+  }, [showAttendanceModal]);
+
+  // Modal auto-close timer
+  useEffect(() => {
+    if (showAttendanceModal) {
+      const timer = setTimeout(() => {
+        setShowAttendanceModal(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showAttendanceModal]);
 
   useEffect(() => {
     if (selectedEducation && isScannerOpen) {
@@ -153,29 +172,47 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
       );
 
       const onScanSuccess = async (decodedText) => {
+        console.log("QR Scanned:", decodedText);
+
+        // Prevent duplicate scans while modal is open
+        if (showAttendanceModalRef.current) {
+          console.log("Modal already open, ignoring scan.");
+          return;
+        }
+
         // Use the ref to get the latest applications data
         const currentApplications = applicationsRef.current;
         const app = currentApplications.find(a => a.qr_code_data === decodedText || a.id === decodedText);
 
         if (!app) {
+          console.warn("Participant not found for QR:", decodedText);
           alert("⚠️ 이 교육 과정의 신청자가 아니거나 유효하지 않은 QR 코드입니다.");
           return;
         }
 
+        console.log("Found participant:", app.applicant_name);
+
         if (app.attendance_status === 'attended') {
-          alert(`⚠️ [${app.applicant_name}] 님은 이미 출석 처리되었습니다.`);
+          console.log("Already attended.");
+          setScannedParticipant({ ...app, alreadyAttended: true });
+          setShowAttendanceModal(true);
           return;
         }
 
+        console.log("Updating attendance for:", app.id);
         const { error } = await supabase
           .from('education_applications')
           .update({ attendance_status: 'attended', attended_at: new Date().toISOString() })
           .eq('id', app.id);
 
         if (!error) {
-          setApplications(prev => prev.map(a => a.id === app.id ? { ...a, attendance_status: 'attended' } : a));
-          alert(`✅ [${app.applicant_name}] 님 출석 처리가 정상적으로 완료되었습니다!`);
+          console.log("Attendance update success.");
+          const updatedApp = { ...app, attendance_status: 'attended' };
+          setApplications(prev => prev.map(a => a.id === app.id ? updatedApp : a));
+          setScannedParticipant(updatedApp);
+          setShowAttendanceModal(true);
         } else {
+          console.error("Attendance update error:", error);
           alert("출석 처리 중 오류가 발생했습니다: " + error.message);
         }
       };
@@ -258,6 +295,11 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
               <h3 className="font-bold mb-2 flex items-center gap-2">
                 <Camera size={18} /> 카메라/스캐너 장치를 허용해주세요. 자동으로 출석 처리됩니다.
               </h3>
+              <style>{`
+                #qr-reader video {
+                  transform: scaleX(-1) !important;
+                }
+              `}</style>
               <div id="qr-reader" className="w-full max-w-sm mx-auto overflow-hidden bg-white shadow-sm rounded-lg border"></div>
             </div>
           )}
@@ -339,6 +381,55 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
               </tbody>
             </table>
           </div>
+          {/* Attendance Confirmation Modal */}
+          {showAttendanceModal && scannedParticipant && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center border-4 border-[#249689]">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle size={48} className="text-[#249689]" />
+                </div>
+
+                <h2 className="text-3xl font-black mb-2" style={{ color: '#249689' }}>
+                  출석 확인
+                </h2>
+
+                <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-100">
+                  <p className="text-gray-500 text-sm mb-1">신청자</p>
+                  <p className="text-2xl font-bold text-gray-900 mb-4">{scannedParticipant.applicant_name}</p>
+
+                  <div className="flex justify-between text-sm py-2 border-t border-gray-200">
+                    <span className="text-gray-500">소속지점</span>
+                    <span className="font-bold text-gray-800">{scannedParticipant.referrer?.branch || '-'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm py-2 border-t border-gray-200">
+                    <span className="text-gray-500">추천인</span>
+                    <span className="font-bold text-gray-800">{scannedParticipant.referrer?.name || '-'}</span>
+                  </div>
+                </div>
+
+                {scannedParticipant.alreadyAttended ? (
+                  <div className="bg-orange-50 text-orange-700 font-bold py-3 px-4 rounded-lg mb-2">
+                    이미 출석 처리된 인원입니다.
+                  </div>
+                ) : (
+                  <div className="bg-[#e0f2f1] text-[#249689] font-bold py-3 px-4 rounded-lg mb-2">
+                    정상적으로 출석 처리되었습니다.
+                  </div>
+                )}
+
+                <p className="text-gray-400 text-xs mt-4">
+                  이 창은 3초 후 자동으로 닫힙니다.
+                </p>
+
+                <button
+                  onClick={() => setShowAttendanceModal(false)}
+                  className="mt-6 w-full py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -468,6 +559,55 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
                   <button type="submit" className="px-4 py-2 bg-[#249689] text-white rounded hover:bg-[#1d7b70]">{editMode ? '수정 완료' : '등록 완료'}</button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+        {/* Attendance Confirmation Modal */}
+        {showAttendanceModal && scannedParticipant && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[9999] backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center border-4 border-[#249689]">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle size={48} className="text-[#249689]" />
+              </div>
+
+              <h2 className="text-3xl font-black mb-2" style={{ color: '#249689' }}>
+                출석 확인
+              </h2>
+
+              <div className="bg-gray-50 rounded-xl p-6 mb-6 border border-gray-100">
+                <p className="text-gray-500 text-sm mb-1">신청자</p>
+                <p className="text-2xl font-bold text-gray-900 mb-4">{scannedParticipant.applicant_name}</p>
+
+                <div className="flex justify-between text-sm py-2 border-t border-gray-200">
+                  <span className="text-gray-500">소속지점</span>
+                  <span className="font-bold text-gray-800">{scannedParticipant.referrer?.branch || '-'}</span>
+                </div>
+                <div className="flex justify-between text-sm py-2 border-t border-gray-200">
+                  <span className="text-gray-500">추천인</span>
+                  <span className="font-bold text-gray-800">{scannedParticipant.referrer?.name || '-'}</span>
+                </div>
+              </div>
+
+              {scannedParticipant.alreadyAttended ? (
+                <div className="bg-orange-50 text-orange-700 font-bold py-3 px-4 rounded-lg mb-2">
+                  이미 출석 처리된 인원입니다.
+                </div>
+              ) : (
+                <div className="bg-[#e0f2f1] text-[#249689] font-bold py-3 px-4 rounded-lg mb-2">
+                  정상적으로 출석 처리되었습니다.
+                </div>
+              )}
+
+              <p className="text-gray-400 text-xs mt-4">
+                이 창은 3초 후 자동으로 닫힙니다.
+              </p>
+
+              <button
+                onClick={() => setShowAttendanceModal(false)}
+                className="mt-6 w-full py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                닫기
+              </button>
             </div>
           </div>
         )}
