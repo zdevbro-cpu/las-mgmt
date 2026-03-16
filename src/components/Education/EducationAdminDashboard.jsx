@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { LogOut, BookOpen, Plus, Users, CheckCircle, ChevronLeft, Camera, X } from 'lucide-react';
+import { LogOut, BookOpen, Plus, Users, CheckCircle, ChevronLeft, Camera, X, FileDown } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import * as XLSX from 'xlsx';
 
 export default function EducationAdminDashboard({ user, onNavigate }) {
   const [educations, setEducations] = useState([]);
@@ -179,6 +180,31 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
     }
   }, [isScannerOpen, selectedEducation, applications]);
 
+  const handleDownloadExcel = (filteredApps) => {
+    if (!filteredApps || filteredApps.length === 0) {
+      alert("다운로드할 데이터가 없습니다.");
+      return;
+    }
+
+    const excelData = filteredApps.map(app => ({
+      "이름": app.applicant_name,
+      "생년월일": app.applicant_birthdate,
+      "전화번호": app.applicant_phone,
+      "추천인": app.referrer ? app.referrer.name : "없음",
+      "소속지점": app.referrer ? app.referrer.branch : "없음",
+      "출석상태": app.attendance_status === 'attended' ? '출석' : '미출석',
+      "출석시간": app.attended_at ? new Date(app.attended_at).toLocaleString() : '-',
+      "신청일시": new Date(app.created_at).toLocaleString()
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "신청자목록");
+    
+    const fileName = `교육명단_${selectedEducation.title}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   if (selectedEducation) {
     const uniqueReferrers = [];
     applications.forEach(app => {
@@ -242,16 +268,24 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
 
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-lg">신청자 목록</h3>
-            <select 
-              value={filterReferrerId}
-              onChange={(e) => setFilterReferrerId(e.target.value)}
-              className="border border-gray-300 rounded-lg p-2 text-sm bg-white min-w-[200px]"
-            >
-              <option value="">전체 추천인 목록 보기</option>
-              {uniqueReferrers.map(r => (
-                <option key={r.id} value={r.id}>{r.branch} - {r.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDownloadExcel(filteredApplications)}
+                className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 font-bold text-sm"
+              >
+                <FileDown size={18} /> 엑셀 다운로드
+              </button>
+              <select 
+                value={filterReferrerId}
+                onChange={(e) => setFilterReferrerId(e.target.value)}
+                className="border border-gray-300 rounded-lg p-2 text-sm bg-white min-w-[200px]"
+              >
+                <option value="">전체 추천인 목록 보기</option>
+                {uniqueReferrers.map(r => (
+                  <option key={r.id} value={r.id}>{r.branch} - {r.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
