@@ -100,6 +100,19 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               구매자정보
             </button>
 
+            {/* ⭐ 교육관리 (시스템 관리자) */}
+            <button
+              onClick={() => {
+                console.log('🧭 Navigate to: EducationAdminDashboard')
+                onNavigate('EducationAdminDashboard')
+              }}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <BookOpen size={20} />
+              교육관리
+            </button>
+
             {/* ⭐ 이벤트 관리로 이동 */}
             <button
               onClick={() => {

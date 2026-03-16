@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X, BarChart3, Send, MessageCircle, Trash2 } from 'lucide-react'
+import { Search, RotateCcw, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Mail, X, BarChart3, Send, MessageCircle, Trash2, Users, Calendar, Trophy, Medal, Award, User, Store, Edit2 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import MathLetterStatsModal from './MathLetterStatsModal'
 
 export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
@@ -68,6 +69,20 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   // 페이지네이션 상태
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(30)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 640px)')
+    const applyMobileItemsPerPage = () => {
+      if (mediaQuery.matches) {
+        setItemsPerPage(200)
+        setCurrentPage(1)
+      }
+    }
+
+    applyMobileItemsPerPage()
+    mediaQuery.addEventListener('change', applyMobileItemsPerPage)
+    return () => mediaQuery.removeEventListener('change', applyMobileItemsPerPage)
+  }, [])
 
   // 수학편지 발송 관련 상태
   const [selectedParticipants, setSelectedParticipants] = useState([])
@@ -144,6 +159,83 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
     return phone;
   }
 
+  // 전화번호 8자리 마스킹 함수 (010-****-****) - 지점장용
+  const formatPhoneMasked = (phone) => {
+    if (!phone) return '';
+    const cleaned = phone.toString().replace(/\D/g, '');
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{3})\d{4}\d{4}/, '$1-****-****'); // 가운데, 끝 4자리 마스킹 -> 010-****-**** 형식으로 요청됨
+    } else if (cleaned.length === 10) {
+      return cleaned.replace(/(\d{3})\d{3}\d{4}/, '$1-***-****');
+    }
+    return phone.replace(/./g, '*');
+  }
+
+  // 엑셀 다운로드 핸들러
+  const handleDownloadExcel = () => {
+    const dataToExport = participants.map(p => {
+      // 지점장(admin)은 연락처 마스킹
+      const phoneDisplay = determinedViewMode === 'admin'
+        ? formatPhoneMasked(p.phone)
+        : formatPhone(p.phone);
+
+      return {
+        '신청일시': new Date(p.created_at).toLocaleString(),
+        '부모님 성함': p.parent_name,
+        '연락처': phoneDisplay,
+        '자녀 나이': p.child_age,
+        '자녀 성별': p.child_gender,
+        '추천인 코드': p.referrer_code,
+        '추천인 이름': p.referrer_name || p.users?.name || '-',
+        '지점': p.users?.branch || '-',
+        '진도': p.nextDay ? `${p.nextDay}일차 발송 예정` : '미발송',
+        '문의사항': p.inquiry || '-'
+      }
+    })
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "참가자목록")
+
+    // 파일명 생성
+    const dateStr = new Date().toISOString().split('T')[0]
+    XLSX.writeFile(wb, `수학편지_참가자목록_${dateStr}.xlsx`)
+  }
+
+  // 수정 관련 상태 및 핸들러
+  const [editingParticipant, setEditingParticipant] = useState(null)
+
+  const handleEditClick = (participant) => {
+    setEditingParticipant({ ...participant })
+  }
+
+  const handleUpdateParticipant = async () => {
+    if (!editingParticipant) return
+
+    try {
+      const { error } = await supabase
+        .from('event_participants')
+        .update({
+          parent_name: editingParticipant.parent_name,
+          phone: editingParticipant.phone,
+          child_age: editingParticipant.child_age,
+          child_gender: editingParticipant.child_gender,
+          inquiry: editingParticipant.inquiry
+        })
+        .eq('id', editingParticipant.id)
+
+      if (error) throw error
+
+      alert('수정되었습니다.')
+      setEditingParticipant(null)
+      // 데이터 다시 로드
+      loadParticipants()
+    } catch (error) {
+      console.error('수정 실패:', error)
+      alert('수정 중 오류가 발생했습니다.')
+    }
+  }
+
   const loadEvents = async () => {
     try {
       const { data, error } = await supabase
@@ -186,33 +278,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       const uniqueBranches = [...new Set(branchData?.map(b => b.branch) || [])].sort()
       setBranches(uniqueBranches)
 
-      // 추천인 목록 로드 - users 테이블에서 가져오기
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('name, referral_code')
-        .not('referral_code', 'is', null)
-        .order('name')
-
-      // event_participants에 실제 사용된 추천인만 필터링
-      let participantsQuery = supabase
-        .from('event_participants')
-        .select('referrer_code, event_name')
-        .not('referrer_code', 'is', null)
-
-      // 이벤트 필터 적용
-      if (selectedEvent) {
-        participantsQuery = participantsQuery.eq('event_name', selectedEvent)
-      }
-
-      const { data: participantsData } = await participantsQuery
-
-      const usedReferrerCodes = new Set(participantsData?.map(p => p.referrer_code) || [])
-
-      const uniqueReferrers = usersData?.filter(u => usedReferrerCodes.has(u.referral_code))
-        .map(u => ({
-          referrer_name: u.name,
-          referrer_code: u.referral_code
-        })) || []
+      setReferrers([]) // 추천인 목록 로드 안 함
 
       setReferrers(uniqueReferrers)
     } catch (error) {
@@ -228,6 +294,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       let statsQuery = supabase
         .from('event_participants')
         .select('*')
+
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        statsQuery = statsQuery.is('deleted_at', null)
+      }
 
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
@@ -330,6 +401,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         .select('referrer_name, referrer_code')
         .not('referrer_code', 'is', null)
 
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        referrerStatsQuery = referrerStatsQuery.is('deleted_at', null)
+      }
+
       // 권한별 필터링
       if (determinedViewMode === 'user' && user?.referral_code) {
         referrerStatsQuery = referrerStatsQuery.eq('referrer_code', user.referral_code)
@@ -354,7 +430,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         referrerStatsQuery = referrerStatsQuery.eq('event_name', selectedEvent)
       }
 
-      const { data: referrerStats, error: referrerError } = await referrerStatsQuery
+      // 페이지네이션을 적용하여 전체 데이터 조회
+      let allReferrerData = []
+      let referrerFrom = 0
+      const referrerPageSize = 1000
+
+      while (true) {
+        const { data: pageData, error: pageError } = await referrerStatsQuery
+          .range(referrerFrom, referrerFrom + referrerPageSize - 1)
+
+        if (pageError) throw pageError
+        if (!pageData || pageData.length === 0) break
+
+        allReferrerData = allReferrerData.concat(pageData)
+
+        if (pageData.length < referrerPageSize) break
+        referrerFrom += referrerPageSize
+      }
+
+      const referrerStats = allReferrerData
+      const referrerError = null
 
       if (referrerError) {
         console.error('▶ 추천인별 통계 에러:', referrerError)
@@ -405,6 +500,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           .from('event_participants')
           .select('referrer_code')
           .not('referrer_code', 'is', null)
+
+        // 시스템 관리자가 아니면 삭제된 데이터 제외
+        if (determinedViewMode !== 'system') {
+          branchStatsQuery = branchStatsQuery.is('deleted_at', null)
+        }
 
         if (selectedEvent) {
           branchStatsQuery = branchStatsQuery.eq('event_name', selectedEvent)
@@ -486,6 +586,11 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         .select('*')
         .order('created_at', { ascending: false })
 
+      // 시스템 관리자가 아니면 삭제된 데이터 제외
+      if (determinedViewMode !== 'system') {
+        query = query.is('deleted_at', null)
+      }
+
       if (selectedEvent) {
         query = query.eq('event_name', selectedEvent)
       }
@@ -493,23 +598,56 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       if (determinedViewMode === 'user' && user?.referral_code) {
         query = query.eq('referrer_code', user.referral_code)
       } else if (determinedViewMode === 'admin' && user?.branch) {
-        const { data: branchUsers } = await supabase
-          .from('users')
-          .select('referral_code')
-          .eq('branch', user.branch)
-          .not('referral_code', 'is', null)
+        if (!activeFilters.branch) {
+          const { data: branchUsers } = await supabase
+            .from('users')
+            .select('referral_code')
+            .eq('branch', user.branch)
+            .not('referral_code', 'is', null)
 
-        const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
+          const branchReferralCodes = branchUsers?.map(u => u.referral_code) || []
 
-        if (branchReferralCodes.length > 0) {
-          query = query.in('referrer_code', branchReferralCodes)
-        } else {
-          query = query.eq('referrer_code', 'NONE')
+          if (branchReferralCodes.length > 0) {
+            query = query.in('referrer_code', branchReferralCodes)
+          } else {
+            query = query.eq('referrer_code', 'NONE')
+          }
         }
       }
 
       if (activeFilters.referrer) {
-        query = query.eq('referrer_code', activeFilters.referrer)
+        // 이름으로 매칭되는 추천인 코드 찾기
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('referral_code')
+          .ilike('name', `%${activeFilters.referrer}%`)
+
+        const nameMatchCodes = usersData?.map(u => u.referral_code).filter(Boolean) || []
+
+        // 검색 조건: (이름으로 찾은 코드들 중 하나) OR (referrer_code 자체가 검색어를 포함)
+        const conditions = []
+        if (nameMatchCodes.length > 0) {
+          const codesStr = nameMatchCodes.map(c => `"${c}"`).join(',')
+          conditions.push(`referrer_code.in.(${codesStr})`)
+        }
+        conditions.push(`referrer_code.ilike.%${activeFilters.referrer}%`)
+
+        query = query.or(conditions.join(','))
+      }
+
+      if (activeFilters.branch) {
+        const { data: filterBranchUsers } = await supabase
+          .from('users')
+          .select('referral_code')
+          .eq('branch', activeFilters.branch)
+
+        const filterBranchCodes = filterBranchUsers?.map(u => u.referral_code).filter(Boolean) || []
+
+        if (filterBranchCodes.length > 0) {
+          query = query.in('referrer_code', filterBranchCodes)
+        } else {
+          query = query.eq('referrer_code', 'NONE_MATCHING_BRANCH_FILTER')
+        }
       }
       if (activeFilters.startDate) {
         query = query.gte('created_at', `${activeFilters.startDate}T00:00:00`)
@@ -580,9 +718,6 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
       }) || []
 
       let filteredData = enrichedData
-      if (activeFilters.branch) {
-        filteredData = enrichedData.filter(p => p.users?.branch === activeFilters.branch)
-      }
 
       setParticipants(filteredData)
     } catch (error) {
@@ -636,78 +771,22 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
   }
 
   const handleDeleteParticipant = async (id) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return
-
     try {
       const { error } = await supabase
         .from('event_participants')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
 
       if (error) throw error
 
-      alert('삭제되었습니다.')
       loadData()
     } catch (error) {
-      console.error('삭제 실패:', error)
-      alert('삭제에 실패했습니다.')
+      console.error('숨김 처리 실패:', error)
+      alert('숨김 처리에 실패했습니다.')
     }
   }
 
-  const handleDownloadExcel = () => {
-    if (participants.length === 0) {
-      alert('다운로드할 데이터가 없습니다.')
-      return
-    }
 
-    const headers = [
-      '신청일시',
-      '학부모명',
-      '연락처',
-      '자녀성별',
-      '자녀나이',
-      '추천인',
-      '추천인코드',
-      '지점',
-      '문의사항',
-      '진도(최근발송)'
-    ]
-
-    const rows = participants.map(p => [
-      new Date(p.created_at).toLocaleString('ko-KR'),
-      p.parent_name || '',
-      p.phone || '',
-      p.child_gender || '',
-      p.child_age || '',
-      p.users?.name || p.referrer_name || '',
-      p.referrer_code || '',
-      p.users?.branch || '',
-      p.inquiry || '',
-      p.lastSentDay ? `${p.lastSentDay}일차` : '미발송'
-    ])
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-
-    const BOM = '\uFEFF'
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-
-    const today = new Date()
-    const dateStr = today.getFullYear() +
-      String(today.getMonth() + 1).padStart(2, '0') +
-      String(today.getDate()).padStart(2, '0')
-
-    link.setAttribute('href', url)
-    link.setAttribute('download', `이벤트참가자목록_${dateStr}.xls`)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 
   const totalPages = Math.ceil(participants.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -886,110 +965,263 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
         </div>
 
         {/* 통계 카드 (관리자용) */}
-        {showFullData && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">총 참가자</div>
-              <div className="text-2xl font-bold text-gray-900">{formatNumber(stats.total)}명</div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">이번주 신규</div>
-              <div className="text-2xl font-bold text-teal-600">{formatNumber(stats.thisWeek)}명</div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">성별 비율</div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                  <span className="font-medium">{formatNumber(stats.male)}</span>
+        {showFullData && (<>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <div className="text-blue-100 text-sm font-medium mb-1">전체 참가자</div>
+                  <div className="text-3xl font-bold">{formatNumber(stats.total)}명</div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-pink-500"></span>
-                  <span className="font-medium">{formatNumber(stats.female)}</span>
+                <div className="p-2 bg-blue-500 rounded-lg bg-opacity-50">
+                  <Users className="w-8 h-8 text-white" />
                 </div>
               </div>
             </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">주요 연령대</div>
-              <div className="text-lg font-bold text-gray-900">
-                {ageDistribution.length > 0
-                  ? ageDistribution.reduce((prev, current) => (prev.total > current.total) ? prev : current).name.split('(')[0]
-                  : '-'
-                }
+
+            <div className="bg-purple-600 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <div className="text-purple-100 text-sm font-medium mb-1">이번주 참가자</div>
+                  <div className="text-3xl font-bold">{formatNumber(stats.thisWeek)}명</div>
+                </div>
+                <div className="p-2 bg-purple-500 rounded-lg bg-opacity-50">
+                  <Calendar className="w-8 h-8 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#0090D4] rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <div className="text-blue-100 text-sm font-medium mb-1">남학생</div>
+                  <div className="text-3xl font-bold">{formatNumber(stats.male)}명</div>
+                </div>
+                <div className="p-2 bg-blue-400 rounded-lg bg-opacity-50">
+                  <User className="w-8 h-8 text-white" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#E91E63] rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
+                <div>
+                  <div className="text-pink-100 text-sm font-medium mb-1">여학생</div>
+                  <div className="text-3xl font-bold">{formatNumber(stats.female)}명</div>
+                </div>
+                <div className="p-2 bg-pink-400 rounded-lg bg-opacity-50">
+                  <User className="w-8 h-8 text-white" />
+                </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Top 랭킹 (관리자용) */}
-        {showTopRankings && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Top 지점 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <h3 className="font-bold text-gray-900">🏆 Top 지점</h3>
-              </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  {topBranches.slice(0, 5).map((branch, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleCardFilterClick('branch', branch.branch)}
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :
-                          idx === 1 ? 'bg-gray-100 text-gray-700' :
-                            idx === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-white text-gray-500 border border-gray-200'
-                          }`}>
-                          {idx + 1}
-                        </span>
-                        <span className="font-medium text-gray-700">{branch.branch}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-teal-700 mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                연령 분포 (1~20세, 4개 구간)
+              </h3>
+              <div className="space-y-6">
+                {ageDistribution.map((range, idx) => {
+                  const malePercent = range.total > 0 ? Math.round((range.male / range.total) * 100) : 0
+                  const femalePercent = range.total > 0 ? Math.round((range.female / range.total) * 100) : 0
+
+                  return (
+                    <div key={idx} className="space-y-2">
+                      <div className="flex justify-between items-end">
+                        <span className="font-bold text-gray-700">{range.name.split('(')[0]} <span className="text-sm font-normal text-gray-500">({range.name.split('(')[1]}</span></span>
+                        <span className="font-bold text-teal-600">총 {formatNumber(range.total)}명</span>
                       </div>
-                      <span className="font-bold text-teal-600">{formatNumber(branch.count)}명</span>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center">👦</span>
+                        <span className="w-16">남학생</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden flex relative">
+                          {range.male > 0 && (
+                            <div style={{ width: `${malePercent}%` }} className="h-full bg-[#0090D4] flex items-center justify-end px-2 text-white font-bold">
+                              {range.male}명
+                            </div>
+                          )}
+                        </div>
+                        <span className="w-8 text-right text-gray-500">{malePercent}%</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="w-4 h-4 rounded-full bg-yellow-400 flex items-center justify-center">👧</span>
+                        <span className="w-16">여학생</span>
+                        <div className="flex-1 h-6 bg-gray-100 rounded-full overflow-hidden flex relative">
+                          {range.female > 0 && (
+                            <div style={{ width: `${femalePercent}%` }} className="h-full bg-[#E91E63] flex items-center justify-end px-2 text-white font-bold">
+                              {range.female}명
+                            </div>
+                          )}
+                        </div>
+                        <span className="w-8 text-right text-gray-500">{femalePercent}%</span>
+                      </div>
                     </div>
-                  ))}
-                  {topBranches.length === 0 && (
-                    <div className="text-center text-gray-400 py-4">데이터가 없습니다</div>
-                  )}
-                </div>
+                  )
+                })}
               </div>
             </div>
 
-            {/* Top 추천인 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-4 border-b border-gray-100 bg-gray-50">
-                <h3 className="font-bold text-gray-900">👑 Top 추천인</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center justify-center">
+              <div className="w-full text-left mb-4">
+                <h3 className="text-lg font-bold text-teal-700 flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-pink-500"></span>
+                  </span>
+                  성별 비율
+                </h3>
               </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  {topReferrers.slice(0, 5).map((referrer, idx) => (
+
+              <div className="relative w-64 h-64 mb-8">
+                <div
+                  className="w-full h-full rounded-full"
+                  style={{
+                    background: `conic-gradient(#E91E63 0% ${stats.total > 0 ? (stats.female / stats.total) * 100 : 50}%, #0090D4 ${stats.total > 0 ? (stats.female / stats.total) * 100 : 50}% 100%)`
+                  }}
+                ></div>
+                <div className="absolute inset-10 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                  <span className="text-3xl font-bold text-teal-600">{formatNumber(stats.total)}</span>
+                  <span className="text-gray-500 text-sm">총 참가자</span>
+                </div>
+              </div>
+
+              <div className="w-full space-y-3">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded bg-[#0090D4]"></span>
+                    <span className="font-bold text-gray-700">남학생</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-[#0090D4]">{formatNumber(stats.male)}명</div>
+                    <div className="text-xs text-gray-500">{stats.total > 0 ? ((stats.male / stats.total) * 100).toFixed(1) : 0}%</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-pink-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-4 rounded bg-[#E91E63]"></span>
+                    <span className="font-bold text-gray-700">여학생</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-[#E91E63]">{formatNumber(stats.female)}명</div>
+                    <div className="text-xs text-gray-500">{stats.total > 0 ? ((stats.female / stats.total) * 100).toFixed(1) : 0}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>)}
+
+        {/* Top 랭킹 (관리자용) */}
+        {showTopRankings && (
+          <div className="grid grid-cols-1 gap-8 mb-10">
+            <div>
+              <h3 className="text-xl font-bold text-teal-800 flex items-center gap-2 mb-4">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+                추천 매장 Top 12
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {topBranches.slice(0, 12).map((branch, idx) => {
+                  let borderColor = 'border-teal-500';
+                  let badgeColor = 'bg-teal-600';
+                  let Icon = Store;
+                  let iconColor = 'text-gray-400';
+
+                  if (idx === 0) {
+                    borderColor = 'border-yellow-400';
+                    badgeColor = 'bg-yellow-400';
+                    Icon = Medal;
+                    iconColor = 'text-yellow-500';
+                  } else if (idx === 1) {
+                    borderColor = 'border-gray-400 shadow-sm';
+                    badgeColor = 'bg-gray-400';
+                    Icon = Medal;
+                    iconColor = 'text-gray-500';
+                  } else if (idx === 2) {
+                    borderColor = 'border-orange-400 shadow-sm';
+                    badgeColor = 'bg-orange-400';
+                    Icon = Medal;
+                    iconColor = 'text-orange-500';
+                  }
+
+                  const Badge = () => (
+                    <div className={`absolute -top-3 -left-3 w-7 h-7 ${badgeColor} rounded-full flex items-center justify-center text-white font-bold shadow-md z-10`}>
+                      {idx + 1}
+                    </div>
+                  );
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleCardFilterClick('branch', branch.branch)}
+                      className={`relative bg-white rounded-xl border-2 ${borderColor} p-3 flex items-center justify-between shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-visible h-14`}
+                    >
+                      <Badge />
+                      <div className="flex items-center gap-3 ml-3">
+                        <Icon className={`w-5 h-5 ${iconColor}`} />
+                        <span className="font-bold text-gray-800 text-sm">{branch.branch}</span>
+                      </div>
+                      <span className="font-bold text-teal-600 text-lg">{formatNumber(branch.count)}<span className="text-xs font-normal">명</span></span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-bold text-blue-800 flex items-center gap-2 mb-4 mt-8">
+                <Award className="w-6 h-6 text-blue-500" />
+                추천인 Top 12
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {topReferrers.slice(0, 12).map((referrer, idx) => {
+                  let borderColor = 'border-blue-500';
+                  let badgeColor = 'bg-blue-600';
+                  let Icon = User;
+                  let iconColor = 'text-gray-400';
+
+                  if (idx === 0) {
+                    borderColor = 'border-yellow-400';
+                    badgeColor = 'bg-yellow-400';
+                    Icon = Medal;
+                    iconColor = 'text-yellow-500';
+                  } else if (idx === 1) {
+                    borderColor = 'border-gray-400 shadow-sm';
+                    badgeColor = 'bg-gray-400';
+                    Icon = Medal;
+                    iconColor = 'text-gray-500';
+                  } else if (idx === 2) {
+                    borderColor = 'border-orange-400 shadow-sm';
+                    badgeColor = 'bg-orange-400';
+                    Icon = Medal;
+                    iconColor = 'text-orange-500';
+                  }
+
+                  const Badge = () => (
+                    <div className={`absolute -top-3 -left-3 w-7 h-7 ${badgeColor} rounded-full flex items-center justify-center text-white font-bold shadow-md z-10`}>
+                      {idx + 1}
+                    </div>
+                  );
+
+                  return (
                     <div
                       key={idx}
                       onClick={() => handleCardFilterClick('referrer', referrer.code)}
-                      className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      className={`relative bg-white rounded-xl border-2 ${borderColor} p-3 flex items-center justify-between shadow-sm cursor-pointer hover:scale-105 transition-transform overflow-visible h-14`}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? 'bg-yellow-100 text-yellow-700' :
-                          idx === 1 ? 'bg-gray-100 text-gray-700' :
-                            idx === 2 ? 'bg-orange-100 text-orange-700' :
-                              'bg-white text-gray-500 border border-gray-200'
-                          }`}>
-                          {idx + 1}
-                        </span>
-                        <div>
-                          <div className="font-medium text-gray-700">{referrer.name}</div>
-                          <div className="text-xs text-gray-400">{referrer.branch}</div>
+                      <Badge />
+                      <div className="flex items-center gap-3 ml-3 overflow-hidden">
+                        <Icon className={`w-5 h-5 ${iconColor}`} />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800 text-sm truncate">{referrer.name}</span>
+                          <span className="text-[10px] text-gray-400 truncate">{referrer.branch}</span>
                         </div>
                       </div>
-                      <span className="font-bold text-blue-600">{formatNumber(referrer.count)}명</span>
+                      <span className="font-bold text-blue-600 text-lg shrink-0">{formatNumber(referrer.count)}<span className="text-xs font-normal">명</span></span>
                     </div>
-                  ))}
-                  {topReferrers.length === 0 && (
-                    <div className="text-center text-gray-400 py-4">데이터가 없습니다</div>
-                  )}
-                </div>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -1015,21 +1247,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
               </div>
             )}
 
-            {/* 추천인 필터 */}
+            {/* 추천인 검색 */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">추천인</label>
-              <select
-                value={filters.referrer}
-                onChange={(e) => handleFilterChange('referrer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              >
-                <option value="">전체 추천인</option>
-                {referrers.map(referrer => (
-                  <option key={referrer.referrer_code} value={referrer.referrer_code}>
-                    {referrer.referrer_name}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-gray-500 mb-1">추천인 검색</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={filters.referrer}
+                  onChange={(e) => handleFilterChange('referrer', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 pr-8"
+                  placeholder="추천인 이름 입력"
+                />
+                {filters.referrer && (
+                  <button
+                    onClick={() => handleFilterChange('referrer', '')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 날짜 필터 */}
@@ -1071,21 +1308,26 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mb-4">
-          <button
-            onClick={() => setShowMathLetterModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
-          >
-            <MessageCircle className="w-4 h-4" />
-            수학편지 발송
-          </button>
-          <button
-            onClick={handleDownloadExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            엑셀 다운로드
-          </button>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            검색 결과 <span className="font-medium">{formatNumber(participants.length)}</span>건
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowMathLetterModal(true)}
+              className="hidden items-center gap-2 px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
+            >
+              <MessageCircle className="w-4 h-4" />
+              수학편지 발송
+            </button>
+            <button
+              onClick={handleDownloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              엑셀 다운로드
+            </button>
+          </div>
         </div>
 
         {/* 테이블 */}
@@ -1102,19 +1344,23 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                       className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청일시</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">학부모명</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청자코드</th>
+                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">신청일시</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">연락처</th>
                   <th className="px-8 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">자녀정보</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">추천인</th>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wide">지점</th>
-                  <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide">진도</th>
+                  <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide hidden">진도</th>
                   <th className="px-6 py-3 text-center text-sm font-medium text-gray-700 uppercase tracking-wide">관리</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {currentParticipants.map((participant) => (
-                  <tr key={participant.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={participant.id}
+                    className={`hover:bg-gray-50 transition-colors ${participant.deleted_at ? 'bg-red-50 opacity-70' : ''}`}
+                  >
                     <td className="px-6 py-3">
                       <input
                         type="checkbox"
@@ -1123,14 +1369,20 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                         className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
                       />
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(participant.created_at).toLocaleDateString('ko-KR')}
-                    </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{participant.parent_name}</div>
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
-                      {formatPhone(participant.phone)}
+                      {participant.subscriber_number || '-'}
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(participant.created_at).toLocaleDateString('ko-KR')}
+                    </td>
+                    <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                      {determinedViewMode === 'admin'
+                        ? formatPhoneMasked(participant.phone)
+                        : formatPhone(participant.phone)
+                      }
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{participant.child_age}세 / {participant.child_gender}</div>
@@ -1144,7 +1396,7 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                     <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
                       {participant.users?.branch || '-'}
                     </td>
-                    <td className="px-6 py-3 whitespace-nowrap text-center">
+                    <td className="px-6 py-3 whitespace-nowrap text-center hidden">
                       {participant.lastSentDay ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {participant.lastSentDay}일차 완료
@@ -1156,19 +1408,30 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
                       )}
                     </td>
                     <td className="px-6 py-3 whitespace-nowrap text-center">
-                      <button
-                        onClick={() => handleDeleteParticipant(participant.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
-                        title="삭제"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleEditClick(participant)}
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50 transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {determinedViewMode !== 'user' && (
+                          <button
+                            onClick={() => handleDeleteParticipant(participant.id)}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="삭제"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {currentParticipants.length === 0 && (
                   <tr>
-                    <td colSpan="9" className="px-6 py-10 text-center text-gray-500">
+                    <td colSpan="10" className="px-6 py-10 text-center text-gray-500">
                       데이터가 없습니다
                     </td>
                   </tr>
@@ -1253,6 +1516,93 @@ export default function AdminEventDashboard({ user, onBack, viewMode, from }) {
             user={user}
             onClose={() => setShowMathLetterStatsModal(false)}
           />
+        )}
+
+        {/* 참가자 정보 수정 모달 */}
+        {editingParticipant && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-lg w-full p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <Edit2 className="w-6 h-6 text-teal-600" />
+                  참가자 정보 수정
+                </h2>
+                <button
+                  onClick={() => setEditingParticipant(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <span className="text-2xl">&times;</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">학부모명</label>
+                  <input
+                    type="text"
+                    value={editingParticipant.parent_name || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, parent_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
+                  <input
+                    type="text"
+                    value={editingParticipant.phone || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    placeholder="010-0000-0000"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">자녀 나이</label>
+                    <input
+                      type="number"
+                      value={editingParticipant.child_age || ''}
+                      onChange={(e) => setEditingParticipant({ ...editingParticipant, child_age: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">자녀 성별</label>
+                    <select
+                      value={editingParticipant.child_gender || ''}
+                      onChange={(e) => setEditingParticipant({ ...editingParticipant, child_gender: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="남">남</option>
+                      <option value="여">여</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">문의사항</label>
+                  <textarea
+                    value={editingParticipant.inquiry || ''}
+                    onChange={(e) => setEditingParticipant({ ...editingParticipant, inquiry: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 h-24 resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => setEditingParticipant(null)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleUpdateParticipant}
+                    className="px-4 py-2 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700"
+                  >
+                    저장하기
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 수학편지 발송 모달 */}

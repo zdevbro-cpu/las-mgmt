@@ -50,16 +50,19 @@ export default function AdminUsers({ user, onNavigate }) {
         .from('users')
         .select('*')
         .order('created_at', { ascending: false })
-      
+
       if (!canAccessAllBranches(user)) {
         query = query.eq('branch', user.branch)
       }
-      
+
+      // 삭제된 사용자 제외
+      query = query.is('deleted_at', null)
+
       const { data, error } = await query
-      
+
       if (error) throw error
       setUsers(data || [])
-      
+
     } catch (err) {
       console.error('사용자 로드 오류:', err)
       alert('사용자 목록을 불러오는데 실패했습니다.')
@@ -71,19 +74,19 @@ export default function AdminUsers({ user, onNavigate }) {
   const handleApprove = async (userId, approve) => {
     const action = approve ? '승인' : '거부'
     if (!window.confirm(`이 사용자를 ${action}하시겠습니까?`)) return
-    
+
     try {
-      const updateData = { 
-        status: approve ? 'approved' : 'rejected' 
+      const updateData = {
+        status: approve ? 'approved' : 'rejected'
       }
-      
+
       if (approve) {
         const { data: existingUser } = await supabase
           .from('users')
           .select('referral_code')
           .eq('id', userId)
           .single()
-        
+
         if (!existingUser?.referral_code) {
           const { data: allCodes } = await supabase
             .from('users')
@@ -91,21 +94,21 @@ export default function AdminUsers({ user, onNavigate }) {
             .not('referral_code', 'is', null)
             .order('referral_code', { ascending: false })
             .limit(1)
-          
+
           const lastCode = allCodes?.[0]?.referral_code || 'LAS0000'
           const lastNumber = parseInt(lastCode.replace('LAS', ''))
           const newNumber = lastNumber + 1
           updateData.referral_code = `LAS${String(newNumber).padStart(4, '0')}`
         }
       }
-      
+
       const { error } = await supabase
         .from('users')
         .update(updateData)
         .eq('id', userId)
-      
+
       if (error) throw error
-      
+
       alert(`${action}되었습니다.`)
       loadUsers()
     } catch (err) {
@@ -116,15 +119,15 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const handleDelete = async (userId) => {
     if (!window.confirm('정말로 이 사용자를 삭제하시겠습니까?')) return
-    
+
     try {
       const { error } = await supabase
         .from('users')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', userId)
-      
+
       if (error) throw error
-      
+
       alert('삭제되었습니다.')
       loadUsers()
     } catch (err) {
@@ -146,9 +149,9 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const handleUpdate = async () => {
     if (!formData.id) return
-    
+
     if (!window.confirm('수정 내용을 저장하시겠습니까?')) return
-    
+
     try {
       const { error } = await supabase
         .from('users')
@@ -159,9 +162,9 @@ export default function AdminUsers({ user, onNavigate }) {
           user_type: formData.user_type
         })
         .eq('id', formData.id)
-      
+
       if (error) throw error
-      
+
       alert('수정되었습니다.')
       setShowEditModal(false)
       loadUsers()
@@ -172,8 +175,8 @@ export default function AdminUsers({ user, onNavigate }) {
   }
 
   const handleCheckboxChange = (userId) => {
-    setSelectedUsers(prev => 
-      prev.includes(userId) 
+    setSelectedUsers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     )
@@ -188,9 +191,9 @@ export default function AdminUsers({ user, onNavigate }) {
 
     try {
       setLoading(true)
-      
+
       const selectedData = users.filter(u => selectedUsers.includes(u.id))
-      
+
       const excelData = await Promise.all(selectedData.map(async (u) => {
         // 날짜가 없으면 자동 설정: 가입일 ~ 오늘
         const effectiveStartDate = startDate || new Date(u.created_at).toISOString().split('T')[0]
@@ -213,7 +216,7 @@ export default function AdminUsers({ user, onNavigate }) {
         }, 0) || 0
 
         const maskedSSN = u.ssn ? u.ssn.substring(0, 6) + '-*******' : '-'
-        const maskedAccount = u.account_number 
+        const maskedAccount = u.account_number
           ? u.account_number.substring(0, u.account_number.length - 4) + '****'
           : '-'
 
@@ -235,16 +238,16 @@ export default function AdminUsers({ user, onNavigate }) {
       const ws = XLSX.utils.json_to_sheet(excelData)
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, '직원목록')
-      
-      const dateRange = startDate && endDate 
+
+      const dateRange = startDate && endDate
         ? `${startDate}_${endDate}`
         : `전체기간_${new Date().toISOString().split('T')[0]}`
-      
+
       const fileName = `직원목록_${dateRange.replace(/-/g, '')}.xlsx`
       XLSX.writeFile(wb, fileName)
-      
 
-      
+
+
     } catch (error) {
       console.error('엑셀 다운로드 오류:', error)
       alert('엑셀 파일 생성 중 오류가 발생했습니다.')
@@ -255,17 +258,17 @@ export default function AdminUsers({ user, onNavigate }) {
 
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesBranch = !filterBranch || u.branch === filterBranch
     const matchesUserType = filterUserType === 'all' || u.user_type === filterUserType
-    
+
     let matchesDate = true
     if (startDate || endDate) {
       const createdDate = new Date(u.created_at)
       if (startDate) matchesDate = matchesDate && createdDate >= new Date(startDate)
       if (endDate) matchesDate = matchesDate && createdDate <= new Date(endDate)
     }
-    
+
     return matchesSearch && matchesBranch && matchesUserType && matchesDate
   })
 
@@ -294,11 +297,11 @@ export default function AdminUsers({ user, onNavigate }) {
               <ArrowLeft size={20} />
               나가기
             </button>
-            
+
             <div className="flex items-center gap-3">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Book" 
+              <img
+                src="/images/logo.png"
+                alt="LAS Book"
                 className="h-10"
               />
               <h1 className="text-2xl font-bold" style={{ color: '#249689' }}>
@@ -393,7 +396,7 @@ export default function AdminUsers({ user, onNavigate }) {
             <div className="flex-1 flex items-end">
               <button
                 onClick={handleExcelDownload}
-                
+
                 className="w-full py-2 flex items-center justify-center gap-2 text-white font-bold rounded-lg hover:opacity-90"
                 style={{ backgroundColor: '#5B7FC8', fontSize: '15px', borderRadius: '10px', height: '42px' }}
               >
@@ -545,7 +548,7 @@ export default function AdminUsers({ user, onNavigate }) {
                 >
                   이전
                 </button>
-                
+
                 <div className="flex gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -558,16 +561,15 @@ export default function AdminUsers({ user, onNavigate }) {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-1 border rounded ${
-                          currentPage === pageNum
+                        className={`px-3 py-1 border rounded ${currentPage === pageNum
                             ? 'text-white font-bold'
                             : 'hover:bg-gray-50'
-                        }`}
+                          }`}
                         style={{
                           fontSize: '14px',
                           backgroundColor: currentPage === pageNum ? '#249689' : 'white',
@@ -603,9 +605,9 @@ export default function AdminUsers({ user, onNavigate }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <div className="flex items-center gap-3 mb-4">
-              <img 
-                src="/images/logo.png" 
-                alt="LAS Logo" 
+              <img
+                src="/images/logo.png"
+                alt="LAS Logo"
                 className="w-10 h-10 object-cover"
                 onError={(e) => e.target.style.display = 'none'}
               />
@@ -671,7 +673,7 @@ export default function AdminUsers({ user, onNavigate }) {
                 </select>
               </div>
             </div>
-            
+
             <div className="flex gap-2 mt-6">
               <button
                 onClick={handleUpdate}

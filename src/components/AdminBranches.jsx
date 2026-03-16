@@ -10,7 +10,8 @@ export default function AdminBranches({ user, onNavigate }) {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
-    phone: ''
+    phone: '',
+    show_on_map: true
   })
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function AdminBranches({ user, onNavigate }) {
   }
 
   const handleAdd = () => {
-    setFormData({ name: '', address: '', phone: '' })
+    setFormData({ name: '', address: '', phone: '', show_on_map: true })
     setShowAddModal(true)
   }
 
@@ -46,14 +47,16 @@ export default function AdminBranches({ user, onNavigate }) {
     setFormData({
       name: branch.name,
       address: branch.address || '',
-      phone: branch.phone || ''
+      phone: branch.phone || '',
+      show_on_map: branch.show_on_map ?? true
     })
   }
 
   const handleChange = (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: value
     })
   }
 
@@ -71,6 +74,7 @@ export default function AdminBranches({ user, onNavigate }) {
           name: formData.name,
           address: formData.address,
           phone: formData.phone,
+          show_on_map: formData.show_on_map,
           created_by: user.id,
           is_active: true
         })
@@ -101,7 +105,8 @@ export default function AdminBranches({ user, onNavigate }) {
         .update({
           name: formData.name,
           address: formData.address,
-          phone: formData.phone
+          phone: formData.phone,
+          show_on_map: formData.show_on_map
         })
         .eq('id', editingBranch.id)
 
@@ -153,9 +158,9 @@ export default function AdminBranches({ user, onNavigate }) {
             나가기
           </button>
           <div className="flex items-center gap-1.5">
-            <img 
-              src="/images/logo.png" 
-              alt="LAS Logo" 
+            <img
+              src="/images/logo.png"
+              alt="LAS Logo"
               className="w-10 h-10 object-cover"
               onError={(e) => e.target.style.display = 'none'}
             />
@@ -306,6 +311,19 @@ export default function AdminBranches({ user, onNavigate }) {
                 />
               </div>
             </div>
+            <div className="flex items-center gap-2 mt-4">
+              <input
+                type="checkbox"
+                id="show_on_map"
+                name="show_on_map"
+                checked={formData.show_on_map}
+                onChange={handleChange}
+                className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-gray-300"
+              />
+              <label htmlFor="show_on_map" className="font-bold cursor-pointer" style={{ fontSize: '15px' }}>
+                지도에 표시
+              </label>
+            </div>
             <div className="flex gap-2 mt-6">
               <button
                 onClick={handleSaveNew}
@@ -371,6 +389,19 @@ export default function AdminBranches({ user, onNavigate }) {
                   style={{ borderRadius: '10px', fontSize: '15px' }}
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              <input
+                type="checkbox"
+                id="edit_show_on_map"
+                name="show_on_map"
+                checked={formData.show_on_map}
+                onChange={handleChange}
+                className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-gray-300"
+              />
+              <label htmlFor="edit_show_on_map" className="font-bold cursor-pointer" style={{ fontSize: '15px' }}>
+                지도에 표시
+              </label>
             </div>
             <div className="flex gap-2 mt-6">
               <button

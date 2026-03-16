@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/ProjectCode/las-mgmt/src/components/*.jsx)",
+      "Bash(xargs wc -l)"
+    ]
+  }
+}
