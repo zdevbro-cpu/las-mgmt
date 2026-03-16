@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { supabase, supabaseUrl } from '../lib/supabase';
-import { BookOpen, Upload, Edit, Trash2, Eye, Video, FileText, Plus, ArrowLeft } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { BookOpen, Upload, Edit, Trash2, Eye, Video, FileText, Plus, ArrowLeft, Play, Link, MessageCircle } from 'lucide-react';
 
+
+// Supabase URL
+const SUPABASE_URL = 'https://sgxnxbhbyvrmgrzhosyh.supabase.co';
 export default function MathLetterManager({ user, onBack, onNavigate }) {
   const [letters, setLetters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedLetter, setSelectedLetter] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [seriesFilter, setSeriesFilter] = useState('all');
-  
+
   // 신규 등록 및 수정 모달 상태
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -24,6 +30,11 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
     video_file: null
   });
 
+  // 알림톡 관련 상태
+  const [showAlimTalkModal, setShowAlimTalkModal] = useState(false);
+  const [alimTalkPhone, setAlimTalkPhone] = useState('');
+  const [sendingAlimTalk, setSendingAlimTalk] = useState(false);
+
   // 실제 DB에서 데이터 로드
   useEffect(() => {
     fetchLetters();
@@ -35,7 +46,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
       const { data, error } = await supabase
         .from('math_letters')
         .select('*')
-        .order('day_number', { ascending: true});
+        .order('day_number', { ascending: true });
 
       if (error) throw error;
       setLetters(data || []);
@@ -72,13 +83,13 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
   // 필터링된 목록
   const filteredLetters = letters.filter(letter => {
     const series = letter.series || extractSeries(letter.title);
-    const matchesSearch = 
+    const matchesSearch =
       letter.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       series.toLowerCase().includes(searchTerm.toLowerCase()) ||
       letter.day_number?.toString().includes(searchTerm);
-    
-    const matchesSeries = 
-      seriesFilter === 'all' || 
+
+    const matchesSeries =
+      seriesFilter === 'all' ||
       (seriesFilter === 'K' && series.startsWith('K')) ||
       (seriesFilter === 'G' && series.startsWith('G'));
 
@@ -100,7 +111,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       alert('삭제되었습니다.');
       fetchLetters();
     } catch (error) {
@@ -114,22 +125,102 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
     setShowModal(true);
   };
 
+  // 링크 생성 함수
+  const handleGenerateLink = (letter) => {
+    // 간단한 공개 링크 생성 (신청자 코드 없이)
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/math-letter-public?series=${letter.series}&day=${letter.day_number}`;
+
+    setGeneratedLink(link);
+    setSelectedLetter(letter);
+    setShowLinkModal(true);
+  };
+
+  // 알림톡 모달 열기
+  const handleOpenAlimTalk = (letter) => {
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/math-letter-public?series=${letter.series}&day=${letter.day_number}`;
+
+    setSelectedLetter(letter);
+    setGeneratedLink(link);
+    setAlimTalkPhone('');
+    setShowAlimTalkModal(true);
+  };
+
+  // 알림톡 전송
+  const handleSendAlimTalk = async () => {
+    if (!alimTalkPhone) {
+      alert('전화번호를 입력해주세요.');
+      return;
+    }
+
+    // 전화번호 형식 간단 검증
+    const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/;
+    const cleanPhone = alimTalkPhone.replace(/-/g, '');
+    if (!phoneRegex.test(alimTalkPhone) && !phoneRegex.test(cleanPhone)) {
+      alert('올바른 전화번호 형식이 아닙니다.');
+      return;
+    }
+
+    setSendingAlimTalk(true);
+    try {
+      const response = await fetch('/api/send-alimtalk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          templateCode: 'MATH_LETTER_DAILY', // 임시 템플릿 코드
+          params: {
+            title: selectedLetter.title,
+            url: generatedLink
+          }
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(result.message || '알림톡이 전송되었습니다.');
+        setShowAlimTalkModal(false);
+      } else {
+        throw new Error(result.error || '전송 실패');
+      }
+    } catch (error) {
+      console.error('알림톡 전송 실패:', error);
+      alert('알림톡 전송에 실패했습니다: ' + error.message);
+    } finally {
+      setSendingAlimTalk(false);
+    }
+  };
+
+  // 링크 복사 함수
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(generatedLink).then(() => {
+      alert('링크가 복사되었습니다!');
+    }).catch((err) => {
+      console.error('복사 실패:', err);
+      alert('링크 복사에 실패했습니다.');
+    });
+  };
+
   // 동영상 시간 자동 계산
   const getVideoDuration = (file) => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       video.preload = 'metadata';
-      
+
       video.onloadedmetadata = () => {
         window.URL.revokeObjectURL(video.src);
         const duration = Math.floor(video.duration);
         resolve(duration);
       };
-      
+
       video.onerror = () => {
         reject(new Error('동영상 메타데이터를 읽을 수 없습니다.'));
       };
-      
+
       video.src = URL.createObjectURL(file);
     });
   };
@@ -137,7 +228,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
   // 신규 등록 제출
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.series || !formData.day_number || !formData.title) {
       alert('시리즈, 일차, 제목은 필수 입력 항목입니다.');
       return;
@@ -154,26 +245,26 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
       // PDF 파일 업로드
       const pdfExt = formData.pdf_file.name.split('.').pop();
       const pdfFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${pdfExt}`;
-      
+
       const { error: pdfError } = await supabase.storage
         .from('math-letters-pdf')
         .upload(pdfFileName, formData.pdf_file);
 
       if (pdfError) throw pdfError;
 
-      const pdfUrl = `${supabaseUrl}/storage/v1/object/public/math-letters-pdf/${pdfFileName}`;
+      const pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/math-letters-pdf/${pdfFileName}`;
 
       // 동영상 파일 업로드
       const videoExt = formData.video_file.name.split('.').pop();
       const videoFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${videoExt}`;
-      
+
       const { error: videoError } = await supabase.storage
         .from('math-letters-video')
         .upload(videoFileName, formData.video_file);
 
       if (videoError) throw videoError;
 
-      const videoUrl = `${supabaseUrl}/storage/v1/object/public/math-letters-video/${videoFileName}`;
+      const videoUrl = `${SUPABASE_URL}/storage/v1/object/public/math-letters-video/${videoFileName}`;
 
       // DB에 저장
       const insertData = {
@@ -217,7 +308,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
   // 수정 제출
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.series || !formData.day_number || !formData.title) {
       alert('시리즈, 일차, 제목은 필수 입력 항목입니다.');
       return;
@@ -233,26 +324,26 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
       if (formData.pdf_file) {
         const pdfExt = formData.pdf_file.name.split('.').pop();
         const pdfFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${pdfExt}`;
-        
+
         const { error: pdfError } = await supabase.storage
           .from('math-letters-pdf')
           .upload(pdfFileName, formData.pdf_file);
 
         if (pdfError) throw pdfError;
-        pdfUrl = `${supabaseUrl}/storage/v1/object/public/math-letters-pdf/${pdfFileName}`;
+        pdfUrl = `${SUPABASE_URL}/storage/v1/object/public/math-letters-pdf/${pdfFileName}`;
       }
 
       // 동영상 파일이 새로 업로드된 경우
       if (formData.video_file) {
         const videoExt = formData.video_file.name.split('.').pop();
         const videoFileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${videoExt}`;
-        
+
         const { error: videoError } = await supabase.storage
           .from('math-letters-video')
           .upload(videoFileName, formData.video_file);
 
         if (videoError) throw videoError;
-        videoUrl = `${supabaseUrl}/storage/v1/object/public/math-letters-video/${videoFileName}`;
+        videoUrl = `${SUPABASE_URL}/storage/v1/object/public/math-letters-video/${videoFileName}`;
       }
 
       // DB 업데이트
@@ -311,9 +402,9 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
 
               {/* 중앙: 로고 + 타이틀 */}
               <div className="flex items-center gap-3">
-                <img 
-                  src="/images/logo.png" 
-                  alt="LAS Logo" 
+                <img
+                  src="/images/logo.png"
+                  alt="LAS Logo"
                   className="h-10 w-10 sm:h-12 sm:w-12"
                 />
                 <h1 className="text-xl sm:text-2xl font-bold text-teal-700">
@@ -414,7 +505,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                     {filteredLetters.map((letter) => {
                       const series = letter.series || extractSeries(letter.title);
                       const registered = isRegistered(letter);
-                      
+
                       return (
                         <tr key={letter.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -430,11 +521,10 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                             {formatDuration(letter.duration)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              registered 
-                                ? 'bg-green-100 text-green-800' 
+                            <span className={`px-2 py-1 text-xs rounded-full ${registered
+                                ? 'bg-green-100 text-green-800'
                                 : 'bg-gray-100 text-gray-800'
-                            }`}>
+                              }`}>
                               {registered ? '등록완료' : '미등록'}
                             </span>
                           </td>
@@ -446,6 +536,20 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                                 title="상세보기"
                               >
                                 <Eye className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleGenerateLink(letter)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="링크 생성"
+                              >
+                                <Link className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => handleOpenAlimTalk(letter)}
+                                className="text-yellow-500 hover:text-yellow-700"
+                                title="알림톡 보내기"
+                              >
+                                <MessageCircle className="w-5 h-5" />
                               </button>
                               <button
                                 onClick={() => handleDelete(letter.id)}
@@ -468,7 +572,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
           {/* 상세보기 모달 */}
           {showModal && selectedLetter && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-6">
                     <div>
@@ -491,35 +595,60 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                     {selectedLetter.description && (
                       <div>
                         <h3 className="font-semibold text-gray-700 mb-2">설명</h3>
-                        <p className="text-gray-600">{selectedLetter.description}</p>
+                        <div className="flex items-end justify-between gap-3">
+                          <p className="text-gray-600 flex-1">{selectedLetter.description}</p>
+                          {selectedLetter.video_url && (
+                            <button
+                              onClick={() => setShowVideoModal(true)}
+                              className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold rounded transition-colors flex-shrink-0"
+                            >
+                              <Play className="w-5 h-5" />
+                              <span>수학편지영상</span>
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
 
-                    <div className="flex flex-col gap-3">
-                      {selectedLetter.pdf_url && (
-                        <a
-                          href={selectedLetter.pdf_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-3 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                    {/* description이 없을 때 버튼만 */}
+                    {!selectedLetter.description && selectedLetter.video_url && (
+                      <div className="flex justify-center my-4">
+                        <button
+                          onClick={() => setShowVideoModal(true)}
+                          className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white text-base font-semibold rounded transition-colors"
                         >
-                          <FileText className="w-5 h-5" />
-                          <span>PDF 보기</span>
-                        </a>
-                      )}
+                          <Play className="w-5 h-5" />
+                          <span>수학편지영상</span>
+                        </button>
+                      </div>
+                    )}
 
-                      {selectedLetter.video_url && (
-                        <a
-                          href={selectedLetter.video_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                    {/* PDF 미리보기 */}
+                    {selectedLetter.pdf_url && (
+                      <div className="relative">
+
+                        {/* PDF iframe */}
+                        <div className="border rounded-lg overflow-hidden" style={{ height: "calc(100vh - 300px)", minHeight: "400px" }}>
+                          <iframe
+                            src={`${selectedLetter.pdf_url}#view=FitH`}
+                            className="w-full h-full"
+                            title="PDF 미리보기"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {!selectedLetter.pdf_url && selectedLetter.video_url && (
+                      <div className="text-center py-8">
+                        <button
+                          onClick={() => setShowVideoModal(true)}
+                          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg mx-auto"
                         >
                           <Video className="w-5 h-5" />
                           <span>동영상 보기</span>
-                        </a>
-                      )}
-                    </div>
+                        </button>
+                      </div>
+                    )}
 
                     {!selectedLetter.pdf_url && !selectedLetter.video_url && (
                       <div className="text-center py-8 text-gray-500">
@@ -563,7 +692,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
           {/* 수정 모달 */}
           {showEditModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-2xl font-bold text-gray-800">수학편지 수정</h2>
@@ -584,7 +713,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         </label>
                         <select
                           value={formData.series}
-                          onChange={(e) => setFormData({...formData, series: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, series: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           required
                         >
@@ -611,7 +740,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         <input
                           type="number"
                           value={formData.day_number}
-                          onChange={(e) => setFormData({...formData, day_number: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, day_number: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           required
                         />
@@ -625,7 +754,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       <input
                         type="text"
                         value={formData.title}
-                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         required
                       />
@@ -637,7 +766,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       </label>
                       <textarea
                         value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         rows="3"
                       />
@@ -650,7 +779,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       {selectedLetter.pdf_url && (
                         <div className="mb-2 p-3 bg-gray-50 rounded-lg">
                           <p className="text-sm text-gray-600">현재 파일:</p>
-                          <a 
+                          <a
                             href={selectedLetter.pdf_url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -665,7 +794,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         <input
                           type="file"
                           accept=".pdf"
-                          onChange={(e) => setFormData({...formData, pdf_file: e.target.files[0]})}
+                          onChange={(e) => setFormData({ ...formData, pdf_file: e.target.files[0] })}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         />
                         <FileText className="w-5 h-5 text-gray-400" />
@@ -682,7 +811,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       {selectedLetter.video_url && (
                         <div className="mb-2 p-3 bg-gray-50 rounded-lg">
                           <p className="text-sm text-gray-600">현재 파일:</p>
-                          <a 
+                          <a
                             href={selectedLetter.video_url}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -702,10 +831,10 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                             if (file) {
                               try {
                                 const duration = await getVideoDuration(file);
-                                setFormData({...formData, video_file: file, duration: duration.toString()});
+                                setFormData({ ...formData, video_file: file, duration: duration.toString() });
                               } catch (error) {
                                 console.error('동영상 시간 계산 실패:', error);
-                                setFormData({...formData, video_file: file});
+                                setFormData({ ...formData, video_file: file });
                               }
                             }
                           }}
@@ -755,10 +884,102 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
             </div>
           )}
 
+          {/* 동영상 재생 모달 */}
+          {showVideoModal && selectedLetter && (
+            <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50">
+              <div className="max-w-5xl w-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-white text-xl font-bold">{selectedLetter.title}</h3>
+                  <button
+                    onClick={() => setShowVideoModal(false)}
+                    className="text-white hover:text-gray-300"
+                  >
+                    <span className="text-3xl">&times;</span>
+                  </button>
+                </div>
+                <video
+                  controls
+                  autoPlay
+                  className="w-full rounded-lg"
+                  src={selectedLetter.video_url}
+                >
+                  브라우저가 비디오를 지원하지 않습니다.
+                </video>
+              </div>
+            </div>
+          )}
+
+          {/* 링크 생성 모달 */}
+          {showLinkModal && selectedLetter && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-lg w-full p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800">수학편지 링크 생성</h2>
+                  <button
+                    onClick={() => setShowLinkModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <span className="text-2xl">&times;</span>
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* 수학편지 정보 */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">시리즈</p>
+                    <p className="text-lg font-semibold text-gray-900">{selectedLetter.series}</p>
+                    <p className="text-sm text-gray-600 mb-1 mt-2">일차</p>
+                    <p className="text-lg font-semibold text-gray-900">{selectedLetter.day_number}일차</p>
+                    <p className="text-sm text-gray-600 mb-1 mt-2">제목</p>
+                    <p className="text-lg font-semibold text-gray-900">{selectedLetter.title}</p>
+                  </div>
+
+                  {/* 생성된 링크 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      공개 링크
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={generatedLink}
+                        readOnly
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm"
+                      />
+                      <button
+                        onClick={handleCopyLink}
+                        className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition-colors"
+                      >
+                        복사
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 안내 메시지 */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      💡 이 링크는 누구나 접속할 수 있는 공개 링크입니다.<br />
+                      신청자별 맞춤 링크는 이벤트 참가자 관리에서 발송하세요.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowLinkModal(false)}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
+                  >
+                    닫기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 신규 등록 모달 */}
           {showRegisterModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto mx-4">
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <h2 className="text-2xl font-bold text-gray-800">수학편지 신규 등록</h2>
@@ -779,7 +1000,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         </label>
                         <select
                           value={formData.series}
-                          onChange={(e) => setFormData({...formData, series: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, series: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           required
                         >
@@ -806,7 +1027,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         <input
                           type="number"
                           value={formData.day_number}
-                          onChange={(e) => setFormData({...formData, day_number: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, day_number: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           placeholder="예: 1"
                           required
@@ -821,7 +1042,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       <input
                         type="text"
                         value={formData.title}
-                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         placeholder="예: K2 수학편지 1번"
                         required
@@ -834,7 +1055,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       </label>
                       <textarea
                         value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         rows="3"
                         placeholder="수학편지에 대한 설명을 입력하세요"
@@ -849,7 +1070,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                         <input
                           type="file"
                           accept=".pdf"
-                          onChange={(e) => setFormData({...formData, pdf_file: e.target.files[0]})}
+                          onChange={(e) => setFormData({ ...formData, pdf_file: e.target.files[0] })}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                           required
                         />
@@ -873,10 +1094,10 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                             if (file) {
                               try {
                                 const duration = await getVideoDuration(file);
-                                setFormData({...formData, video_file: file, duration: duration.toString()});
+                                setFormData({ ...formData, video_file: file, duration: duration.toString() });
                               } catch (error) {
                                 console.error('동영상 시간 계산 실패:', error);
-                                setFormData({...formData, video_file: file});
+                                setFormData({ ...formData, video_file: file });
                               }
                             }
                           }}
@@ -922,6 +1143,79 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                       </button>
                     </div>
                   </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 알림톡 전송 모달 */}
+          {showAlimTalkModal && selectedLetter && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-lg max-w-md w-full mx-4">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                      <MessageCircle className="w-6 h-6 text-yellow-500" />
+                      알림톡 전송
+                    </h2>
+                    <button
+                      onClick={() => setShowAlimTalkModal(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <span className="text-2xl">&times;</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <h3 className="font-bold text-sm text-yellow-800 mb-2">전송 내용 미리보기</h3>
+                      <p className="text-sm text-gray-700">
+                        [수학편지] {selectedLetter.title}<br />
+                        오늘의 수학편지가 도착했습니다!<br />
+                        <br />
+                        링크: {generatedLink}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        수신자 전화번호
+                      </label>
+                      <input
+                        type="tel"
+                        value={alimTalkPhone}
+                        onChange={(e) => setAlimTalkPhone(e.target.value)}
+                        placeholder="010-1234-5678"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        * '-' 없이 입력해도 됩니다.
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        onClick={() => setShowAlimTalkModal(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                      >
+                        취소
+                      </button>
+                      <button
+                        onClick={handleSendAlimTalk}
+                        disabled={sendingAlimTalk}
+                        className="px-4 py-2 bg-yellow-400 text-black font-bold rounded-lg hover:bg-yellow-500 flex items-center gap-2"
+                      >
+                        {sendingAlimTalk ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                            <span>전송 중...</span>
+                          </>
+                        ) : (
+                          <span>전송하기</span>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

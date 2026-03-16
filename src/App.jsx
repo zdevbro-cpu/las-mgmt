@@ -34,7 +34,9 @@ import ScrollToTop from './components/Admin/ScrollToTop'
 import AdminEventManager from './components/Admin/AdminEventManager'
 import WeeklyScheduleGrid from './components/WorkDuty/WeeklyScheduleGrid'
 import WeeklyScheduleView from './components/WorkDuty/WeeklyScheduleView'
-
+import MathLetterTokenGenerator from './components/MathLetterTokenGenerator'
+import MathLetterPublicViewer from './components/MathLetterPublicViewer'
+import MathLetterDetailViewer from './components/MathLetterDetailViewer'
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -183,6 +185,11 @@ function AppContent() {
         <Route path="/" element={<HeroPage onNavigate={handleNavigate} onAutoLogin={handleAutoLogin} />} /> 
         <Route path="/login" element={<Login onNavigate={handleNavigate} onLogin={handleLogin} />} />
         <Route path="/signup" element={<Signup onNavigate={handleNavigate} />} />
+        
+        {/* 수학편지 공개 라우트 */}
+        <Route path="/math-letter-list" element={<MathLetterPublicViewer />} />
+        <Route path="/math-letter-view" element={<MathLetterDetailViewer />} />
+        <Route path="/test-token" element={<MathLetterTokenGenerator />} />
         
         <Route path="/mathletter" element={<MathLetterLanding />} />
         
@@ -502,8 +509,6 @@ function AppContent() {
             )
           } 
         />
-
-        
 
         <Route 
           path="/profile" 
