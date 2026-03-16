@@ -37,6 +37,9 @@ import WeeklyScheduleView from './components/WorkDuty/WeeklyScheduleView'
 import MathLetterTokenGenerator from './components/MathLetterTokenGenerator'
 import MathLetterPublicViewer from './components/MathLetterPublicViewer'
 import MathLetterDetailViewer from './components/MathLetterDetailViewer'
+import EducationApply from './components/Education/EducationApply'
+import EducationApproval from './components/Education/EducationApproval'
+import EducationAdminDashboard from './components/Education/EducationAdminDashboard'
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -118,7 +121,10 @@ function AppContent() {
       'SystemAdminPurchases': '/system-admin/purchases',
       'SystemAdminShipping': '/system-admin/shipping',
       'MathLetterManager': '/system-admin/mathletter',
-      'Profile': '/profile'
+      'Profile': '/profile',
+      'EducationApply': '/education/apply',
+      'EducationApproval': '/admin/education/approval',
+      'EducationAdminDashboard': '/admin/education/dashboard'
     }
     
     const targetPath = pageMap[trimmedPage]
@@ -194,6 +200,7 @@ function AppContent() {
         <Route path="/mathletter" element={<MathLetterLanding />} />
         
         <Route path="/event" element={<EventLandingPage />} />
+        <Route path="/education/apply" element={<EducationApply />} />
         
         
         <Route 
@@ -367,6 +374,28 @@ function AppContent() {
           } 
         />
         
+        <Route 
+          path="/admin/education/approval" 
+          element={
+            user && canAccessManagement(user) ? (
+              <EducationApproval user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+        
+        <Route 
+          path="/admin/education/dashboard" 
+          element={
+            user && user.user_type === '시스템관리자' ? (
+              <EducationAdminDashboard user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          } 
+        />
+
         <Route 
           path="/myinfo" 
           element={
