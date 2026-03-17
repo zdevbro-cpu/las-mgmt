@@ -27,6 +27,7 @@ export default function EducationApply() {
   });
   const [myApplications, setMyApplications] = useState([]);
   const [hasChecked, setHasChecked] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState(null);
 
   useEffect(() => {
     fetchActiveEducations();
@@ -48,7 +49,7 @@ export default function EducationApply() {
     const { data } = await supabase
       .from('users')
       .select('id, name, branch, user_type')
-      .in('user_type', ['점장', '지점관리자', '시스템관리자'])
+      .in('user_type', ['점장', '지점관리자', '시스템관리자', '점주'])
       .order('branch');
     
     if (data) setManagers(data);
@@ -59,6 +60,17 @@ export default function EducationApply() {
     if (!applyForm.educationId || !applyForm.referrerId || !applyForm.name || !applyForm.phone || !applyForm.birthdate) {
       alert("모든 필수 항목을 입력해주세요.");
       return;
+    }
+
+    // Deadline check
+    const selectedEdu = educations.find(e => e.id === applyForm.educationId);
+    if (selectedEdu && selectedEdu.registration_deadline) {
+      const now = new Date();
+      const deadline = new Date(selectedEdu.registration_deadline);
+      if (now > deadline) {
+        alert("죄송합니다. 이 교육의 신청 기간이 마감되었습니다.");
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -86,7 +98,7 @@ export default function EducationApply() {
           alert('신청 중 오류가 발생했습니다: ' + error.message);
         }
       } else {
-        alert("교육 신청이 정상적으로 완료되었습니다!\n점장님의 승인 완료 후 QR코드를 발급받으실 수 있습니다.");
+        alert("교육 신청이 정상적으로 완료되었습니다!\n추천인(점장/지점관리자/점주)의 승인 완료 후 QR코드를 발급받으실 수 있습니다.");
         setApplyForm({ name: '', phone: '', birthdate: '', educationId: '', referrerId: '' });
         setActiveTab('check');
         // Pre-fill check form and perform a search immediately if possible
@@ -128,6 +140,11 @@ export default function EducationApply() {
       alert("조회 중 오류가 발생했습니다: " + error.message);
     } else {
       setMyApplications(data || []);
+      if (data && data.length === 1) {
+        setSelectedAppId(data[0].id);
+      } else {
+        setSelectedAppId(null);
+      }
     }
   };
 
@@ -181,6 +198,7 @@ export default function EducationApply() {
             onClick={() => {
               setActiveTab('check')
               setHasChecked(false)
+              setSelectedAppId(null)
             }}
             className={`flex-1 py-2 text-sm font-bold rounded-md transition-colors ${
               activeTab === 'check' ? 'bg-white shadow text-[#249689]' : 'text-gray-500'
@@ -204,16 +222,21 @@ export default function EducationApply() {
                 className="w-full bg-gray-50 border rounded-lg p-3 text-sm"
               >
                 <option value="" disabled>-- 진행 중인 교육을 선택하세요 --</option>
-                {educations.map(edu => (
-                  <option key={edu.id} value={edu.id}>
-                    [{new Date(edu.event_date).toLocaleDateString()}] {edu.title}
-                  </option>
-                ))}
+                {educations.map(edu => {
+                  const deadline = edu.registration_deadline ? new Date(edu.registration_deadline) : null;
+                  const isClosed = deadline ? new Date() > deadline : false;
+                  return (
+                    <option key={edu.id} value={edu.id} disabled={isClosed}>
+                      [{new Date(edu.event_date).toLocaleDateString()}] {edu.title} 
+                      {isClosed ? ' (신청 마감)' : (deadline ? ` (~${deadline.toLocaleDateString()} ${deadline.getHours().toString().padStart(2,'0')}:${deadline.getMinutes().toString().padStart(2,'0')} 마감)` : '')}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">추천인 (점장/지점장) 지정</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">추천인 (점장/지점관리자/점주) 지정</label>
               <select 
                 required
                 value={applyForm.referrerId}
@@ -306,63 +329,130 @@ export default function EducationApply() {
                   <div className="text-center p-6 bg-gray-50 rounded-lg text-gray-500">
                     <p>등록된 교육 신청 내역이 없습니다.</p>
                   </div>
+                ) : !selectedAppId ? (
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-gray-500 px-1">총 {myApplications.length}건의 신청 내역이 있습니다.</p>
+                    {myApplications.map(app => (
+                      <div 
+                        key={app.id} 
+                        onClick={() => setSelectedAppId(app.id)}
+                        className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex justify-between items-center hover:bg-white hover:border-[#249689] transition-all cursor-pointer group"
+                      >
+                        <div>
+                          <h3 className="font-bold text-gray-800 group-hover:text-[#249689]">{app.education?.title}</h3>
+                          <p className="text-xs text-gray-500 mt-1">📅 {new Date(app.education?.event_date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {app.status === 'approved' ? (
+                            <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full">승인</span>
+                          ) : app.status === 'rejected' ? (
+                            <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">거절</span>
+                          ) : (
+                            <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">대기</span>
+                          )}
+                          <div className="text-gray-300 group-hover:text-[#249689]">▶</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
-                  myApplications.map(app => (
-                    <div key={app.id} className="border rounded-lg p-5 shadow-sm">
-                      <div className="mb-2">
-                        <span className="text-xs font-bold text-gray-500 uppercase">교육명</span>
-                        <h3 className="text-lg font-bold text-gray-900">{app.education?.title}</h3>
-                      </div>
-                      
-                      <div className="text-sm text-gray-600 mb-4 space-y-1">
-                        <p>📅 {new Date(app.education?.event_date).toLocaleString()}</p>
-                        <p>📍 {app.education?.location}</p>
-                        <p>👤 추천인: {app.referrer?.branch} {app.referrer?.name}</p>
-                      </div>
+                  myApplications.filter(app => app.id === selectedAppId).map(app => (
+                    <div key={app.id} className="space-y-4">
+                      <button 
+                        onClick={() => setSelectedAppId(null)}
+                        className="text-xs font-bold text-gray-500 flex items-center gap-1 hover:text-gray-800"
+                      >
+                        ← 목록으로 돌아가기
+                      </button>
+                      <div className="border-2 border-[#249689] rounded-2xl p-6 shadow-sm bg-[#fcfdfd]">
+                        <div className="mb-4">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">교육 신청 정보</span>
+                          <h3 className="text-xl font-black text-gray-900 leading-tight mt-1">{app.education?.title}</h3>
+                        </div>
+                        
+                        <div className="text-sm text-gray-700 mb-6 space-y-2 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                          <p className="flex justify-between">
+                            <span className="text-gray-400">교육 일시</span>
+                            <span className="font-bold">{new Date(app.education?.event_date).toLocaleString()}</span>
+                          </p>
+                          <p className="flex justify-between">
+                            <span className="text-gray-400">교육 장소</span>
+                            <span className="font-bold">{app.education?.location}</span>
+                          </p>
+                          <p className="flex justify-between">
+                            <span className="text-gray-400">추천 소속</span>
+                            <span className="font-bold">{app.referrer?.branch || '-'}</span>
+                          </p>
+                          <p className="flex justify-between">
+                            <span className="text-gray-400">추천인</span>
+                            <span className="font-bold">{app.referrer?.name || '-'}</span>
+                          </p>
+                        </div>
 
-                      {/* 상태에 따른 UI 분기 */}
-                      <div className="mt-4 pt-4 border-t">
-                        {app.status === 'pending' && (
-                          <div className="flex items-center gap-2 text-yellow-600 font-bold bg-yellow-50 p-3 rounded-lg justify-center">
-                            <Clock size={20} /> 점장 승인 대기 중입니다.
-                          </div>
-                        )}
-                        {app.status === 'rejected' && (
-                          <div className="flex items-center gap-2 text-red-600 font-bold bg-red-50 p-3 rounded-lg justify-center">
-                            <AlertCircle size={20} /> 취소/거절된 신청입니다.
-                          </div>
-                        )}
-                        {app.status === 'approved' && (
-                          <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-2 text-green-600 font-bold bg-green-50 p-3 rounded-lg mb-4 w-full justify-center">
-                              <CheckCircle size={20} /> 승인 완료 (입장용 QR코드)
+                        {/* 상태에 따른 UI 분기 */}
+                        <div className="mt-4">
+                          {app.status === 'pending' && (
+                            <div className="flex flex-col items-center gap-3 text-yellow-700 font-bold bg-yellow-50 p-6 rounded-2xl border border-yellow-100">
+                              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                                <Clock size={24} />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg">승인 대기 중입니다</p>
+                                <p className="text-xs font-normal text-yellow-600 mt-1">추천인(점장/지점관리자)의 승인을 기다려주세요.</p>
+                              </div>
                             </div>
-                            <div id={`qr-container-${app.id}`} className="bg-white p-6 rounded-xl border-2 border-green-100 shadow-sm inline-flex flex-col items-center justify-center">
-                              <h3 className="font-bold text-gray-800 mb-1 whitespace-nowrap">[{app.education?.title}]</h3>
-                              <p className="text-gray-600 font-bold text-sm mb-4">{new Date(app.education?.event_date).toLocaleString()}</p>
-                              <QRCodeSVG 
-                                value={app.qr_code_data || app.id} 
-                                size={180} 
-                                level="M"
-                                includeMargin={true}
-                              />
-                              <p className="text-sm font-bold text-gray-800 mt-4">{app.applicant_name} 님</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {app.applicant_phone.replace(/^(\d{3})(\d{4})(\d{4})$/, '$1-$2-$3')}
+                          )}
+                          {app.status === 'rejected' && (
+                            <div className="flex flex-col items-center gap-3 text-red-700 font-bold bg-red-50 p-6 rounded-2xl border border-red-100">
+                              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                <AlertCircle size={24} />
+                              </div>
+                              <div className="text-center">
+                                <p className="text-lg">신청이 거절되었습니다</p>
+                                <p className="text-xs font-normal text-red-600 mt-1">자세한 사항은 소속 지점에 문의해주세요.</p>
+                              </div>
+                            </div>
+                          )}
+                          {app.status === 'approved' && (
+                            <div className="flex flex-col items-center">
+                              <div className="flex items-center gap-2 text-green-700 font-bold bg-green-50 px-4 py-2 rounded-full mb-6 border border-green-100">
+                                <CheckCircle size={18} /> 승인 완료 (입장용 QR코드)
+                              </div>
+                              
+                              <div id={`qr-container-${app.id}`} className="bg-white p-8 rounded-2xl border-2 border-gray-100 shadow-lg inline-flex flex-col items-center justify-center mb-6">
+                                <div className="mb-4 text-center">
+                                  <p className="text-xs text-gray-400 font-bold">Attendance QR</p>
+                                  <p className="text-sm font-black text-gray-800">{app.applicant_name} 님</p>
+                                </div>
+                                <QRCodeSVG 
+                                  value={app.qr_code_data || app.id} 
+                                  size={200} 
+                                  level="H"
+                                  includeMargin={true}
+                                />
+                                <div className="mt-4 text-center">
+                                  <p className="text-xs font-bold text-gray-400">PHONE</p>
+                                  <p className="text-sm font-bold text-gray-800">
+                                    {app.applicant_phone.replace(/^(\d{3})(\d{4})(\d{4})$/, '$1-$2-$3')}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <p className="text-xs text-gray-400 text-center mb-6 leading-relaxed">
+                                위 QR코드를 교육장 입구의<br/>
+                                <span className="text-[#249689] font-bold">참석 확인용 스캐너</span>에 보여주세요.
                               </p>
+                              
+                              <button
+                                onClick={() => handleDownloadQR(app.id)}
+                                className="w-full flex items-center justify-center gap-2 py-4 bg-[#249689] text-white font-bold rounded-xl hover:bg-[#1d7b70] transition-colors shadow-md"
+                              >
+                                <Download size={20} />
+                                이미지로 갤러리에 저장
+                              </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-3 text-center mb-4">
-                              교육장 입장 시 담당자에게<br/>위 QR코드를 제시해 주세요.
-                            </p>
-                            <button
-                              onClick={() => handleDownloadQR(app.id)}
-                              className="w-full flex items-center justify-center gap-2 py-3 bg-[#249689] text-white font-bold rounded-lg hover:bg-[#1d7b70] transition-colors"
-                            >
-                              <Download size={20} />
-                              이미지로 갤러리에 저장
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))

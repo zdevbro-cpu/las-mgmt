@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.educations (
     description TEXT,
     event_date TIMESTAMP WITH TIME ZONE NOT NULL,
     location VARCHAR(255),
+    registration_deadline TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_by TEXT REFERENCES public.users(id) ON DELETE SET NULL,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import { canAccessManagement, canAccessEventDashboard, LOGIN_MODES } from './constants/roles'
+import { canAccessManagement, canAccessEventDashboard, isOwner, LOGIN_MODES } from './constants/roles'
 import HeroPage from './components/HeroPage'
 import Login from './components/Login'
 import Signup from './components/Signup'
@@ -377,7 +377,7 @@ function AppContent() {
         <Route 
           path="/admin/education/approval" 
           element={
-            user && canAccessManagement(user) ? (
+            user && (canAccessManagement(user) || isOwner(user)) ? (
               <EducationApproval user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/login" replace />

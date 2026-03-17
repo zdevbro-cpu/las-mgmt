@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LogOut, FileText, ShoppingCart, Truck, Package, Shield, User, BarChart3, Calendar } from 'lucide-react'
-import { isMonitoringAgent, isContractWorker } from '../constants/roles'
+import { isMonitoringAgent, isContractWorker, isOwner, canAccessManagement } from '../constants/roles'
 
 export default function Dashboard({ user, onNavigate, onLogout }) {
   // 모니터링요원 또는 계약근무 여부 확인
@@ -170,6 +170,18 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
                   구매이력조회
                 </button>
               </>
+            )}
+
+            {/* 교육관리 버튼 - 점주, 점장, 지점관리자, 시스템관리자 */}
+            {(isOwner(user) || canAccessManagement(user)) && (
+              <button
+                onClick={() => onNavigate('EducationApproval')}
+                className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+              >
+                <Calendar size={20} />
+                교육관리
+              </button>
             )}
 
             {/* 이벤트관리 버튼 - 모든 사용자 표시 */}

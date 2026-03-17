@@ -170,18 +170,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               구매고객조회
             </button>
 
-            {/* 교육관리 버튼 - 지점관리자와 시스템관리자 등 매장관리 권한 */}
-            <button
-              onClick={() => {
-                console.log('🧭 Navigate to: EducationApproval')
-                onNavigate('EducationApproval') 
-              }}
-              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
-            >
-              <Calendar size={20} />
-              교육관리
-            </button>
+
 
             {/* 이벤트 대시보드 버튼 - 지점관리자와 시스템관리자만 */}
             {showEventDashboard && (

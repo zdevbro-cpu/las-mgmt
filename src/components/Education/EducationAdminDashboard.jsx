@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { LogOut, BookOpen, Plus, Users, CheckCircle, ChevronLeft, Camera, X, FileDown } from 'lucide-react';
+import { LogOut, BookOpen, Plus, Users, CheckCircle, ChevronLeft, Camera, X, FileDown, Clock } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
 
 export default function EducationAdminDashboard({ user, onNavigate }) {
   const [educations, setEducations] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [formData, setFormData] = useState({ title: '', event_date: '', location: '', description: '' });
+  const [formData, setFormData] = useState({ title: '', event_date: '', location: '', description: '', registration_deadline: '' });
   const [selectedEducation, setSelectedEducation] = useState(null);
   const [applications, setApplications] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -16,10 +16,22 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
   const [filterReferrerId, setFilterReferrerId] = useState('');
   const [scannedParticipant, setScannedParticipant] = useState(null);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [allManagers, setAllManagers] = useState([]);
 
   useEffect(() => {
     fetchEducations();
+    fetchAllManagers();
   }, []);
+
+  const fetchAllManagers = async () => {
+    const { data } = await supabase
+      .from('users')
+      .select('id, name, branch, user_type')
+      .in('user_type', ['점장', '지점관리자', '시스템관리자', '점주'])
+      .order('branch');
+    
+    if (data) setAllManagers(data);
+  };
 
   const fetchEducations = async () => {
     const { data, error } = await supabase
@@ -53,7 +65,8 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
           title: formData.title,
           event_date: formData.event_date,
           location: formData.location,
-          description: formData.description
+          description: formData.description,
+          registration_deadline: formData.registration_deadline || null
         })
         .eq('id', editingId);
 
@@ -72,12 +85,13 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
         .from('educations')
         .insert({
           ...formData,
+          registration_deadline: formData.registration_deadline || null,
           created_by: user.id
         });
 
       if (!error) {
         setShowCreateModal(false);
-        setFormData({ title: '', event_date: '', location: '', description: '' });
+        setFormData({ title: '', event_date: '', location: '', description: '', registration_deadline: '' });
         fetchEducations();
         alert('교육이 성공적으로 생성되었습니다.');
       } else {
@@ -89,7 +103,7 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
   const openCreateModal = () => {
     setEditMode(false);
     setEditingId(null);
-    setFormData({ title: '', event_date: '', location: '', description: '' });
+    setFormData({ title: '', event_date: '', location: '', description: '', registration_deadline: '' });
     setShowCreateModal(true);
   };
 
@@ -100,7 +114,8 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
       title: edu.title,
       event_date: edu.event_date.split('+')[0], // strip timezone if necessary
       location: edu.location,
-      description: edu.description
+      description: edu.description,
+      registration_deadline: edu.registration_deadline ? edu.registration_deadline.split('+')[0] : ''
     });
     setShowCreateModal(true);
   };
@@ -251,12 +266,8 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
   };
 
   if (selectedEducation) {
-    const uniqueReferrers = [];
-    applications.forEach(app => {
-      if (app.referrer_id && app.referrer && !uniqueReferrers.some(r => r.id === app.referrer_id)) {
-        uniqueReferrers.push({ id: app.referrer_id, ...app.referrer });
-      }
-    });
+    // Use allManagers for the filter list
+    const filterOptions = allManagers;
 
     const filteredApplications = filterReferrerId
       ? applications.filter(a => a.referrer_id === filterReferrerId)
@@ -330,8 +341,8 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
                 className="border border-gray-300 rounded-lg p-2 text-sm bg-white min-w-[200px]"
               >
                 <option value="">전체 추천인 목록 보기</option>
-                {uniqueReferrers.map(r => (
-                  <option key={r.id} value={r.id}>{r.branch} - {r.name}</option>
+                {filterOptions.map(r => (
+                  <option key={r.id} value={r.id}>{r.branch} - {r.name} ({r.user_type})</option>
                 ))}
               </select>
             </div>
@@ -467,10 +478,16 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
               <div key={edu.id} className="border rounded-lg p-5 flex justify-between items-center hover:shadow-md transition-shadow">
                 <div>
                   <h3 className="text-lg font-bold text-gray-800">{edu.title}</h3>
-                  <p className="text-gray-600 text-sm mt-1 flex items-center gap-4">
+                  <div className="text-gray-600 text-sm mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
                     <span>📅 {new Date(edu.event_date).toLocaleString()}</span>
                     <span>📍 {edu.location}</span>
-                  </p>
+                    {edu.registration_deadline && (
+                      <span className={`font-bold flex items-center gap-1 ${new Date() > new Date(edu.registration_deadline) ? 'text-red-500' : 'text-orange-600'}`}>
+                        <Clock size={14} /> 신청마감: {new Date(edu.registration_deadline).toLocaleString()}
+                        {new Date() > new Date(edu.registration_deadline) && ' (마감됨)'}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -545,6 +562,52 @@ export default function EducationAdminDashboard({ user, onNavigate }) {
                       })}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">신청 마감 일시 (선택)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      className="flex-1 border rounded p-2"
+                      onChange={(e) => {
+                        const newDate = e.target.value;
+                        const oldTime = formData.registration_deadline ? formData.registration_deadline.split('T')[1]?.substring(0, 5) || '18:00' : '18:00';
+                        setFormData({ ...formData, registration_deadline: newDate ? `${newDate}T${oldTime}` : '' });
+                      }}
+                      value={formData.registration_deadline ? formData.registration_deadline.split('T')[0] : ''}
+                    />
+                    <select
+                      className="border rounded p-2"
+                      disabled={!formData.registration_deadline && !formData.registration_deadline?.split('T')[0]}
+                      onChange={(e) => {
+                        const newTime = e.target.value;
+                        const oldDate = formData.registration_deadline ? formData.registration_deadline.split('T')[0] : new Date().toISOString().split('T')[0];
+                        setFormData({ ...formData, registration_deadline: `${oldDate}T${newTime}` });
+                      }}
+                      value={formData.registration_deadline ? formData.registration_deadline.split('T')[1]?.substring(0, 5) : '18:00'}
+                    >
+                      {Array.from({ length: 24 }, (_, i) => {
+                        const hour = i.toString().padStart(2, '0');
+                        return (
+                          <React.Fragment key={hour}>
+                            <option value={`${hour}:00`}>{hour}:00</option>
+                            <option value={`${hour}:30`}>{hour}:30</option>
+                          </React.Fragment>
+                        );
+                      })}
+                    </select>
+                    {formData.registration_deadline && (
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({...formData, registration_deadline: ''})}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded border border-red-200"
+                        title="마감일 해제"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">지정하지 않으면 마감 기한 없이 상시 신청 가능합니다.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-1">장소</label>
