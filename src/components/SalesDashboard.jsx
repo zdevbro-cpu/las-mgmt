@@ -10,7 +10,7 @@ import { ShoppingCart, Trophy, Award, BarChart3, Search, RotateCcw, Download, Ch
 //   viewMode - 'user' | 'admin' | 'system'
 //   branchFilter - 특정 지점명을 강제 필터링 (매장관리에서 호출 시)
 // ══════════════════════════════════════════════
-export default function SalesDashboard({ user, viewMode, branchFilter }) {
+export default function SalesDashboard({ user, viewMode, branchFilter, hideIndividualRanking = false }) {
   const [loading, setLoading] = useState(true)
   const [salesData, setSalesData] = useState([])
   const [stats, setStats] = useState({
@@ -40,7 +40,7 @@ export default function SalesDashboard({ user, viewMode, branchFilter }) {
       if (viewMode === 'user') query = query.eq('user_id', user.id)
       else if (viewMode === 'admin') query = query.eq('branch_name', user.branch)
       if (filters.branch) query = query.eq('branch_name', filters.branch)
-      if (filters.userName) query = query.ilike('user_name', `%${filters.userName}%`)
+      if (filters.userName) query = query.or(`user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`)
       if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00`)
       if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59`)
       const { data, error } = await query
@@ -109,11 +109,28 @@ export default function SalesDashboard({ user, viewMode, branchFilter }) {
   const currentItems = salesData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
   const handleDownloadExcel = () => {
-    const exportData = salesData.map(s => ({
-      '일시': new Date(s.created_at).toLocaleString(), '지점': s.branch_name, '담당자': s.user_name,
-      '구매자': s.customer_name, '연락처': s.phone, '결제수단': s.payment_method,
-      '수량': s.quantity, '금액': s.deposit_amount, '상세내용': s.order_details
-    }))
+    const exportData = salesData.map(s => {
+      let cardInfo = '', cashInfo = '';
+      try {
+        const info = typeof s.payment_info === 'string' ? JSON.parse(s.payment_info) : s.payment_info;
+        if (info?.card) cardInfo = `[카드] ${new Intl.NumberFormat('ko-KR').format(info.card.amount.toString().replace(/[^0-9]/g, ''))}원 (${info.card.issuer || '-'})`;
+        if (info?.cash) cashInfo = `[현금] ${new Intl.NumberFormat('ko-KR').format(info.cash.amount.toString().replace(/[^0-9]/g, ''))}원 (${info.cash.bank || '-'})`;
+      } catch (e) {}
+
+      return {
+        '일시': new Date(s.created_at).toLocaleString(),
+        '지점': s.branch_name,
+        '담당자': s.user_name,
+        '구매자': s.customer_name,
+        '연락처': s.phone,
+        '결제수단': s.payment_method,
+        '카드상세': cardInfo,
+        '현금상세': cashInfo,
+        '수량이름': s.order_details,
+        '수량': s.quantity,
+        '총금액': s.deposit_amount
+      }
+    })
     const ws = XLSX.utils.json_to_sheet(exportData)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '매출내역')
@@ -209,8 +226,8 @@ export default function SalesDashboard({ user, viewMode, branchFilter }) {
         </div>
       )}
 
-      {/* 랭킹 */}
-      {(viewMode === 'system' || viewMode === 'admin') && (
+      {/* 랭킹 섹션 - hideIndividualRanking이 false일 때만 표시 */}
+      {!hideIndividualRanking && (viewMode === 'system' || viewMode === 'admin') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {viewMode === 'system' && !branchFilter && (
             <div>
@@ -243,10 +260,10 @@ export default function SalesDashboard({ user, viewMode, branchFilter }) {
           )}
           {(viewMode === 'system' || viewMode === 'admin') && !branchFilter && (
             <div className="col-span-2 sm:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 mb-1">담당자</label>
+              <label className="block text-[10px] font-black text-gray-400 mb-1">판매자</label>
               <div className="relative">
                 <input type="text" value={filters.userName} onChange={e => setFilters(p => ({ ...p, userName: e.target.value }))}
-                  placeholder="이름" className="w-full h-9 pl-7 pr-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500" />
+                  placeholder="판매자 성함" className="w-full h-9 pl-7 pr-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500" />
                 <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -311,7 +328,22 @@ export default function SalesDashboard({ user, viewMode, branchFilter }) {
                 <td className="px-5 py-3.5 text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</td>
                 <td className="px-5 py-3.5"><p className="text-xs font-black text-gray-800">{item.branch_name}</p><p className="text-[10px] text-teal-600 font-bold">{item.user_name}</p></td>
                 <td className="px-5 py-3.5"><p className="text-xs font-bold text-gray-800">{item.customer_name}</p><p className="text-[10px] text-gray-400">{item.phone}</p></td>
-                <td className="px-5 py-3.5 max-w-xs"><span className="inline-flex items-center px-1.5 py-0.5 rounded bg-gray-100 text-[9px] font-bold">{item.payment_method}</span><p className="text-[11px] text-gray-500 truncate mt-0.5">{item.order_details}</p></td>
+                <td className="px-5 py-3.5 max-w-xs">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="inline-flex items-center w-fit px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 text-[9px] font-black">
+                      {item.payment_method}
+                    </span>
+                    <p className="text-[11px] text-gray-500 truncate font-medium">
+                      {item.order_details}
+                    </p>
+                    {item.payment_method === '카드+입금' && (
+                      <div className="flex gap-2 text-[9px] text-gray-400 font-bold">
+                         <span>💳 {fmt(parseInt(typeof item.payment_info === 'string' ? JSON.parse(item.payment_info)?.card?.amount?.toString().replace(/[^0-9]/g, '') : item.payment_info?.card?.amount?.toString().replace(/[^0-9]/g, '') || 0))}</span>
+                         <span>💰 {fmt(parseInt(typeof item.payment_info === 'string' ? JSON.parse(item.payment_info)?.cash?.amount?.toString().replace(/[^0-9]/g, '') : item.payment_info?.cash?.amount?.toString().replace(/[^0-9]/g, '') || 0))}</span>
+                      </div>
+                    )}
+                  </div>
+                </td>
                 <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">{fmt(item.deposit_amount)}</td>
               </tr>
             ))}
