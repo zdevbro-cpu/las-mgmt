@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import * as XLSX from 'xlsx'
 import {
@@ -115,7 +115,12 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
   const [topBranches, setTopBranches] = useState([])
   const [topPersons, setTopPersons]   = useState([])
   const [branches, setBranches]       = useState([])
-  const [seriesList, setSeriesList]   = useState([])
+  const DEFAULT_SERIES = [
+    "K2", "K3", "K4", "K5", "K6", "K7",
+    "G1", "G2", "G3", "G4", "G5", "G6",
+    "S2", "S3", "S4", "S5",
+  ]
+  const [seriesList, setSeriesList]   = useState(DEFAULT_SERIES)
   const [currentPage, setCurrentPage] = useState(1)
   const ITEMS = 30
 
@@ -151,7 +156,7 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
         if (info?.items) info.items.forEach(i => { if (i.series) sSet.add(i.series) })
       } catch {}
     })
-    setSeriesList([...sSet].sort())
+    setSeriesList([...new Set([...DEFAULT_SERIES, ...sSet])].sort())
   }
 
   const computeRankings = (rows) => {
@@ -180,18 +185,32 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
 
   const applyFilters = (f) => {
     let rows = [...allData]
-    if (f.branch)    rows = rows.filter(r => r.branch_name === f.branch)
-    if (f.userName)  rows = rows.filter(r => (r.user_name || '').includes(f.userName))
-    if (f.series)    rows = rows.filter(r => {
-      try {
-        const info = typeof r.payment_info === 'string' ? JSON.parse(r.payment_info) : r.payment_info
-        return info?.items?.some(i => i.series === f.series)
-      } catch { return false }
-    })
-    if (f.startDate) rows = rows.filter(r => toLocalStr(new Date(r.created_at)) >= f.startDate)
-    if (f.endDate)   rows = rows.filter(r => toLocalStr(new Date(r.created_at)) <= f.endDate)
+    if (f.branch) {
+      rows = rows.filter(r => r.branch_name === f.branch)
+    }
+    if (f.userName) {
+      const search = f.userName.toLowerCase()
+      rows = rows.filter(r => 
+        (r.user_name || '').toLowerCase().includes(search) || 
+        (r.seller_name || '').toLowerCase().includes(search)
+      )
+    }
+    if (f.series) {
+      rows = rows.filter(r => {
+        try {
+          const info = typeof r.payment_info === 'string' ? JSON.parse(r.payment_info) : r.payment_info
+          return info?.items?.some(i => i.series === f.series)
+        } catch { return false }
+      })
+    }
+    if (f.startDate) {
+      rows = rows.filter(r => toLocalStr(new Date(r.created_at)) >= f.startDate)
+    }
+    if (f.endDate) {
+      rows = rows.filter(r => toLocalStr(new Date(r.created_at)) <= f.endDate)
+    }
     setSalesData(rows)
-    computeRankings(rows)
+    // 랭킹 카드는 필터와 무관하게 전사 현황을 유지하도록 computeRankings(rows) 호출 제거
     setCurrentPage(1)
   }
 
@@ -201,18 +220,21 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
     const empty = { branch: '', userName: '', series: '', startDate: '', endDate: '' }
     setPending(empty)
     setSalesData(allData)
+    // 초기화 시에는 전체 데이터 기준 랭킹 복구
     computeRankings(allData)
     setCurrentPage(1)
   }
 
   const handleCardBranch = (branch) => {
     const f = { ...pending, branch }
-    setPending(f); applyFilters(f)
+    setPending(f)
+    applyFilters(f)
   }
 
   const handleCardPerson = (name) => {
     const f = { ...pending, userName: name }
-    setPending(f); applyFilters(f)
+    setPending(f)
+    applyFilters(f)
   }
 
   // 날짜 기준값

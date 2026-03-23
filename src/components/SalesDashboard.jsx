@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import * as XLSX from 'xlsx'
-import { ShoppingCart, Trophy, Award, BarChart3, Search, RotateCcw, Download, ChevronLeft, ChevronRight, Calendar, Package } from 'lucide-react'
+import { ShoppingCart, Trophy, Award, BarChart3, Search, RotateCcw, Download, ChevronLeft, ChevronRight, Calendar, Package, X } from 'lucide-react'
 
 // ══════════════════════════════════════════════
 // 매출 현황 대시보드 - 재사용 가능 컴포넌트
@@ -21,9 +21,16 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
   const [topBranches, setTopBranches] = useState([])
   const [topPerformers, setTopPerformers] = useState([])
   const [seriesStats, setSeriesStats] = useState({})
-  const [filters, setFilters] = useState({ branch: branchFilter || '', userName: '', startDate: '', endDate: '' })
-  const [availableBranches, setAvailableBranches] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
+  const [filters, setFilters] = useState({
+    branch: branchFilter || "",
+    userName: "전체",
+    series: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [availableBranches, setAvailableBranches] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20
 
   useEffect(() => { if (viewMode) fetchData() }, [filters, viewMode])
@@ -40,7 +47,7 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       if (viewMode === 'user') query = query.eq('user_id', user.id)
       else if (viewMode === 'admin') query = query.eq('branch_name', user.branch)
       if (filters.branch) query = query.eq('branch_name', filters.branch)
-      if (filters.userName) query = query.or(`user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`)
+      if (filters.userName && filters.userName !== "전체") query = query.or(`user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`)
       if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00`)
       if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59`)
       const { data, error } = await query
@@ -48,7 +55,14 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       setSalesData(data || [])
       calculateStats(data || [])
       if (viewMode === 'system' && !branchFilter) {
-        setAvailableBranches([...new Set(data?.map(s => s.branch_name).filter(Boolean))].sort())
+        const branches = [...new Set(data?.map(s => s.branch_name).filter(Boolean))].sort()
+        setAvailableBranches(branches)
+      }
+      
+      // 판매자 목록 추출 (가나다순)
+      if (data) {
+        const users = [...new Set(data.map(s => s.user_name).filter(Boolean))].sort()
+        setAvailableUsers(users)
       }
     } catch (err) { console.error('Data load error:', err) }
     finally { setLoading(false) }
@@ -120,7 +134,7 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       return {
         '일시': new Date(s.created_at).toLocaleString(),
         '지점': s.branch_name,
-        '담당자': s.user_name,
+        '담당자(판매자)': s.user_name,
         '구매자': s.customer_name,
         '연락처': s.phone,
         '결제수단': s.payment_method,
@@ -147,27 +161,136 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
 
   return (
     <div className="space-y-5 pb-10">
-      {/* 헤더: branchFilter 없을 때만 타이틀 표시 */}
-      {!branchFilter ? (
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
-              <BarChart3 className="text-teal-600" size={22} />
-              매출 현황
-            </h2>
-            <p className="text-gray-400 text-xs mt-0.5">실시간 판매 데이터 분석</p>
+      {/* 타이틀 및 헤더 */}
+      <div className="flex justify-between items-center mb-1">
+        <div>
+          <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+            <BarChart3 className="text-teal-600" size={22} />
+            매출 현황
+          </h2>
+          <p className="text-gray-400 text-xs mt-0.5 font-bold">
+            실시간 판매 데이터 분석
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadExcel}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#10b981] text-white rounded-xl font-bold shadow-sm hover:bg-[#059669] transition-all text-xs"
+          >
+            <Download size={14} /> 엑셀 다운로드
+          </button>
+        </div>
+      </div>
+
+      {/* 필터 (상단 2row 배치) */}
+      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              시리즈
+            </label>
+            <select
+              value={filters.series}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, series: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+            >
+              <option value="">전체</option>
+              {[
+                "K2", "K3", "K4", "K5", "K6", "K7",
+                "G1", "G2", "G3", "G4", "G5", "G6",
+                "S2", "S3", "S4", "S5",
+              ].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
-          <button onClick={handleDownloadExcel} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl font-bold shadow-md hover:bg-green-700 transition-all text-xs">
-            <Download size={14} /> 엑셀 다운로드
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              담당자(판매자)
+            </label>
+            <div className="relative">
+              <select
+                value={filters.userName}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, userName: e.target.value }))
+                }
+                className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+              >
+                <option value="전체">전체</option>
+                {availableUsers.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              시작일
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, startDate: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              종료일
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, endDate: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-50">
+          <div className="bg-[#effefb] px-4 py-2.5 rounded-2xl flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#249689]">
+              검색 필터 합계:{" "}
+            </span>
+            <span className="font-black text-[#249689] text-base">
+              {fmt(stats.totalAmount)}
+            </span>
+            <span className="text-[10px] text-gray-300 ml-1">
+              ({salesData.length}건)
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setFilters({
+                branch: branchFilter || "",
+                userName: user?.name || "",
+                series: "",
+                startDate: "",
+                endDate: "",
+              });
+              setCurrentPage(1);
+            }}
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-teal-600 transition-colors mr-1"
+          >
+            <RotateCcw size={14} /> 초기화
           </button>
         </div>
-      ) : (
-        <div className="flex justify-end">
-          <button onClick={handleDownloadExcel} className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl font-bold shadow-md hover:bg-green-700 transition-all text-xs">
-            <Download size={14} /> 엑셀 다운로드
-          </button>
-        </div>
-      )}
+      </div>
+
+
 
       {/* 총 누적 매출 */}
       <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-5 text-white relative overflow-hidden">
@@ -227,70 +350,45 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       )}
 
       {/* 랭킹 섹션 - hideIndividualRanking이 false일 때만 표시 */}
-      {!hideIndividualRanking && (viewMode === 'system' || viewMode === 'admin') && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {viewMode === 'system' && !branchFilter && (
+      {!hideIndividualRanking &&
+        (viewMode === "system" || viewMode === "admin") && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-4">
+            {viewMode === "system" && !branchFilter && (
+              <div>
+                <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3">
+                  <Trophy className="text-yellow-500" size={16} /> 지점별 매출 Top
+                  12
+                </h3>
+                <div className="space-y-2">
+                  {topBranches.map((item, idx) => (
+                    <RankItem
+                      key={item.name}
+                      item={item}
+                      idx={idx}
+                      color="text-teal-700"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div>
-              <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3"><Trophy className="text-yellow-500" size={16} /> 지점별 매출 Top 12</h3>
-              <div className="space-y-2">{topBranches.map((item, idx) => <RankItem key={item.name} item={item} idx={idx} color="text-teal-700" />)}</div>
-            </div>
-          )}
-          <div>
-            <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3">
-              <Award className="text-blue-500" size={16} />
-              {branchFilter ? `${branchFilter} 소속 Top 12` : viewMode === 'admin' ? '지점 소속 개인별 Top 12' : '개인별 매출 Top 12'}
-            </h3>
-            <div className="space-y-2">{topPerformers.map((item, idx) => <RankItem key={item.name} item={item} idx={idx} color="text-blue-700" />)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* 필터 */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {viewMode === 'system' && !branchFilter && (
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 mb-1">지점</label>
-              <select value={filters.branch} onChange={e => setFilters(p => ({ ...p, branch: e.target.value }))}
-                className="w-full h-9 px-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500">
-                <option value="">모든 지점</option>
-                {availableBranches.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-          )}
-          {(viewMode === 'system' || viewMode === 'admin') && !branchFilter && (
-            <div className="col-span-2 sm:col-span-1">
-              <label className="block text-[10px] font-black text-gray-400 mb-1">판매자</label>
-              <div className="relative">
-                <input type="text" value={filters.userName} onChange={e => setFilters(p => ({ ...p, userName: e.target.value }))}
-                  placeholder="판매자 성함" className="w-full h-9 pl-7 pr-2 bg-gray-50 border border-gray-100 rounded-lg text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500" />
-                <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+              <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3">
+                <Award className="text-blue-500" size={16} />
+                개인매출현황
+              </h3>
+              <div className="space-y-2">
+                {topPerformers.map((item, idx) => (
+                  <RankItem
+                    key={item.name}
+                    item={item}
+                    idx={idx}
+                    color="text-blue-700"
+                  />
+                ))}
               </div>
             </div>
-          )}
-          <div>
-            <label className="block text-[10px] font-black text-gray-400 mb-1">시작일</label>
-            <input type="date" value={filters.startDate} onChange={e => setFilters(p => ({ ...p, startDate: e.target.value }))}
-              className="w-full h-9 px-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500" />
           </div>
-          <div>
-            <label className="block text-[10px] font-black text-gray-400 mb-1">종료일</label>
-            <input type="date" value={filters.endDate} onChange={e => setFilters(p => ({ ...p, endDate: e.target.value }))}
-              className="w-full h-9 px-2 bg-gray-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500" />
-          </div>
-        </div>
-        <div className="flex justify-between items-center mt-3">
-          <div className="bg-teal-50 px-3 py-1.5 rounded-lg">
-            <span className="text-[10px] font-black text-teal-600">필터 합계: </span>
-            <span className="font-black text-teal-700 text-sm">{fmt(stats.totalAmount)}</span>
-            <span className="text-[10px] text-gray-400 ml-1.5">({salesData.length}건)</span>
-          </div>
-          <button onClick={() => { setFilters({ branch: branchFilter || '', userName: '', startDate: '', endDate: '' }); setCurrentPage(1) }}
-            className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-teal-600 transition-colors">
-            <RotateCcw size={12} /> 초기화
-          </button>
-        </div>
-      </div>
+        )}
 
       {/* 모바일 카드 */}
       <div className="md:hidden space-y-3">
@@ -320,31 +418,39 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b border-gray-100">
-            <tr>{['일시','지점/담당자','구매자','내용','금액'].map(h => <th key={h} className="px-5 py-3.5 text-[11px] font-black text-gray-400 uppercase">{h}</th>)}</tr>
+            <tr>
+              {["일시", "담당자(판매자)", "시리즈", "금액"].map((h) => (
+                <th
+                  key={h}
+                  className={`px-5 py-3.5 text-[11px] font-black text-gray-400 uppercase ${h === "금액" ? "text-right" : ""}`}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {currentItems.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                <td className="px-5 py-3.5 text-xs text-gray-500">{new Date(item.created_at).toLocaleString()}</td>
-                <td className="px-5 py-3.5"><p className="text-xs font-black text-gray-800">{item.branch_name}</p><p className="text-[10px] text-teal-600 font-bold">{item.user_name}</p></td>
-                <td className="px-5 py-3.5"><p className="text-xs font-bold text-gray-800">{item.customer_name}</p><p className="text-[10px] text-gray-400">{item.phone}</p></td>
-                <td className="px-5 py-3.5 max-w-xs">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="inline-flex items-center w-fit px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 text-[9px] font-black">
-                      {item.payment_method}
-                    </span>
-                    <p className="text-[11px] text-gray-500 truncate font-medium">
-                      {item.order_details}
-                    </p>
-                    {item.payment_method === '카드+입금' && (
-                      <div className="flex gap-2 text-[9px] text-gray-400 font-bold">
-                         <span>💳 {fmt(parseInt(typeof item.payment_info === 'string' ? JSON.parse(item.payment_info)?.card?.amount?.toString().replace(/[^0-9]/g, '') : item.payment_info?.card?.amount?.toString().replace(/[^0-9]/g, '') || 0))}</span>
-                         <span>💰 {fmt(parseInt(typeof item.payment_info === 'string' ? JSON.parse(item.payment_info)?.cash?.amount?.toString().replace(/[^0-9]/g, '') : item.payment_info?.cash?.amount?.toString().replace(/[^0-9]/g, '') || 0))}</span>
-                      </div>
-                    )}
-                  </div>
+            {currentItems.map((item) => (
+              <tr
+                key={item.id}
+                className="hover:bg-gray-50/50 transition-colors"
+              >
+                <td className="px-5 py-3.5 text-xs text-gray-500">
+                  {new Date(item.created_at).toLocaleString()}
                 </td>
-                <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">{fmt(item.deposit_amount)}</td>
+                <td className="px-5 py-3.5">
+                  <p className="text-xs font-black text-gray-800">
+                    {item.user_name}
+                  </p>
+                </td>
+                <td className="px-5 py-3.5">
+                  <p className="text-[11px] text-gray-500 font-bold truncate max-w-[150px]">
+                    {item.order_details || "-"}
+                  </p>
+                </td>
+                <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">
+                  {fmt(item.deposit_amount)}
+                </td>
               </tr>
             ))}
             {salesData.length === 0 && !loading && <tr><td colSpan="5" className="px-5 py-16 text-center text-gray-400 text-sm">판매 내역이 없습니다.</td></tr>}

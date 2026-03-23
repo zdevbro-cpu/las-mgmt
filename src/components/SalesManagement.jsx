@@ -44,12 +44,13 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   });
   const [seriesStats, setSeriesStats] = useState({});
   const [filters, setFilters] = useState({
-    branch: "",
-    userName: "",
+    userName: "전체",
+    series: "",
     startDate: "",
     endDate: "",
   });
   const [availableBranches, setAvailableBranches] = useState([]);
+  const [availableUsers, setAvailableUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -68,20 +69,48 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       else if (viewMode === "admin")
         query = query.eq("branch_name", user.branch);
       if (filters.branch) query = query.eq("branch_name", filters.branch);
-      if (filters.userName)
-        query = query.or(`user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`);
+      if (filters.userName && filters.userName !== "전체")
+        query = query.or(
+          `user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`,
+        );
+      if (filters.series) {
+        // 시리즈 필터링: JSONB 타입인 payment_info 내의 items 배열에서 series 확인
+        // 클라이언트 사이드 필터링이 더 정확할 수 있으나, 일단 raw 데이터 가져온 후 필터링하는 로직으로 보완
+      }
       if (filters.startDate)
         query = query.gte("created_at", `${filters.startDate}T00:00:00`);
       if (filters.endDate)
         query = query.lte("created_at", `${filters.endDate}T23:59:59`);
-      const { data, error } = await query;
+
+      let { data, error } = await query;
       if (error) throw error;
+
+      // 시리즈 필터링 보완 (서버 사이드에서 JSONB 복합 쿼리가 까다로우므로 가져온 후 한 번 더 필터링)
+      if (filters.series && data) {
+        data = data.filter((r) => {
+          try {
+            const info =
+              typeof r.payment_info === "string"
+                ? JSON.parse(r.payment_info)
+                : r.payment_info;
+            return info?.items?.some((i) => i.series === filters.series);
+          } catch {
+            return false;
+          }
+        });
+      }
+
       setSalesData(data || []);
       calculateStats(data || []);
       if (viewMode === "system")
         setAvailableBranches(
           [...new Set(data?.map((s) => s.branch_name).filter(Boolean))].sort(),
         );
+      
+      // 판매자 목록 추출 (가나다순)
+      if (data) {
+        setAvailableUsers([...new Set(data.map(s => s.user_name).filter(Boolean))].sort());
+      }
     } catch (err) {
       console.error("Data load error:", err);
     } finally {
@@ -219,38 +248,132 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-5 pb-20">
-      {/* 상단 헤더 바 (이미지 2 스타일) */}
-      <div className="flex items-center justify-between border-b pb-4 mb-2">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="text-teal-600" size={20} />
-          <h2 className="text-lg font-black text-gray-800">
-            {user?.branch || "본사"} 매출현황
-          </h2>
-        </div>
-        <button
-          onClick={() => onNavigate("dashboard")}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
-        >
-          <X size={24} />
-        </button>
-      </div>
-
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white/50 py-2">
         <div>
           <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
             <BarChart3 className="text-teal-600" size={22} />
             매출 현황
           </h2>
-          <p className="text-gray-400 text-xs mt-0.5">
+          <p className="text-gray-400 text-xs mt-0.5 font-bold">
             실시간 판매 데이터 분석
           </p>
         </div>
-        <button
-          onClick={handleDownloadExcel}
-          className="flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-xl font-bold shadow-md hover:bg-green-700 transition-all text-xs"
-        >
-          <Download size={14} /> 엑셀 다운로드
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadExcel}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#10b981] text-white rounded-xl font-bold shadow-sm hover:bg-[#059669] transition-all text-xs"
+          >
+            <Download size={14} /> 엑셀 다운로드
+          </button>
+        </div>
+      </div>
+
+      {/* 필터 (시리즈/판매자/시작일/종료일 2row 배치) - 상단으로 이동 */}
+      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              시리즈
+            </label>
+            <select
+              value={filters.series}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, series: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+            >
+              <option value="">전체</option>
+              {[
+                "K2", "K3", "K4", "K5", "K6", "K7",
+                "G1", "G2", "G3", "G4", "G5", "G6",
+                "S2", "S3", "S4", "S5",
+              ].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              판매자
+            </label>
+            <div className="relative">
+              <select
+                value={filters.userName}
+                onChange={(e) =>
+                  setFilters((p) => ({ ...p, userName: e.target.value }))
+                }
+                className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+              >
+                <option value="전체">전체</option>
+                {availableUsers.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              시작일
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, startDate: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+              종료일
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) =>
+                setFilters((p) => ({ ...p, endDate: e.target.value }))
+              }
+              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-50">
+          <div className="bg-[#effefb] px-4 py-2.5 rounded-2xl flex items-center gap-1.5">
+            <span className="text-xs font-bold text-[#249689]">
+              검색 필터 합계:{" "}
+            </span>
+            <span className="font-black text-[#249689] text-base">
+              {fmt(stats.totalAmount)}
+            </span>
+            <span className="text-[10px] text-gray-300 ml-1">
+              ({salesData.length}건)
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setFilters({
+                branch: "",
+                userName: user?.name || "",
+                series: "",
+                startDate: "",
+                endDate: "",
+              });
+              setCurrentPage(1);
+            }}
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-teal-600 transition-colors mr-1"
+          >
+            <RotateCcw size={14} /> 초기화
+          </button>
+        </div>
       </div>
 
       {/* 총 누적 매출 */}
@@ -343,118 +466,45 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         </div>
       )}
 
-      {/* 이미지 2에 따라 랭킹 섹션 다시 활성화 */}
-      {salesData.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <h4 className="text-sm font-black text-gray-600 flex items-center gap-1.5">
-            <Users size={14} className="text-blue-500" /> {user?.branch || "본사"} 소속 Top 12
-          </h4>
-          <div className="space-y-2">
-            {Object.entries(
-              salesData.reduce((acc, curr) => {
-                const name = curr.user_name || "알 수 없음";
-                acc[name] = (acc[name] || 0) + curr.deposit_amount;
-                return acc;
-              }, {}),
-            )
-              .map(([name, amount]) => ({ name, amount }))
-              .sort((a, b) => b.amount - a.amount)
-              .slice(0, 12)
-              .map((item, idx) => (
-                <RankItem
-                  key={item.name}
-                  item={item}
-                  idx={idx}
-                  color="text-blue-700"
-                />
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* 필터 (이미지 1 스타일 정밀 조정) */}
-      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mt-4">
-        <div className="grid grid-cols-3 gap-6">
-          {(viewMode === "system" || viewMode === "admin") && (
-            <div className="flex flex-col">
-              <label className="block text-sm font-bold text-gray-800 mb-2 ml-1">
-                판매자
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={filters.userName}
-                  onChange={(e) =>
-                    setFilters((p) => ({ ...p, userName: e.target.value }))
-                  }
-                  placeholder="판매자"
-                  className="w-full h-12 pl-10 pr-4 bg-gray-50 border-none rounded-2xl text-base font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all placeholder:text-gray-300"
-                />
-                <Search
-                  size={18}
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300"
-                />
+      {/* 개인매출현황 (랭킹) */}
+      <div className="pt-4">
+        <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3">
+          <Award className="text-blue-500" size={16} />
+          개인매출현황
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Object.entries(
+            salesData.reduce((acc, curr) => {
+              const name = curr.user_name || "알 수 없음";
+              acc[name] = (acc[name] || 0) + (parseInt(curr.deposit_amount) || 0);
+              return acc;
+            }, {}),
+          )
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 12)
+            .map(([name, amount], idx) => (
+              <div
+                key={name}
+                className="bg-white p-3 rounded-xl border border-gray-100 flex items-center gap-3 shadow-sm"
+              >
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 ${idx === 0 ? "bg-yellow-400" : idx === 1 ? "bg-gray-400" : idx === 2 ? "bg-orange-400" : "bg-gray-200 text-gray-500"}`}
+                >
+                  {idx + 1}
+                </div>
+                <span className="flex-1 font-bold text-gray-700 text-sm truncate">
+                  {name}
+                </span>
+                <span className="font-black text-sm shrink-0 text-blue-700">
+                  {fmt(amount)}
+                </span>
               </div>
-            </div>
-          )}
-          <div className="flex flex-col">
-            <label className="block text-sm font-bold text-gray-800 mb-2 ml-1">
-              시작일
-            </label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) =>
-                setFilters((p) => ({ ...p, startDate: e.target.value }))
-              }
-              className="w-full h-12 px-4 bg-gray-50 border-none rounded-2xl text-[15px] font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-            />
-          </div>
-          <div className="flex flex-col">
-            <label className="block text-sm font-bold text-gray-800 mb-2 ml-1">
-              종료일
-            </label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) =>
-                setFilters((p) => ({ ...p, endDate: e.target.value }))
-              }
-              className="w-full h-12 px-4 bg-gray-50 border-none rounded-2xl text-[15px] font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all"
-            />
-          </div>
-        </div>
-        <div className="flex justify-between items-center mt-6">
-          <div className="bg-[#effefb] px-5 py-3 rounded-2xl flex items-center gap-1.5">
-            <span className="text-sm font-bold text-[#249689]">
-              필터 합계:{" "}
-            </span>
-            <span className="font-black text-[#249689] text-lg">
-              {fmt(stats.totalAmount)}
-            </span>
-            <span className="text-xs text-gray-300 ml-1">
-              ({salesData.length}건)
-            </span>
-          </div>
-          <button
-            onClick={() => {
-              setFilters({
-                branch: "",
-                userName: "",
-                startDate: "",
-                endDate: "",
-              });
-              setCurrentPage(1);
-            }}
-            className="flex items-center gap-1.5 text-sm font-bold text-gray-400 hover:text-teal-600 transition-colors mr-2"
-          >
-            <RotateCcw size={16} /> 초기화
-          </button>
+            ))}
         </div>
       </div>
 
-      {/* 리스트 카드 (초기 상태 복원) */}
-      <div className="space-y-3">
+      {/* 모바일 카드 */}
+      <div className="md:hidden space-y-3">
         {currentItems.map((item) => (
           <div
             key={item.id}
@@ -463,14 +513,14 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 font-black text-sm">
-                  {item.customer_name?.[0] || "익"}
+                  {item.user_name?.[0] || "익"}
                 </div>
                 <div>
                   <p className="font-black text-gray-800 text-sm">
-                    {item.customer_name || "비회원"}
+                    {item.user_name}
                   </p>
                   <p className="text-[10px] text-gray-400">
-                    {item.phone || "-"}
+                    {item.branch_name}
                   </p>
                 </div>
               </div>
@@ -481,10 +531,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
             <p className="text-[11px] text-gray-500 bg-gray-50 rounded-lg p-2 line-clamp-2">
               {item.order_details}
             </p>
-            <div className="flex justify-between mt-2">
-              <span className="text-[10px] text-gray-400">
-                {item.branch_name} / {item.user_name}
-              </span>
+            <div className="flex justify-end mt-2">
               <span className="text-[10px] text-gray-400">
                 {new Date(item.created_at).toLocaleDateString()}
               </span>
@@ -496,6 +543,60 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
             판매 내역이 없습니다.
           </p>
         )}
+      </div>
+
+      {/* PC 테이블 */}
+      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b border-gray-100">
+            <tr>
+              {["일시", "판매자", "시리즈", "금액"].map((h) => (
+                <th
+                  key={h}
+                  className={`px-5 py-3.5 text-[11px] font-black text-gray-400 uppercase ${h === "금액" ? "text-right" : ""}`}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {currentItems.map((item) => (
+              <tr
+                key={item.id}
+                className="hover:bg-gray-50/50 transition-colors"
+                onClick={() => {}}
+              >
+                <td className="px-5 py-3.5 text-xs text-gray-500">
+                  {new Date(item.created_at).toLocaleString()}
+                </td>
+                <td className="px-5 py-3.5">
+                  <p className="text-xs font-black text-gray-800">
+                    {item.user_name}
+                  </p>
+                </td>
+                <td className="px-5 py-3.5">
+                  <p className="text-[11px] text-gray-500 font-bold truncate max-w-[200px]">
+                    {item.order_details || "-"}
+                  </p>
+                </td>
+                <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">
+                  {fmt(item.deposit_amount)}
+                </td>
+              </tr>
+            ))}
+            {salesData.length === 0 && !loading && (
+              <tr>
+                <td
+                  colSpan="4"
+                  className="px-5 py-20 text-center text-gray-400 text-sm"
+                >
+                  판매 내역이 없습니다.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* 페이징 */}
@@ -1006,25 +1107,32 @@ export default function SalesManagement({ user, onNavigate }) {
           paddingBottom: activeTab === "input" ? "24px" : "0px",
         }}
       >
-        {/* 헤더 섹션 */}
-        <div className="flex flex-col items-center justify-center mb-2">
-          <div className="flex items-center gap-1.5 mb-0.5">
+        {/* 헤더 섹션 (시안 반영: 로고 + LAS Book Store) */}
+        <div className="flex flex-col items-center justify-center pt-6 pb-4 mb-2 relative">
+          <div className="flex items-center gap-3 mb-1">
             <img
               src="/images/logo.png"
               alt="LAS Logo"
-              className="w-8 h-8 object-cover"
+              className="w-10 h-10 object-contain"
               onError={(e) => (e.target.style.display = "none")}
             />
             <h1
-              className="font-bold"
-              style={{ color: "#249689", fontSize: "24px" }}
+              className="text-3xl font-black tracking-tight"
+              style={{ color: "#1fa193" }}
             >
               LAS Book Store
             </h1>
           </div>
-          <p className="text-gray-500 text-xs font-medium tracking-wide">
+          <p className="text-[13px] font-bold text-gray-400 tracking-[0.3em] uppercase">
             판매관리 시스템
           </p>
+          <button
+            onClick={() => onNavigate?.("Dashboard")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"
+            title="나가기"
+          >
+            <X size={22} />
+          </button>
         </div>
 
         {/* 탭 네비게이션 - 헤더 바로 아래 */}

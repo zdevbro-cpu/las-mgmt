@@ -283,19 +283,30 @@ export default function AdminBranches({ user, onNavigate }) {
           />
           {/* 슬라이드 패널 */}
           <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-gray-50 shadow-2xl z-50 flex flex-col overflow-hidden">
-            {/* 패널 헤더 */}
+            {/* 패널 헤더 (로고 스타일 적용) */}
             <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-teal-600" />
-                <span className="font-black text-gray-800 text-base">{selectedBranchSales}</span>
-                <span className="text-xs text-gray-400 font-medium">매출현황</span>
+              <div className="flex flex-col items-center mx-auto relative w-full">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/images/logo.png"
+                    alt="Logo"
+                    className="w-8 h-8 object-contain"
+                    onError={(e) => (e.target.style.display = "none")}
+                  />
+                  <h1 className="text-2xl font-black tracking-tight" style={{ color: "#1fa193" }}>
+                    LAS Book Store
+                  </h1>
+                </div>
+                <p className="text-[13px] font-bold text-gray-400 tracking-widest mt-0.5">
+                  판매관리 시스템
+                </p>
+                <button
+                  onClick={() => setSelectedBranchSales(null)}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedBranchSales(null)}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-              >
-                <X size={20} />
-              </button>
             </div>
             {/* 대시보드 */}
             <div className="flex-1 overflow-y-auto p-4">
