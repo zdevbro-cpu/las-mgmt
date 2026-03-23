@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3, BookOpen } from 'lucide-react'
+import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3, BookOpen, FileText } from 'lucide-react'
 
 export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
   return (
@@ -100,6 +100,15 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
               구매자정보
             </button>
 
+            <button
+              onClick={() => onNavigate('AdminProductPrices')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <FileText size={20} />
+              상품단가관리
+            </button>
+
             {/* ⭐ 교육관리 (시스템 관리자) */}
             <button
               onClick={() => {
@@ -111,6 +120,16 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             >
               <BookOpen size={20} />
               교육관리
+            </button>
+
+            {/* ⭐ 매출현황 */}
+            <button
+              onClick={() => onNavigate('SystemSalesDashboard')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <BarChart3 size={20} />
+              매출현황
             </button>
 
             {/* ⭐ 이벤트 관리로 이동 */}

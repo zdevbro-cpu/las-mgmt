@@ -40,6 +40,8 @@ import MathLetterDetailViewer from './components/MathLetterDetailViewer'
 import EducationApply from './components/Education/EducationApply'
 import EducationApproval from './components/Education/EducationApproval'
 import EducationAdminDashboard from './components/Education/EducationAdminDashboard'
+import AdminProductPrices from './components/AdminProductPrices'
+import SystemSalesDashboard from './components/SystemSalesDashboard'
 
 function AppContent() {
   const [user, setUser] = useState(null)
@@ -124,7 +126,9 @@ function AppContent() {
       'Profile': '/profile',
       'EducationApply': '/education/apply',
       'EducationApproval': '/admin/education/approval',
-      'EducationAdminDashboard': '/admin/education/dashboard'
+      'EducationAdminDashboard': '/admin/education/dashboard',
+      'AdminProductPrices': '/admin/product-prices',
+      'SystemSalesDashboard': '/system-admin/sales'
     }
     
     const targetPath = pageMap[trimmedPage]
@@ -397,6 +401,17 @@ function AppContent() {
         />
 
         <Route 
+          path="/admin/product-prices" 
+          element={
+            user && (user.user_type === '시스템관리자' || user.user_type === '지점관리자') ? (
+              <AdminProductPrices user={user} onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/admin" replace />
+            )
+          } 
+        />
+
+        <Route 
           path="/myinfo" 
           element={
             user ? (
@@ -533,6 +548,17 @@ function AppContent() {
           element={
             user && user.user_type === '시스템관리자' ? (
               <MathLetterManager user={user} onNavigate={handleNavigate} onBack={() => navigate('/system-admin')} />   
+            ) : (
+              <Navigate to="/system-admin" replace />
+            )
+          } 
+        />
+
+        <Route 
+          path="/system-admin/sales" 
+          element={
+            user && user.user_type === '시스템관리자' ? (
+              <SystemSalesDashboard user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/system-admin" replace />
             )

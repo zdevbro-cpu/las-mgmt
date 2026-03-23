@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, Users, FileText, ShoppingCart, UserCircle, Calendar } from 'lucide-react'
+import { LogOut, Users, FileText, ShoppingCart, UserCircle, Calendar, BarChart3, X } from 'lucide-react'
 import { LOGIN_MODES, canAccessEventDashboard } from '../constants/roles'
 import NoticeFloatingButton from './NoticeFloatingButton'
+import SalesDashboard from './SalesDashboard'
 
 export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMode }) {
   console.log('🎨 AdminDashboard 렌더링')
@@ -39,6 +40,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
 
   // 이벤트 대시보드 접근 권한 확인
   const showEventDashboard = canAccessEventDashboard(user)
+  const [showSalesDashboard, setShowSalesDashboard] = useState(false)
 
   return (
     <div className="min-h-screen bg-white">
@@ -170,6 +172,15 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               구매고객조회
             </button>
 
+            <button
+              onClick={() => setShowSalesDashboard(true)}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <BarChart3 size={20} />
+              판매현황
+            </button>
+
 
 
             {/* 이벤트 대시보드 버튼 - 지점관리자와 시스템관리자만 */}
@@ -201,6 +212,39 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
       {/* 공지사항 플로팅 버튼 */}
       <NoticeFloatingButton onNavigate={onNavigate} />
       </div>
+
+      {/* 판매현황 모달 - 모바일 최적화 */}
+      {showSalesDashboard && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowSalesDashboard(false)}
+          />
+          <div className="fixed inset-0 sm:inset-x-auto sm:inset-y-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md bg-gray-50 rounded-none sm:rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+            {/* 모달 헤더 */}
+            <div className="bg-white border-b border-gray-100 px-4 py-3.5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={18} className="text-teal-600" />
+                <span className="font-black text-gray-800 text-sm">{user?.branch || '매장'} 매출현황</span>
+              </div>
+              <button
+                onClick={() => setShowSalesDashboard(false)}
+                className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* 대시보드 스크롤 영역 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <SalesDashboard
+                user={user}
+                viewMode="admin"
+                branchFilter={user?.branch}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

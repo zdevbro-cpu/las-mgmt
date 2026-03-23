@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, Plus, Edit2, Trash2, Save, X } from 'lucide-react'
+import { ArrowLeft, Plus, Edit2, Trash2, Save, X, BarChart3 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import SalesDashboard from './SalesDashboard'
 
 export default function AdminBranches({ user, onNavigate }) {
   const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(false)
   const [editingBranch, setEditingBranch] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [selectedBranchSales, setSelectedBranchSales] = useState(null) // 매출현황 슬라이드 패널용
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -240,6 +242,13 @@ export default function AdminBranches({ user, onNavigate }) {
                       <td className="px-4 py-3">
                         <div className="flex gap-2 justify-center">
                           <button
+                            onClick={() => setSelectedBranchSales(branch.name)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-teal-600 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors"
+                            title="매출현황"
+                          >
+                            <BarChart3 size={14} /> 매출현황
+                          </button>
+                          <button
                             onClick={() => handleEdit(branch)}
                             className="p-2 hover:bg-gray-100 rounded"
                             title="수정"
@@ -263,6 +272,42 @@ export default function AdminBranches({ user, onNavigate }) {
           </div>
         </div>
       </div>
+
+      {/* 매출현황 슬라이드 패널 */}
+      {selectedBranchSales && (
+        <>
+          {/* 배경 오버레이 */}
+          <div
+            className="fixed inset-0 bg-black/40 z-40"
+            onClick={() => setSelectedBranchSales(null)}
+          />
+          {/* 슬라이드 패널 */}
+          <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-gray-50 shadow-2xl z-50 flex flex-col overflow-hidden">
+            {/* 패널 헤더 */}
+            <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <BarChart3 size={20} className="text-teal-600" />
+                <span className="font-black text-gray-800 text-base">{selectedBranchSales}</span>
+                <span className="text-xs text-gray-400 font-medium">매출현황</span>
+              </div>
+              <button
+                onClick={() => setSelectedBranchSales(null)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {/* 대시보드 */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <SalesDashboard
+                user={user}
+                viewMode="admin"
+                branchFilter={selectedBranchSales}
+              />
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 지점 추가 모달 */}
       {showAddModal && (
