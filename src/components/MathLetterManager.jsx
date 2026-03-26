@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import QRCode from 'qrcode';
 import { BookOpen, Upload, Edit, Trash2, Eye, Video, FileText, Plus, ArrowLeft, Play, Link, MessageCircle } from 'lucide-react';
 
 
@@ -13,6 +14,7 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
+  const [linkQrImageUrl, setLinkQrImageUrl] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [seriesFilter, setSeriesFilter] = useState('all');
 
@@ -126,13 +128,19 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
   };
 
   // 링크 생성 함수
-  const handleGenerateLink = (letter) => {
+  const handleGenerateLink = async (letter) => {
     // 간단한 공개 링크 생성 (신청자 코드 없이)
     const baseUrl = window.location.origin;
     const link = `${baseUrl}/math-letter-public?series=${letter.series}&day=${letter.day_number}`;
 
     setGeneratedLink(link);
     setSelectedLetter(letter);
+    try {
+      const qrUrl = await QRCode.toDataURL(link, { width: 300, margin: 2, errorCorrectionLevel: 'M' });
+      setLinkQrImageUrl(qrUrl);
+    } catch (e) {
+      setLinkQrImageUrl('');
+    }
     setShowLinkModal(true);
   };
 
@@ -933,6 +941,14 @@ export default function MathLetterManager({ user, onBack, onNavigate }) {
                     <p className="text-sm text-gray-600 mb-1 mt-2">제목</p>
                     <p className="text-lg font-semibold text-gray-900">{selectedLetter.title}</p>
                   </div>
+
+                  {/* QR 코드 */}
+                  {linkQrImageUrl && (
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-700 mb-2">QR 코드</p>
+                      <img src={linkQrImageUrl} alt="QR" className="mx-auto border border-gray-200 rounded-lg" style={{ width: 200, height: 200 }} />
+                    </div>
+                  )}
 
                   {/* 생성된 링크 */}
                   <div>

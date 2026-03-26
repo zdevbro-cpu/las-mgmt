@@ -1,0 +1,13 @@
+{
+  "terminal.integrated.defaultProfile.windows": "PowerShell (NoProfile)",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell (NoProfile)": {
+      "source": "PowerShell",
+      "args": [
+        "-NoLogo",
+        "-NoProfile"
+      ]
+    }
+  },
+  "terminal.integrated.shellIntegration.enabled": false
+}

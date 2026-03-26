@@ -11,15 +11,15 @@ export default function HeroPage({ onNavigate, onAutoLogin }) {
 
   const checkExistingSession = async () => {
     try {
-      // Supabase 세션 확인 (Supabase v1 방식)
-      const session = supabase.auth.session()
+      // Supabase 세션 확인 (Supabase v2 방식)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
       if (session && session.user) {
-        // 세션이 있으면 사용자 정보 가져오기
+        // 세션이 있으면 사용자 정보 가져오기 (auth_uid로 조회)
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('auth_uid', session.user.id)
           .single()
         
         if (userError) {

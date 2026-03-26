@@ -11,22 +11,33 @@ export default function Login({ onNavigate, onLogin }) {
     setLoading(true)
 
     try {
-      // users 테이블에서 이메일과 비밀번호로 직접 조회
+      // 1. Supabase Auth로 로그인 시도
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (authError) {
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.')
+        return
+      }
+
+      // 2. users 테이블에서 추가 프로필 정보 조회
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('email', email)
-        .eq('password', password)
+        .eq('auth_uid', authData.user.id)
         .single()
 
       if (userError || !userData) {
-        alert('이메일 또는 비밀번호가 올바르지 않습니다.')
+        alert('사용자 정보를 불러올 수 없습니다.')
         return
       }
 
       // 승인 상태 확인
       if (userData.status !== 'approved') {
         alert('관리자 승인 대기 중입니다. 승인 후 로그인이 가능합니다.')
+        await supabase.auth.signOut()
         return
       }
 

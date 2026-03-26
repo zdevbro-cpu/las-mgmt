@@ -107,10 +107,21 @@ export default function Signup({ onNavigate }) {
         newCode = `LAS${String(nextNumber).padStart(3, '0')}`
       }
 
-      // 2. UUID 생성
-      const userId = crypto.randomUUID()
+      // 2. Supabase Auth 회원가입
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            full_name: name,
+          }
+        }
+      })
 
-      // 3. users 테이블에 직접 저장
+      if (authError) throw authError
+
+      // 3. users 테이블에 프로필 저장
       const phoneNumbers = phone.replace(/-/g, '')
       const ssnNumbers = ssn ? ssn.replace(/-/g, '') : null
       
@@ -118,9 +129,9 @@ export default function Signup({ onNavigate }) {
         .from('users')
         .insert([
           {
-            id: userId,  // UUID 명시적 추가
+            auth_uid: authData.user.id,
             email,
-            password,
+            password: 'MIGRATED_TO_SUPABASE_AUTH', // 보안 위해 마커만 저장
             name,
             branch: brname,
             phone: phoneNumbers,
