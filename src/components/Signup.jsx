@@ -107,9 +107,10 @@ export default function Signup({ onNavigate }) {
         newCode = `LAS${String(nextNumber).padStart(3, '0')}`
       }
 
-      // 2. Supabase Auth 회원가입 (v1 방식)
+      // 2. Supabase Auth 회원가입 (v1 정식 방식: positional arguments)
       const { user: authUser, error: authError } = await supabase.auth.signUp(
-        { email, password },
+        email,
+        password,
         { data: { name, full_name: name } }
       )
 
