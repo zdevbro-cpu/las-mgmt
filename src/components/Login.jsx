@@ -11,11 +11,11 @@ export default function Login({ onNavigate, onLogin }) {
     setLoading(true)
 
     try {
-      // 1. Supabase Auth로 로그인 시도 (v1 정식 방식: positional arguments)
-      const { user: authUser, error: authError } = await supabase.auth.signIn(
+      // 1. Supabase Auth로 로그인 시도 (v1 정석 방식: object-based)
+      const { user: authUser, error: authError } = await supabase.auth.signIn({
         email,
         password
-      )
+      })
 
       if (authError) {
         alert('이메일 또는 비밀번호가 올바르지 않습니다.')
