@@ -11,8 +11,8 @@ export default function HeroPage({ onNavigate, onAutoLogin }) {
 
   const checkExistingSession = async () => {
     try {
-      // Supabase 세션 확인 (Supabase v2 방식)
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      // Supabase 세션 확인 (Supabase v1 방식)
+      const session = supabase.auth.session()
       
       if (session && session.user) {
         // 세션이 있으면 사용자 정보 가져오기 (auth_uid로 조회)

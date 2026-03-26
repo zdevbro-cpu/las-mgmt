@@ -107,17 +107,11 @@ export default function Signup({ onNavigate }) {
         newCode = `LAS${String(nextNumber).padStart(3, '0')}`
       }
 
-      // 2. Supabase Auth 회원가입
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-            full_name: name,
-          }
-        }
-      })
+      // 2. Supabase Auth 회원가입 (v1 방식)
+      const { user: authUser, error: authError } = await supabase.auth.signUp(
+        { email, password },
+        { data: { name, full_name: name } }
+      )
 
       if (authError) throw authError
 
@@ -129,7 +123,7 @@ export default function Signup({ onNavigate }) {
         .from('users')
         .insert([
           {
-            auth_uid: authData.user.id,
+            auth_uid: authUser.id,
             email,
             password: 'MIGRATED_TO_SUPABASE_AUTH', // 보안 위해 마커만 저장
             name,

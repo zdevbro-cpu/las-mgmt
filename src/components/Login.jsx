@@ -11,8 +11,8 @@ export default function Login({ onNavigate, onLogin }) {
     setLoading(true)
 
     try {
-      // 1. Supabase Auth로 로그인 시도
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // 1. Supabase Auth로 로그인 시도 (v1 방식)
+      const { user: authUser, error: authError } = await supabase.auth.signIn({
         email,
         password
       })
@@ -26,7 +26,7 @@ export default function Login({ onNavigate, onLogin }) {
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
-        .eq('auth_uid', authData.user.id)
+        .eq('auth_uid', authUser.id)
         .single()
 
       if (userError || !userData) {
