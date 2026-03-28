@@ -110,28 +110,30 @@ export default function MyInfo({ user, onBack, onNavigate }) {
 
     setLoading(true)
     try {
-      // 현재 비밀번호 확인
-      const { data: userData, error: checkError } = await supabase
-        .from('users')
-        .select('password')
-        .eq('id', user.id)
-        .single()
+      // 1. 현재 비밀번호 확인을 위해 Supabase Auth로 로그인 시도 (재인증)
+      const { error: authCheckError } = await supabase.auth.signIn({
+        email: userInfo.email,
+        password: currentPassword
+      })
 
-      if (checkError) throw checkError
-
-      if (userData.password !== currentPassword) {
+      if (authCheckError) {
         alert('현재 비밀번호가 일치하지 않습니다.')
         setLoading(false)
         return
       }
 
-      // 비밀번호 변경
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ password: newPassword })
-        .eq('id', user.id)
+      // 2. Auth 비밀번호 변경
+      const { error: updateError } = await supabase.auth.update({ 
+        password: newPassword 
+      })
 
       if (updateError) throw updateError
+
+      // 3. users 테이블의 password 필드도 'MIGRATED_TO_SUPABASE_AUTH'로 확실히 하여 보안 강화 및 정합성 유지
+      await supabase
+        .from('users')
+        .update({ password: 'MIGRATED_TO_SUPABASE_AUTH' })
+        .eq('id', user.id)
 
       alert('비밀번호가 변경되었습니다.')
       setChangingPassword(false)
