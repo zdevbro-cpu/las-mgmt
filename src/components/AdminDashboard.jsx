@@ -237,9 +237,6 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
                     LAS Book Store
                   </h1>
                 </div>
-                <p className="text-[13px] font-bold text-gray-400 tracking-widest mt-0.5">
-                  판매관리 시스템
-                </p>
                 <button
                   onClick={() => setShowSalesDashboard(false)}
                   className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors"

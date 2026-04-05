@@ -52,7 +52,14 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const [availableBranches, setAvailableBranches] = useState([]);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const itemsPerPage = 20;
+
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setShowDetailModal(true);
+  };
 
   useEffect(() => {
     if (viewMode) fetchData();
@@ -508,33 +515,35 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         {currentItems.map((item) => (
           <div
             key={item.id}
-            className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm"
+            className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm active:bg-gray-50 transition-colors"
+            onClick={() => handleRowClick(item)}
           >
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 font-black text-sm">
-                  {item.user_name?.[0] || "익"}
-                </div>
-                <div>
-                  <p className="font-black text-gray-800 text-sm">
-                    {item.user_name}
-                  </p>
-                  <p className="text-[10px] text-gray-400">
-                    {item.branch_name}
-                  </p>
-                </div>
+            {/* 1행: 시간, 구매자(변경), 금액 */}
+            <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                  {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-xs font-black text-gray-800">{item.customer_name || "구매자 미입력"}</span>
               </div>
-              <span className="font-black text-teal-700">
+              <span className="text-[13px] font-black text-[#249689]">
                 {fmt(item.deposit_amount)}
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 bg-gray-50 rounded-lg p-2 line-clamp-2">
-              {item.order_details}
-            </p>
-            <div className="flex justify-end mt-2">
-              <span className="text-[10px] text-gray-400">
-                {new Date(item.created_at).toLocaleDateString()}
-              </span>
+
+            {/* 2행: 상세내용, 상세보기 화살표 */}
+            <div className="flex justify-between items-end">
+              <div className="flex-1 overflow-hidden mr-2">
+                <div className="flex items-center gap-1.5">
+                  <Package size={10} className="text-teal-400 shrink-0" />
+                  <p className="text-[11px] font-bold text-gray-600 truncate">
+                    {item.order_details || "-"}
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center gap-0.5 text-[#249689] font-black text-[10px] opacity-80">
+                상세보기 <ChevronRight size={10} />
+              </div>
             </div>
           </div>
         ))}
@@ -545,51 +554,62 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         )}
       </div>
 
-      {/* PC 테이블 */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
             <tr>
-              {["일시", "판매자", "시리즈", "금액"].map((h) => (
-                <th
-                  key={h}
-                  className={`px-5 py-3.5 text-[11px] font-black text-gray-400 uppercase ${h === "금액" ? "text-right" : ""}`}
-                >
-                  {h}
-                </th>
-              ))}
+              <th className="px-5 py-3 text-[11px] font-black text-gray-400">매출 내역</th>
+              <th className="px-5 py-3 text-[11px] font-black text-gray-400 text-right">금액</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {currentItems.map((item) => (
               <tr
                 key={item.id}
-                className="hover:bg-gray-50/50 transition-colors"
-                onClick={() => {}}
+                className="hover:bg-teal-50/30 transition-colors cursor-pointer group"
+                onClick={() => handleRowClick(item)}
               >
-                <td className="px-5 py-3.5 text-xs text-gray-500">
-                  {new Date(item.created_at).toLocaleString()}
-                </td>
-                <td className="px-5 py-3.5">
-                  <p className="text-xs font-black text-gray-800">
-                    {item.user_name}
-                  </p>
-                </td>
-                <td className="px-5 py-3.5">
-                  <p className="text-[11px] text-gray-500 font-bold truncate max-w-[200px]">
-                    {item.order_details || "-"}
-                  </p>
-                </td>
-                <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">
-                  {fmt(item.deposit_amount)}
+                <td className="px-5 py-4" colSpan="2">
+                  {/* 1행: 일시 및 구매자 */}
+                  <div className="flex justify-between items-start mb-1.5">
+                    <div className="flex items-center gap-3">
+                       <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded leading-tight">
+                         {new Date(item.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                       </span>
+                       <span className="text-sm font-black text-gray-800 flex items-center gap-1.5">
+                         <User size={14} className="text-blue-500" />
+                         {item.customer_name || "구매자 미입력"}
+                       </span>
+                    </div>
+                    <div className="text-right">
+                       <span className="text-base font-black text-[#249689]">
+                         {fmt(item.deposit_amount)}
+                       </span>
+                    </div>
+                  </div>
+                  
+                  {/* 2행: 주문 상세 */}
+                  <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 mt-1">
+                     <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                           <Package size={14} className="text-teal-400 shrink-0" />
+                           <span className="text-xs text-gray-600 font-bold truncate max-w-[200px] md:max-w-md">
+                             {item.order_details || "-"}
+                           </span>
+                        </div>
+                     </div>
+                     <div className="flex items-center gap-1 text-[#249689] font-black text-[11px] group-hover:translate-x-1 transition-transform">
+                        상세보기 <ChevronRight size={14} />
+                     </div>
+                  </div>
                 </td>
               </tr>
             ))}
             {salesData.length === 0 && !loading && (
               <tr>
                 <td
-                  colSpan="4"
-                  className="px-5 py-20 text-center text-gray-400 text-sm"
+                  colSpan="2"
+                  className="px-5 py-20 text-center text-gray-400 text-sm font-bold"
                 >
                   판매 내역이 없습니다.
                 </td>
@@ -640,6 +660,172 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
           </div>
         </div>
       )}
+
+      {/* 매출 상세 모달 */}
+      {showDetailModal && selectedRecord && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 bg-[#249689] flex items-center justify-between">
+              <div>
+                <h2 className="font-black text-white text-base">매출 상세 내역</h2>
+                <p className="text-[10px] text-teal-100 font-bold">
+                  {new Date(selectedRecord.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="p-2 text-white/70 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[75vh]">
+              {/* 담당자 섹션 */}
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <p className="text-[11px] font-black text-gray-400 mb-2 uppercase tracking-wide">판매 정보</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-500 font-bold">지점 / 판매자</span>
+                    <span className="font-black text-gray-800">{selectedRecord.branch_name} / {selectedRecord.seller_name || selectedRecord.user_name}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 구매자 섹션 */}
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <p className="text-[11px] font-black text-gray-400 mb-2 uppercase tracking-wide">구매자 정보</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-bold">성함 / 타입</span>
+                    <span className="font-black text-gray-800">{selectedRecord.customer_name || "-"} ({selectedRecord.buyer_type || "일반"})</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-bold">연락처</span>
+                    <span className="font-black text-gray-800">{selectedRecord.phone || "-"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-bold">생년월일</span>
+                    <span className="font-black text-gray-800">{selectedRecord.age || "-"}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-bold">주소</span>
+                    <span className="font-black text-gray-800 text-right text-xs max-w-[150px]">{selectedRecord.address || "-"}</span>
+                  </div>
+                  {selectedRecord.planned_delivery && (
+                     <div className="pt-1 mt-1 border-t border-gray-200">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-black">계획배송(일정협의)</span>
+                     </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 주문 상품 섹션 */}
+              <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                <p className="text-[11px] font-black text-gray-400 mb-2 uppercase tracking-wide">주문 상품</p>
+                <div className="space-y-2">
+                  {(() => {
+                    try {
+                      const info = typeof selectedRecord.payment_info === 'string' 
+                        ? JSON.parse(selectedRecord.payment_info) 
+                        : selectedRecord.payment_info;
+                      return info?.items?.map((item, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm bg-white p-2 rounded-lg border border-gray-100">
+                           <span className="font-bold text-gray-600">{item.language} {item.series}</span>
+                           <span className="font-black text-teal-700">{item.quantity}세트</span>
+                        </div>
+                      ));
+                    } catch {
+                      return <p className="text-sm font-bold text-gray-500">{selectedRecord.order_details}</p>;
+                    }
+                  })()}
+                   <div className="pt-2 mt-2 border-t border-gray-200 flex justify-between items-center">
+                    <span className="text-sm font-black text-gray-800">구매 합계</span>
+                    <span className="text-base font-black text-[#249689]">{fmt(selectedRecord.deposit_amount)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 결제 상세 섹션 */}
+              {(() => {
+                try {
+                  const info = typeof selectedRecord.payment_info === 'string' 
+                    ? JSON.parse(selectedRecord.payment_info) 
+                    : selectedRecord.payment_info;
+                  if (!info) return null;
+                  
+                  return (
+                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
+                       <p className="text-[11px] font-black text-gray-400 mb-2 uppercase tracking-wide">결제 수단별 상세</p>
+                       
+                       {/* 카드 내역 */}
+                       {info.cards && info.cards.length > 0 && info.cards.map((card, i) => (
+                         <div key={i} className="bg-white p-3 rounded-xl border border-gray-200 space-y-1.5 shadow-sm">
+                            <div className="flex justify-between items-center pb-1 border-b border-gray-100">
+                               <span className="text-xs font-black text-blue-600 flex items-center gap-1"><CreditCard size={12}/> 카드-{i+1}</span>
+                               <span className="font-black text-gray-800 text-sm">{fmt(card.amount || 0)}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-y-1 text-[11px] pt-1">
+                               <div className="flex justify-between pr-2 border-r border-gray-100">
+                                 <span className="text-gray-400">단말기:</span> <span className="font-bold">{card.terminalNo || "-"}</span>
+                               </div>
+                               <div className="flex justify-between pl-2">
+                                 <span className="text-gray-400">일련번호:</span> <span className="font-bold">{card.serialNo || "-"}</span>
+                               </div>
+                               <div className="flex justify-between pr-2 border-r border-gray-100">
+                                 <span className="text-gray-400">카드사:</span> <span className="font-bold">{card.issuer || "-"}</span>
+                               </div>
+                               <div className="flex justify-between pl-2">
+                                 <span className="text-gray-400">승인번호:</span> <span className="font-bold">{card.approvalNo || "-"}</span>
+                               </div>
+                            </div>
+                            {card.receiptUrl && (
+                               <div className="pt-2 mt-1 border-t border-gray-50 text-right">
+                                  <button
+                                     onClick={() => window.open(card.receiptUrl, "_blank")}
+                                     className="text-[10px] font-black text-teal-600 hover:underline"
+                                  >
+                                    영수증 보기
+                                  </button>
+                               </div>
+                            )}
+                         </div>
+                       ))}
+
+                       {/* 현금 내역 */}
+                       {info.cash && (
+                          <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-1.5 shadow-sm">
+                             <div className="flex justify-between items-center pb-1 border-b border-gray-100">
+                                <span className="text-xs font-black text-green-600 flex items-center gap-1"><Banknote size={12}/> 현금(입금)</span>
+                                <span className="font-black text-gray-800 text-sm">{fmt(info.cash.amount || 0)}</span>
+                             </div>
+                             <div className="grid grid-cols-1 gap-y-1 text-[11px] pt-1 uppercase">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">입금기관:</span> <span className="font-bold">{info.cash.bank || "-"}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">입금자명:</span> <span className="font-bold">{info.cash.depositor || "-"}</span>
+                                </div>
+                             </div>
+                          </div>
+                       )}
+                    </div>
+                  );
+                } catch { return null; }
+              })()}
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t flex gap-2">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="w-full py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -652,6 +838,8 @@ export default function SalesManagement({ user, onNavigate }) {
     phone: "",
     paymentMethod: "카드",
     needsShipping: false,
+    plannedDelivery: false,
+    buyerType: "구독", // 기본값: 구독
     privacyAgreed: false,
     marketingAgreed: false,
     sellerName: user?.name || "",
@@ -661,13 +849,19 @@ export default function SalesManagement({ user, onNavigate }) {
   const [orderItems, setOrderItems] = useState([
     { id: Date.now(), language: "한글", series: "K2", quantity: 1, price: 0 },
   ]);
-  const [cardInfo, setCardInfo] = useState({
-    number: ["", "", "", ""],
-    cvc: "",
-    issuer: "",
-    approvalNo: "",
-    amount: "",
-  });
+  const [cardInfos, setCardInfos] = useState([
+    { 
+      id: Date.now(), 
+      number: ["", "", "", ""], 
+      issuer: "", 
+      approvalNo: "", 
+      amount: "", 
+      terminalNo: "", 
+      serialNo: "",
+      receiptUrl: "",
+      receiptName: ""
+    },
+  ]);
   const [cashInfo, setCashInfo] = useState({
     bank: "",
     depositor: "",
@@ -685,6 +879,45 @@ export default function SalesManagement({ user, onNavigate }) {
   const [excelPreview, setExcelPreview] = useState(null);
   const [showExcelPreview, setShowExcelPreview] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
+
+  const resetForm = () => {
+    setFormData((prev) => ({
+      customerName: "",
+      age: "",
+      address: "",
+      phone: "",
+      paymentMethod: "카드",
+      needsShipping: false,
+      plannedDelivery: false,
+      buyerType: "구독",
+      privacyAgreed: false,
+      marketingAgreed: false,
+      sellerName: prev.sellerName, // 판매자 이름은 유지
+    }));
+    setOrderItems([
+      { id: Date.now(), language: "한글", series: "K2", quantity: 1, price: getPrice("K2", "한글") },
+    ]);
+    setCardInfos([
+      { 
+        id: Date.now(), 
+        number: ["", "", "", ""], 
+        issuer: "", 
+        approvalNo: "", 
+        amount: "", 
+        terminalNo: "", 
+        serialNo: "",
+        receiptUrl: "",
+        receiptName: ""
+      },
+    ]);
+    setCashInfo({
+      bank: "",
+      depositor: "",
+      amount: "",
+    });
+  };
 
   // 탭 및 권한 상태
   const [activeTab, setActiveTab] = useState("input"); // 'input' | 'stats'
@@ -812,21 +1045,100 @@ export default function SalesManagement({ user, onNavigate }) {
   };
 
   // 카드 정보 관리
-  const handleCardNumberChange = (index, value) => {
+  const addCardInfo = () => {
+    if (cardInfos.length >= 3) {
+      alert("카드는 최대 3개까지만 등록 가능합니다.");
+      return;
+    }
+    setCardInfos([
+      ...cardInfos,
+      { 
+        id: Date.now(), 
+        number: ["", "", "", ""], 
+        issuer: "", 
+        approvalNo: "", 
+        amount: "", 
+        terminalNo: "", 
+        serialNo: "",
+        receiptUrl: "",
+        receiptName: ""
+      },
+    ]);
+  };
+
+  const removeCardInfo = (id) => {
+    if (cardInfos.length > 1) {
+      setCardInfos(cardInfos.filter((c) => c.id !== id));
+    }
+  };
+
+  const handleCardInfoChange = (id, field, value) => {
+    setCardInfos(
+      cardInfos.map((c) => (c.id === id ? { ...c, [field]: value } : c))
+    );
+  };
+
+  const handleCardNumberChange = (id, index, value) => {
     const numbers = value.replace(/[^\d]/g, "").slice(0, 4);
-    const newNumbers = [...cardInfo.number];
-    newNumbers[index] = numbers;
-    setCardInfo({ ...cardInfo, number: newNumbers });
+    setCardInfos(
+      cardInfos.map((c) => {
+        if (c.id === id) {
+          const newNumbers = [...c.number];
+          newNumbers[index] = numbers;
+          return { ...c, number: newNumbers };
+        }
+        return c;
+      })
+    );
 
     // 자동 다음 칸 이동
     if (numbers.length === 4 && index < 3) {
-      const nextInput = document.getElementById(`card-number-${index + 1}`);
+      const nextInput = document.getElementById(`card-number-${id}-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
   };
 
-  const validateCardNumber = () => {
-    const fullNumber = cardInfo.number.join("");
+  const handleReceiptUpload = async (id, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setLoading(true);
+    try {
+      const fileName = `${Date.now()}_${file.name}`;
+      const filePath = `receipts/${fileName}`;
+
+      const { data, error } = await supabase.storage
+        .from('sales-receipts')
+        .upload(filePath, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('sales-receipts')
+        .getPublicUrl(filePath);
+
+      setCardInfos(
+        cardInfos.map((c) => 
+          c.id === id ? { ...c, receiptUrl: publicUrl, receiptName: file.name } : c
+        )
+      );
+    } catch (err) {
+      console.error("Receipt upload error:", err);
+      // Storage 버킷이 없을 경우를 위해 Blob URL로 대체 (호환성 및 보안상 데이터 URL보다 권장됨)
+      const blobUrl = URL.createObjectURL(file);
+      setCardInfos(
+        cardInfos.map((c) => 
+          c.id === id ? { ...c, receiptUrl: blobUrl, receiptName: file.name } : c
+        )
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const validateCardNumber = (id) => {
+    const card = cardInfos.find(c => c.id === id);
+    const fullNumber = card.number.join("");
     if (fullNumber.length !== 16) {
       setCardValidationResult({
         success: false,
@@ -920,8 +1232,15 @@ export default function SalesManagement({ user, onNavigate }) {
           privacy_agreed: true,
           marketing_agreed: false,
           payment_info: JSON.stringify({
-            card: cardAmt > 0 ? { amount: cardAmt, issuer: header["카드사"], approvalNo: header["승인번호"], terminalNo: header["단말기번호"] } : null,
-            cash: cashAmt > 0 ? { amount: cashAmt, bank: header["입금기관"], depositor: header["입금자명"] } : null,
+            cards: cardAmt > 0 ? [{ 
+              amount: cardAmt.toString(), 
+              issuer: header["카드사"], 
+              approvalNo: header["승인번호"], 
+              terminalNo: header["단말기번호"],
+              serialNo: header["일련번호"] || "",
+              number: ["", "", "", ""]
+            }] : [],
+            cash: cashAmt > 0 ? { amount: cashAmt.toString(), bank: header["입금기관"], depositor: header["입금자명"] } : null,
             items: items
           })
         };
@@ -934,7 +1253,7 @@ export default function SalesManagement({ user, onNavigate }) {
       setActiveTab("stats"); // 업로드 성공 후 매출현황 탭으로 이동
     } catch (err) {
       console.error("Batch upload error:", err);
-      alert("일괄 업로드 중 오류가 발생했습니다: " + err.message);
+      alert("일괄 업로드 중 오류가 발생했습니다. 엑셀 파일 형식을 확인 후 다시 시도해 주세요.");
     } finally {
       setLoading(false);
     }
@@ -984,9 +1303,9 @@ export default function SalesManagement({ user, onNavigate }) {
       }
     }
 
-    const cardAmount = parseInt(cardInfo.amount.replace(/[^0-9]/g, "") || 0);
+    const totalPaidCards = cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.replace(/[^0-9]/g, "") || 0), 0);
     const cashAmount = parseInt(cashInfo.amount.replace(/[^0-9]/g, "") || 0);
-    const totalPaid = cardAmount + cashAmount;
+    const totalPaid = totalPaidCards + cashAmount;
     const totalOrder = calculateTotal();
 
     if (totalPaid === 0) {
@@ -1001,25 +1320,34 @@ export default function SalesManagement({ user, onNavigate }) {
       return false;
     }
 
-    if (cardAmount > 0) {
-      if (!cardInfo.issuer) {
-        alert("카드사를 입력해주세요");
-        return false;
-      }
-      if (!cardInfo.approvalNo) {
-        alert("승인번호를 입력해주세요");
-        return false;
+    // 카드 정보 검증 (현금으로 전액 결제한 경우 카드 체크 루틴 건너뜀)
+    if (cashAmount !== totalOrder) {
+      for (let c of cardInfos) {
+        const cAmt = parseInt(c.amount?.replace(/[^0-9]/g, "") || 0);
+        if (cAmt > 0) {
+          if (!c.issuer) {
+            alert("카드사를 입력해주세요");
+            return false;
+          }
+          if (!c.approvalNo) {
+            alert("승인번호를 입력해주세요");
+            return false;
+          }
+        }
       }
     }
 
-    if (cashAmount > 0) {
-      if (!cashInfo.bank) {
-        alert("입금기관명을 입력해주세요");
-        return false;
-      }
-      if (!cashInfo.depositor) {
-        alert("입금자명을 입력해주세요");
-        return false;
+    // 현금 정보 검증 (카드로 전액 결제한 경우 현금 체크 루틴 건너뜀)
+    if (totalPaidCards !== totalOrder) {
+      if (cashAmount > 0) {
+        if (!cashInfo.bank) {
+          alert("입금기관명을 입력해주세요");
+          return false;
+        }
+        if (!cashInfo.depositor) {
+          alert("입금자명을 입력해주세요");
+          return false;
+        }
       }
     }
 
@@ -1049,12 +1377,12 @@ export default function SalesManagement({ user, onNavigate }) {
         .map((item) => `${item.language} ${item.series} ${item.quantity}개`)
         .join(", ");
 
-      const cardAmount = parseInt(cardInfo.amount.replace(/[^0-9]/g, "") || 0);
+      const cardAmountTotal = cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.replace(/[^0-9]/g, "") || 0), 0);
       const cashAmount = parseInt(cashInfo.amount.replace(/[^0-9]/g, "") || 0);
 
       let paymentMethodStr = "";
-      if (cardAmount > 0 && cashAmount > 0) paymentMethodStr = "카드+입금";
-      else if (cardAmount > 0) paymentMethodStr = "카드";
+      if (cardAmountTotal > 0 && cashAmount > 0) paymentMethodStr = "카드+입금";
+      else if (cardAmountTotal > 0) paymentMethodStr = "카드";
       else if (cashAmount > 0) paymentMethodStr = "입금";
 
       const insertData = {
@@ -1072,10 +1400,12 @@ export default function SalesManagement({ user, onNavigate }) {
         order_details: orderSummary,
         age: formData.age ? parseInt(formData.age) : null,
         needs_shipping: formData.needsShipping,
+        planned_delivery: formData.plannedDelivery,
+        buyer_type: formData.buyerType,
         privacy_agreed: formData.privacyAgreed,
         marketing_agreed: formData.marketingAgreed,
         payment_info: JSON.stringify({
-          card: cardAmount > 0 ? cardInfo : null,
+          cards: cardInfos.filter(c => parseInt(c.amount?.replace(/[^0-9]/g, "") || 0) > 0),
           cash: cashAmount > 0 ? cashInfo : null,
           items: orderItems,
         }),
@@ -1089,10 +1419,10 @@ export default function SalesManagement({ user, onNavigate }) {
       if (error) throw error;
 
       alert("저장되었습니다!");
-      onNavigate?.("Dashboard");
+      resetForm();
     } catch (err) {
       console.error("저장 오류:", err);
-      alert("저장 중 오류가 발생했습니다: " + err.message);
+      alert("데이터 저장 중 오류가 발생했습니다. 입력값 확인 후 다시 시도해 주시기 바랍니다.");
     } finally {
       setLoading(false);
     }
@@ -1123,9 +1453,6 @@ export default function SalesManagement({ user, onNavigate }) {
               LAS Book Store
             </h1>
           </div>
-          <p className="text-[13px] font-bold text-gray-400 tracking-[0.3em] uppercase">
-            판매관리 시스템
-          </p>
           <button
             onClick={() => onNavigate?.("Dashboard")}
             className="absolute right-0 top-1/2 -translate-y-1/2 p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-gray-100 transition-colors shadow-sm"
@@ -1212,38 +1539,67 @@ export default function SalesManagement({ user, onNavigate }) {
             </div>
 
             <div className="space-y-2">
-              <div className="border border-teal-200 rounded-xl p-2 bg-teal-50/20 transition-all">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input
-                    type="checkbox"
-                    name="needsShipping"
-                    checked={formData.needsShipping}
-                    onChange={handleChange}
-                    className="w-4 h-4 accent-teal-600 rounded cursor-pointer"
-                  />
-                  <span
-                    className="font-bold text-teal-800"
-                    style={{ fontSize: "15px" }}
-                  >
-                    📦 배송이 필요합니다
-                  </span>
-                </label>
-                <p className="text-[11px] text-teal-600 mt-1 ml-7 font-medium leading-tight">
-                  {formData.needsShipping
-                    ? "✓ 배송 선택: 이름, 연락처, 주소가 필수입니다"
-                    : "배송을 선택하지 않으면 구매자 정보는 선택사항입니다"}
-                </p>
+              <div className="border border-teal-200 rounded-xl p-2 bg-teal-50/20 transition-all flex flex-col gap-2">
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="needsShipping"
+                      checked={formData.needsShipping}
+                      onChange={handleChange}
+                      className="w-4 h-4 accent-teal-600 rounded cursor-pointer"
+                    />
+                    <span
+                      className="font-bold text-teal-800"
+                      style={{ fontSize: "15px" }}
+                    >
+                      배송이 필요합니다
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      name="plannedDelivery"
+                      checked={formData.plannedDelivery}
+                      onChange={handleChange}
+                      className="w-4 h-4 accent-teal-600 rounded cursor-pointer"
+                    />
+                    <span
+                      className="font-bold text-teal-800"
+                      style={{ fontSize: "15px" }}
+                    >
+                      계획배송(일정협의)
+                    </span>
+                  </label>
+                </div>
               </div>
 
               {/* 구매자 기본정보 */}
               <div className="border border-gray-200 rounded-xl p-2.5 shadow-sm">
-                <h3
-                  className="font-bold mb-2 flex items-center gap-2"
-                  style={{ color: "#249689", fontSize: "16px" }}
-                >
-                  <div className="w-1 h-5 bg-teal-500 rounded-full"></div>
-                  구매자 기본정보
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3
+                    className="font-bold flex items-center gap-2"
+                    style={{ color: "#249689", fontSize: "16px" }}
+                  >
+                    <div className="w-1 h-5 bg-teal-500 rounded-full"></div>
+                    구매자 기본정보
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {["구독", "관리", "시리즈구매"].map((type) => (
+                      <label key={type} className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="buyerType"
+                          value={type}
+                          checked={formData.buyerType === type}
+                          onChange={handleChange}
+                          className="w-3 h-3 accent-teal-600"
+                        />
+                        <span className="text-xs font-bold text-gray-600">{type}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block mb-0.5 text-xs font-bold text-gray-700">
@@ -1464,60 +1820,113 @@ export default function SalesManagement({ user, onNavigate }) {
                     <div className="w-1 h-5 bg-teal-500 rounded-full"></div>
                     결제정보
                   </h3>
+                  {cardInfos.length < 3 && (
+                    <button
+                      onClick={addCardInfo}
+                      className="flex items-center gap-1 px-2 py-1 bg-teal-50 text-teal-600 rounded-lg text-[11px] font-bold hover:bg-teal-100 transition-colors border border-teal-100 shadow-sm pr-2.5"
+                    >
+                      <Plus size={13} />
+                      카드 추가
+                    </button>
+                  )}
                 </div>
                 
                 <div className="space-y-3">
                   {/* 카드 결제 영역 */}
-                  <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/50">
-                    <div className="flex items-center justify-between mb-2">
-                       <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
-                        <CreditCard size={16} className="text-teal-600" />
-                        카드결제정보
+                  {cardInfos.map((card, idx) => (
+                    <div key={card.id} className="p-3 border border-gray-100 rounded-xl bg-gray-50/50 relative">
+                      {idx > 0 && (
+                        <button
+                          onClick={() => removeCardInfo(card.id)}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow-sm z-10"
+                        >
+                          <X size={12} strokeWidth={3} />
+                        </button>
+                      )}
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+                          <CreditCard size={16} className="text-teal-600" />
+                          카드결제 {idx + 1}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[11px] font-black text-gray-500">결재금액</label>
+                          <input
+                            type="text"
+                            value={card.amount}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^\d]/g, "");
+                              handleCardInfoChange(card.id, "amount", val ? formatCurrency(val).replace("원", "") : "");
+                            }}
+                            placeholder="0"
+                            className="w-24 px-2 py-1 border border-gray-300 rounded-lg text-right font-black text-teal-700 outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <label className="text-[11px] font-black text-gray-500">결재금액</label>
-                        <input
-                          type="text"
-                          value={cardInfo.amount}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^\d]/g, "");
-                            setCardInfo({ ...cardInfo, amount: val ? formatCurrency(val).replace("원", "") : "" });
-                          }}
-                          placeholder="0"
-                          className="w-28 px-2 py-1 border border-gray-300 rounded-lg text-right font-black text-teal-700 outline-none focus:ring-1 focus:ring-teal-500 bg-white"
-                        />
+
+                      <div className="grid grid-cols-4 gap-1 pt-2 border-t border-gray-200">
+                        <div>
+                          <label className="block mb-0.5 text-[10px] font-bold text-gray-400">단말기번호</label>
+                          <input
+                            type="text"
+                            value={card.terminalNo}
+                            onChange={(e) => handleCardInfoChange(card.id, "terminalNo", e.target.value)}
+                            className="w-full px-1 py-1 border border-gray-200 rounded-lg text-[10px] font-bold text-center outline-none focus:border-teal-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block mb-0.5 text-[10px] font-bold text-gray-400">일련번호</label>
+                          <input
+                            type="text"
+                            value={card.serialNo}
+                            onChange={(e) => handleCardInfoChange(card.id, "serialNo", e.target.value)}
+                            className="w-full px-1 py-1 border border-gray-200 rounded-lg text-[10px] font-bold text-center outline-none focus:border-teal-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block mb-0.5 text-[10px] font-bold text-gray-400">카드사</label>
+                          <input
+                            type="text"
+                            value={card.issuer}
+                            onChange={(e) => handleCardInfoChange(card.id, "issuer", e.target.value)}
+                            className="w-full px-1 py-1 border border-gray-200 rounded-lg text-[10px] font-bold text-center outline-none focus:border-teal-500 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block mb-0.5 text-[10px] font-bold text-gray-400">승인번호</label>
+                          <input
+                            type="text"
+                            value={card.approvalNo}
+                            onChange={(e) => handleCardInfoChange(card.id, "approvalNo", e.target.value)}
+                            className="w-full px-1 py-1 border border-gray-200 rounded-lg text-[10px] font-bold text-center outline-none focus:border-teal-500 bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <label className="flex-1 flex items-center justify-center gap-2 h-8 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-500 cursor-pointer hover:bg-gray-50 transition-colors">
+                          <FileUp size={14} />
+                          {card.receiptName ? card.receiptName : "영수증 첨부"}
+                          <input
+                            type="file"
+                            accept="image/*, application/pdf"
+                            className="hidden"
+                            onChange={(e) => handleReceiptUpload(card.id, e)}
+                          />
+                        </label>
+                        {card.receiptUrl && (
+                          <button
+                            onClick={() => {
+                              setSelectedReceipt({ url: card.receiptUrl, name: card.receiptName });
+                              setShowReceiptModal(true);
+                            }}
+                            className="px-3 h-8 bg-teal-50 text-teal-600 border border-teal-100 rounded-lg text-[11px] font-bold hover:bg-teal-100 transition-colors flex items-center justify-center transition-all shadow-sm active:scale-95"
+                          >
+                            보기
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-gray-200">
-                      <div>
-                        <label className="block mb-0.5 text-xs font-bold text-gray-500">단말기번호</label>
-                        <input
-                          type="text"
-                          value={cardInfo.cvc}
-                          onChange={(e) => setCardInfo({ ...cardInfo, cvc: e.target.value })}
-                          className="w-full px-1.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-center outline-none focus:border-teal-500 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-0.5 text-xs font-bold text-gray-500">카드사</label>
-                        <input
-                          type="text"
-                          value={cardInfo.issuer}
-                          onChange={(e) => setCardInfo({ ...cardInfo, issuer: e.target.value })}
-                          className="w-full px-1.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-center outline-none focus:border-teal-500 bg-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block mb-0.5 text-xs font-bold text-gray-500">승인번호</label>
-                        <input
-                          type="text"
-                          value={cardInfo.approvalNo}
-                          onChange={(e) => setCardInfo({ ...cardInfo, approvalNo: e.target.value })}
-                          className="w-full px-1.5 py-1 border border-gray-200 rounded-lg text-xs font-bold text-center outline-none focus:border-teal-500 bg-white"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  ))}
 
                   {/* 현금 결제 영역 */}
                   <div className="p-3 border border-gray-100 rounded-xl bg-gray-50/50">
@@ -1572,15 +1981,15 @@ export default function SalesManagement({ user, onNavigate }) {
                       <span className="font-bold">결제 합계금액</span>
                       <span className="text-lg font-black text-teal-400">
                         {formatCurrency(
-                          parseInt(cardInfo.amount?.toString().replace(/[^\d]/g, "") || 0) +
+                          cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.toString().replace(/[^\d]/g, "") || 0), 0) +
                           parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)
                         )}
                       </span>
                     </div>
-                    {calculateTotal() !== (parseInt(cardInfo.amount?.toString().replace(/[^\d]/g, "") || 0) + parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)) && (
+                    {calculateTotal() !== (cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.toString().replace(/[^\d]/g, "") || 0), 0) + parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)) && (
                       <div className="pt-1.5 border-t border-white/10 flex justify-between items-center text-[11px] text-red-400 font-bold animate-pulse">
                         <span>미결제 잔액 (불일치)</span>
-                        <span>{formatCurrency(calculateTotal() - (parseInt(cardInfo.amount?.toString().replace(/[^\d]/g, "") || 0) + parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)))}</span>
+                        <span>{formatCurrency(calculateTotal() - (cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.toString().replace(/[^\d]/g, "") || 0), 0) + parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)))}</span>
                       </div>
                     )}
                   </div>
@@ -1758,32 +2167,30 @@ export default function SalesManagement({ user, onNavigate }) {
                 <p className="text-xs font-bold text-teal-600 mb-2">
                   결제 정보
                 </p>
-                {parseInt(cardInfo.amount.replace(/[^0-9]/g, "") || 0) > 0 && (
-                  <div className="border-b border-gray-200 pb-2 mb-2">
+                {cardInfos.filter(c => parseInt(c.amount?.toString().replace(/[^0-9]/g, "") || 0) > 0).map((c, idx) => (
+                  <div key={idx} className="border-b border-gray-200 pb-2 mb-2">
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-500">결제수단</span>
-                      <span className="font-bold">카드</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">카드결제액</span>
+                      <span className="text-gray-500 font-bold">카드 결제 {idx + 1}</span>
                       <span className="font-bold text-teal-600">
-                        {formatCurrency(cardInfo.amount)}
+                        {formatCurrency(c.amount)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">카드사</span>
-                      <span className="font-bold">
-                        {cardInfo.issuer || "-"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">승인번호</span>
-                      <span className="font-bold">
-                        {cardInfo.approvalNo || "-"}
-                      </span>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-1.5 px-2 py-1.5 bg-white rounded-lg">
+                      <div className="flex justify-between">
+                        <span>단말기:</span> <span className="font-bold text-gray-700">{c.terminalNo || "-"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>일련번호:</span> <span className="font-bold text-gray-700">{c.serialNo || "-"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>카드사:</span> <span className="font-bold text-gray-700">{c.issuer || "-"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>승인번호:</span> <span className="font-bold text-gray-700">{c.approvalNo || "-"}</span>
+                      </div>
                     </div>
                   </div>
-                )}
+                ))}
                 {parseInt(cashInfo.amount.replace(/[^0-9]/g, "") || 0) > 0 && (
                   <div>
                     <div className="flex justify-between text-sm mb-1">
@@ -1808,18 +2215,14 @@ export default function SalesManagement({ user, onNavigate }) {
                     </div>
                   </div>
                 )}
-                {parseInt(cardInfo.amount.replace(/[^0-9]/g, "") || 0) > 0 &&
-                  parseInt(cashInfo.amount.replace(/[^0-9]/g, "") || 0) > 0 && (
+                {cardInfos.some(c => parseInt(c.amount?.toString().replace(/[^0-9]/g, "") || 0) > 0) &&
+                  parseInt(cashInfo.amount?.toString().replace(/[^0-9]/g, "") || 0) > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-300 flex justify-between">
                       <span className="font-bold text-gray-700">결제 합계</span>
                       <span className="font-black text-teal-700">
                         {formatCurrency(
-                          parseInt(
-                            cardInfo.amount.replace(/[^0-9]/g, "") || 0,
-                          ) +
-                            parseInt(
-                              cashInfo.amount.replace(/[^0-9]/g, "") || 0,
-                            ),
+                          cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.toString().replace(/[^0-9]/g, "") || 0), 0) +
+                            parseInt(cashInfo.amount.replace(/[^0-9]/g, "") || 0)
                         )}
                       </span>
                     </div>
@@ -1945,6 +2348,59 @@ export default function SalesManagement({ user, onNavigate }) {
                 className="flex-1 py-3 font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/20"
               >
                 적용하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 모달: 영수증 미리보기 */}
+      {showReceiptModal && selectedReceipt && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[150] animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-gray-50 rounded-t-2xl">
+              <div className="flex flex-col">
+                <h2 className="font-bold text-gray-800 text-base">
+                  영수증 미리보기
+                </h2>
+                <p className="text-[11px] text-gray-400 font-medium truncate max-w-[200px]">
+                  {selectedReceipt.name}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedReceipt(null);
+                }}
+                className="p-1.5 bg-gray-100 text-gray-400 rounded-lg hover:text-gray-600 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto bg-gray-200/50 p-4 flex items-center justify-center">
+              {selectedReceipt.url.includes("data:application/pdf") || selectedReceipt.name.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={selectedReceipt.url}
+                  className="w-full h-[60vh] rounded-lg shadow-inner bg-white"
+                  title="PDF 영수증"
+                />
+              ) : (
+                <img
+                  src={selectedReceipt.url}
+                  alt="영수증"
+                  className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
+                />
+              )}
+            </div>
+            <div className="p-4 bg-gray-50 border-t rounded-b-2xl">
+              <button
+                onClick={() => {
+                  setShowReceiptModal(false);
+                  setSelectedReceipt(null);
+                }}
+                className="w-full py-3.5 bg-teal-600 text-white font-black rounded-xl hover:bg-teal-700 shadow-lg shadow-teal-700/10 active:scale-95 transition-all"
+              >
+                닫기
               </button>
             </div>
           </div>

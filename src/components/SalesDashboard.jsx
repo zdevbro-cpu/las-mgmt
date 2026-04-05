@@ -392,22 +392,31 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
 
       {/* 모바일 카드 */}
       <div className="md:hidden space-y-3">
-        {currentItems.map(item => (
-          <div key={item.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 font-black text-sm">{item.customer_name?.[0] || '익'}</div>
-                <div>
-                  <p className="font-black text-gray-800 text-sm">{item.customer_name || '비회원'}</p>
-                  <p className="text-[10px] text-gray-400">{item.phone || '-'}</p>
+        {currentItems.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm active:bg-gray-50 transition-colors"
+          >
+            {/* 1행: 시간, 구매자, 금액 */}
+            <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-gray-50">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
+                   {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <span className="text-xs font-black text-gray-800">{item.customer_name || '비회원'}</span>
+              </div>
+              <span className="text-[13px] font-black text-[#249689]">
+                {fmt(item.deposit_amount)}
+              </span>
+            </div>
+            {/* 2행: 상세내용 */}
+            <div className="flex justify-between items-end">
+              <div className="flex-1 overflow-hidden mr-2">
+                <div className="flex items-center gap-1.5">
+                  <Package size={10} className="text-teal-400 shrink-0" />
+                  <p className="text-[11px] font-bold text-gray-600 truncate">{item.order_details}</p>
                 </div>
               </div>
-              <span className="font-black text-teal-700">{fmt(item.deposit_amount)}</span>
-            </div>
-            <p className="text-[11px] text-gray-500 bg-gray-50 rounded-lg p-2 line-clamp-2">{item.order_details}</p>
-            <div className="flex justify-between mt-2">
-              <span className="text-[10px] text-gray-400">{item.branch_name} / {item.user_name}</span>
-              <span className="text-[10px] text-gray-400">{new Date(item.created_at).toLocaleDateString()}</span>
             </div>
           </div>
         ))}
@@ -415,45 +424,48 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       </div>
 
       {/* PC 테이블 */}
-      <div className="hidden md:block bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100">
+          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
             <tr>
-              {["일시", "담당자(판매자)", "시리즈", "금액"].map((h) => (
-                <th
-                  key={h}
-                  className={`px-5 py-3.5 text-[11px] font-black text-gray-400 uppercase ${h === "금액" ? "text-right" : ""}`}
-                >
-                  {h}
-                </th>
-              ))}
+              <th className="px-5 py-3 text-[11px] font-black text-gray-400">매출 내역</th>
+              <th className="px-5 py-3 text-[11px] font-black text-gray-400 text-right">금액</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {currentItems.map((item) => (
-              <tr
-                key={item.id}
-                className="hover:bg-gray-50/50 transition-colors"
-              >
-                <td className="px-5 py-3.5 text-xs text-gray-500">
-                  {new Date(item.created_at).toLocaleString()}
-                </td>
-                <td className="px-5 py-3.5">
-                  <p className="text-xs font-black text-gray-800">
-                    {item.user_name}
-                  </p>
-                </td>
-                <td className="px-5 py-3.5">
-                  <p className="text-[11px] text-gray-500 font-bold truncate max-w-[150px]">
-                    {item.order_details || "-"}
-                  </p>
-                </td>
-                <td className="px-5 py-3.5 text-right font-black text-teal-700 text-sm">
-                  {fmt(item.deposit_amount)}
+              <tr key={item.id} className="hover:bg-teal-50/30 transition-colors group">
+                <td className="px-5 py-4" colSpan="2">
+                   {/* 1행: 일시 및 구매자 */}
+                   <div className="flex justify-between items-start mb-1.5">
+                     <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded leading-tight">
+                           {new Date(item.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-sm font-black text-gray-800 flex items-center gap-1.5">
+                           <ShoppingCart size={14} className="text-blue-500" />
+                           {item.customer_name || "구매자 미입력"}
+                        </span>
+                     </div>
+                     <div className="text-right">
+                        <span className="text-base font-black text-[#249689]">
+                          {fmt(item.deposit_amount)}
+                        </span>
+                     </div>
+                   </div>
+                   {/* 2행: 주문 상세 */}
+                   <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 mt-1">
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Package size={14} className="text-teal-400 shrink-0" />
+                        <span className="text-xs text-gray-600 font-bold truncate">
+                          {item.order_details || "-"}
+                        </span>
+                      </div>
+                   </div>
                 </td>
               </tr>
             ))}
-            {salesData.length === 0 && !loading && <tr><td colSpan="5" className="px-5 py-16 text-center text-gray-400 text-sm">판매 내역이 없습니다.</td></tr>}
+            {salesData.length === 0 && !loading && <tr><td colSpan="2" className="px-5 py-16 text-center text-gray-400 text-sm font-bold">판매 내역이 없습니다.</td></tr>}
           </tbody>
         </table>
       </div>
