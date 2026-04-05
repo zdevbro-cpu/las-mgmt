@@ -26,6 +26,7 @@ import {
   Package,
   Medal,
   Users,
+  FileText,
 } from "lucide-react";
 
 // SalesDashboard Component
@@ -717,6 +718,14 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                         <span className="inline-flex items-center px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] font-black">계획배송(일정협의)</span>
                      </div>
                   )}
+                  {selectedRecord.notes && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 mb-1">기타</p>
+                      <p className="text-xs font-bold text-gray-700 bg-white p-2 rounded-lg border border-gray-100 leading-relaxed whitespace-pre-wrap">
+                        {selectedRecord.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -843,6 +852,7 @@ export default function SalesManagement({ user, onNavigate }) {
     privacyAgreed: false,
     marketingAgreed: false,
     sellerName: user?.name || "",
+    notes: "",
   });
 
   // 신규 상태 추가
@@ -894,7 +904,8 @@ export default function SalesManagement({ user, onNavigate }) {
       buyerType: "구독",
       privacyAgreed: false,
       marketingAgreed: false,
-      sellerName: prev.sellerName, // 판매자 이름은 유지
+      sellerName: prev.sellerName,
+      notes: "",
     }));
     setOrderItems([
       { id: Date.now(), language: "한글", series: "K2", quantity: 1, price: getPrice("K2", "한글") },
@@ -1078,26 +1089,6 @@ export default function SalesManagement({ user, onNavigate }) {
     );
   };
 
-  const handleCardNumberChange = (id, index, value) => {
-    const numbers = value.replace(/[^\d]/g, "").slice(0, 4);
-    setCardInfos(
-      cardInfos.map((c) => {
-        if (c.id === id) {
-          const newNumbers = [...c.number];
-          newNumbers[index] = numbers;
-          return { ...c, number: newNumbers };
-        }
-        return c;
-      })
-    );
-
-    // 자동 다음 칸 이동
-    if (numbers.length === 4 && index < 3) {
-      const nextInput = document.getElementById(`card-number-${id}-${index + 1}`);
-      if (nextInput) nextInput.focus();
-    }
-  };
-
   const handleReceiptUpload = async (id, e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -1124,7 +1115,6 @@ export default function SalesManagement({ user, onNavigate }) {
       );
     } catch (err) {
       console.error("Receipt upload error:", err);
-      // Storage 버킷이 없을 경우를 위해 Blob URL로 대체 (호환성 및 보안상 데이터 URL보다 권장됨)
       const blobUrl = URL.createObjectURL(file);
       setCardInfos(
         cardInfos.map((c) => 
@@ -1167,7 +1157,6 @@ export default function SalesManagement({ user, onNavigate }) {
       const data = XLSX.utils.sheet_to_json(ws);
 
       if (data && data.length > 0 && data[0]["지점명"]) {
-        setLoading(true);
         handleBatchSalesUpload(data);
       } else {
         setExcelPreview(data);
@@ -1178,8 +1167,8 @@ export default function SalesManagement({ user, onNavigate }) {
   };
 
   const handleBatchSalesUpload = async (rawData) => {
+    setLoading(true);
     try {
-      // 구매자 성함 + 연락처 + 지점명을 키로 하여 데이터 그룹화 (멀티 상품 처리)
       const salesMap = new Map();
 
       rawData.forEach(row => {
@@ -1187,32 +1176,61 @@ export default function SalesManagement({ user, onNavigate }) {
         if (!salesMap.has(key)) {
           salesMap.set(key, {
             header: row,
-            items: []
+            items: [],
+            cards: [],
+            cash: null
           });
         }
+        
+        const entry = salesMap.get(key);
+
         if (row["상품시리즈"] || row["상품언어"]) {
-          salesMap.get(key).items.push({
+          entry.items.push({
             language: row["상품언어"] || "한글",
             series: row["상품시리즈"] || "K2",
             quantity: parseInt(row["상품수량"] || 1),
             price: getPrice(row["상품시리즈"] || "K2", row["상품언어"] || "한글")
           });
         }
+
+        const cardAmt = parseInt(row["카드결제액"]?.toString().replace(/[^\d]/g, "") || 0);
+        if (cardAmt > 0) {
+          entry.cards.push({
+            amount: cardAmt.toString(),
+            issuer: row["카드사"] || "알수없음",
+            approvalNo: row["승인번호"] || "",
+            terminalNo: row["단말기번호"] || "",
+            serialNo: row["일련번호"] || "",
+            number: ["", "", "", ""]
+          });
+        }
+
+        const cashAmt = parseInt(row["현금입금액"]?.toString().replace(/[^\d]/g, "") || 0);
+        if (cashAmt > 0 && !entry.cash) {
+          entry.cash = {
+            amount: cashAmt.toString(),
+            bank: row["입금기관"] || "",
+            depositor: row["입금자명"] || ""
+          };
+        }
       });
 
       const insertPromises = Array.from(salesMap.values()).map(sale => {
-        const { header, items } = sale;
-        const totalAmount = items.reduce((sum, it) => sum + (it.price * it.quantity), 0);
-        const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
-        const orderSummary = items.map(it => `${it.language} ${it.series} ${it.quantity}개`).join(", ");
-
-        const cardAmt = parseInt(header["카드결제액"]?.toString().replace(/[^\d]/g, "") || 0);
-        const cashAmt = parseInt(header["현금입금액"]?.toString().replace(/[^\d]/g, "") || 0);
+        const { header, items, cards, cash } = sale;
         
+        const totalCardAmount = cards.reduce((sum, c) => sum + parseInt(c.amount), 0);
+        const totalCashAmount = cash ? parseInt(cash.amount) : 0;
+        const depositAmount = totalCardAmount + totalCashAmount;
+
+        const totalQty = items.reduce((sum, it) => sum + it.quantity, 0);
+        const orderSummary = items.length > 0 
+          ? items.map(it => `${it.language} ${it.series} ${it.quantity}개`).join(", ")
+          : "상품 정보 없음";
+
         let paymentMethodStr = "";
-        if (cardAmt > 0 && cashAmt > 0) paymentMethodStr = "카드+입금";
-        else if (cardAmt > 0) paymentMethodStr = "카드";
-        else if (cashAmt > 0) paymentMethodStr = "입금";
+        if (cards.length > 0 && cash) paymentMethodStr = "카드+입금";
+        else if (cards.length > 0) paymentMethodStr = cards.length > 1 ? `카드(${cards.length}건)` : "카드";
+        else if (cash) paymentMethodStr = "입금";
 
         return {
           user_id: user?.id || null,
@@ -1225,22 +1243,19 @@ export default function SalesManagement({ user, onNavigate }) {
           address: header["주소"] || null,
           age: header["생년월일"] ? parseInt(header["생년월일"].toString().replace(/[^\d]/g, "")) : null,
           needs_shipping: header["배송여부(Y/N)"] === "Y",
+          planned_delivery: header["계획배송(Y/N)"] === "Y",
+          buyer_type: header["구매자구분(일반/구독/관리/시리즈구매)"] === "구독" ? "subscription" : 
+                      header["구매자구분(일반/구독/관리/시리즈구매)"] === "관리" ? "management" : 
+                      header["구매자구분(일반/구독/관리/시리즈구매)"] === "시리즈구매" ? "series" : "normal",
           payment_method: paymentMethodStr,
           quantity: totalQty,
-          deposit_amount: totalAmount,
+          deposit_amount: depositAmount,
           order_details: orderSummary,
           privacy_agreed: true,
           marketing_agreed: false,
           payment_info: JSON.stringify({
-            cards: cardAmt > 0 ? [{ 
-              amount: cardAmt.toString(), 
-              issuer: header["카드사"], 
-              approvalNo: header["승인번호"], 
-              terminalNo: header["단말기번호"],
-              serialNo: header["일련번호"] || "",
-              number: ["", "", "", ""]
-            }] : [],
-            cash: cashAmt > 0 ? { amount: cashAmt.toString(), bank: header["입금기관"], depositor: header["입금자명"] } : null,
+            cards: cards,
+            cash: cash,
             items: items
           })
         };
@@ -1250,7 +1265,7 @@ export default function SalesManagement({ user, onNavigate }) {
       if (error) throw error;
 
       alert(`${insertPromises.length}건의 매출 데이터가 성공적으로 일괄 업로드되었습니다.`);
-      setActiveTab("stats"); // 업로드 성공 후 매출현황 탭으로 이동
+      setActiveTab("dashboard"); 
     } catch (err) {
       console.error("Batch upload error:", err);
       alert("일괄 업로드 중 오류가 발생했습니다. 엑셀 파일 형식을 확인 후 다시 시도해 주세요.");
@@ -1404,6 +1419,7 @@ export default function SalesManagement({ user, onNavigate }) {
         buyer_type: formData.buyerType,
         privacy_agreed: formData.privacyAgreed,
         marketing_agreed: formData.marketingAgreed,
+        notes: formData.notes || null,
         payment_info: JSON.stringify({
           cards: cardInfos.filter(c => parseInt(c.amount?.replace(/[^0-9]/g, "") || 0) > 0),
           cash: cashAmount > 0 ? cashInfo : null,
@@ -1992,6 +2008,23 @@ export default function SalesManagement({ user, onNavigate }) {
                         <span>{formatCurrency(calculateTotal() - (cardInfos.reduce((sum, c) => sum + parseInt(c.amount?.toString().replace(/[^\d]/g, "") || 0), 0) + parseInt(cashInfo.amount?.toString().replace(/[^\d]/g, "") || 0)))}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* 기타(Notes) 입력창 추가 */}
+                  <div className="bg-white border-2 border-dashed border-gray-100 p-3 rounded-xl mt-3 shadow-sm hover:border-teal-100 transition-colors">
+                    <label 
+                      className="flex items-center gap-1.5 font-bold mb-2"
+                      style={{ color: "#249689", fontSize: "16px" }}
+                    >
+                       <FileText size={17} className="text-teal-400" />
+                       기타
+                    </label>
+                    <textarea
+                       value={formData.notes}
+                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                       placeholder="추가적인 요청사항이나 참고사항을 입력하세요."
+                       className="w-full h-20 px-3 py-2.5 bg-gray-50 border-none rounded-xl text-xs font-bold text-gray-700 placeholder:text-gray-300 outline-none focus:ring-1 focus:ring-teal-500/20 resize-none leading-relaxed transition-all"
+                    />
                   </div>
                 </div>
               </div>

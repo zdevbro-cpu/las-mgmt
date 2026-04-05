@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Edit2, Trash2, Save, X, BarChart3 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import SalesDashboard from './SalesDashboard'
+import { addressToCoordinates } from '../services/geocoding'
 
 export default function AdminBranches({ user, onNavigate }) {
   const [branches, setBranches] = useState([])
@@ -70,17 +71,24 @@ export default function AdminBranches({ user, onNavigate }) {
 
     setLoading(true)
     try {
-      const { error } = await supabase
-        .from('branches')
-        .insert({
-          name: formData.name,
-          address: formData.address,
-          phone: formData.phone,
-          show_on_map: formData.show_on_map,
-          created_by: user.id,
-          is_active: true
-        })
+      const insertData = {
+        name: formData.name,
+        address: formData.address,
+        phone: formData.phone,
+        show_on_map: formData.show_on_map,
+        created_by: user.id,
+        is_active: true
+      }
 
+      if (formData.address.trim()) {
+        const coords = await addressToCoordinates(formData.address, formData.name)
+        if (coords) {
+          insertData.lat = coords.lat
+          insertData.lng = coords.lng
+        }
+      }
+
+      const { error } = await supabase.from('branches').insert(insertData)
       if (error) throw error
 
       alert('지점이 추가되었습니다.')
@@ -102,16 +110,26 @@ export default function AdminBranches({ user, onNavigate }) {
 
     setLoading(true)
     try {
+      const updateData = {
+        name: formData.name,
+        address: formData.address,
+        phone: formData.phone,
+        show_on_map: formData.show_on_map
+      }
+
+      const addressChanged = formData.address.trim() !== (editingBranch.address || '').trim()
+      if (formData.address.trim() && addressChanged) {
+        const coords = await addressToCoordinates(formData.address, formData.name)
+        if (coords) {
+          updateData.lat = coords.lat
+          updateData.lng = coords.lng
+        }
+      }
+
       const { error } = await supabase
         .from('branches')
-        .update({
-          name: formData.name,
-          address: formData.address,
-          phone: formData.phone,
-          show_on_map: formData.show_on_map
-        })
+        .update(updateData)
         .eq('id', editingBranch.id)
-
       if (error) throw error
 
       alert('지점 정보가 수정되었습니다.')

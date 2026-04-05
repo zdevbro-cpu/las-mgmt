@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { ArrowLeft, Plus, Edit, Trash2, Building2, Download } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { addressToCoordinates } from '../services/geocoding'
 
 export default function SystemAdminBranches({ user, onNavigate }) {
   const [branches, setBranches] = useState([])
@@ -97,8 +98,6 @@ export default function SystemAdminBranches({ user, onNavigate }) {
     setLoading(true)
     try {
       if (modalMode === 'create') {
-        console.log('Creating branch:', formData)
-
         const insertData = {
           name: formData.name.trim(),
           manager_name: formData.manager_name.trim() || null,
@@ -108,21 +107,19 @@ export default function SystemAdminBranches({ user, onNavigate }) {
         if (formData.address.trim()) insertData.address = formData.address.trim()
         if (formData.phone.trim()) insertData.phone = formData.phone.trim()
 
-        const { data, error } = await supabase
-          .from('branches')
-          .insert([insertData])
-          .select()
-
-        if (error) {
-          console.error('Insert error:', error)
-          throw error
+        if (formData.address.trim()) {
+          const coords = await addressToCoordinates(formData.address, formData.name)
+          if (coords) {
+            insertData.lat = coords.lat
+            insertData.lng = coords.lng
+          }
         }
 
-        console.log('Branch created successfully:', data)
+        const { error } = await supabase.from('branches').insert([insertData]).select()
+        if (error) throw error
+
         alert('지점이 생성되었습니다!')
       } else {
-        console.log('Updating branch:', formData)
-
         const updateData = {
           name: formData.name.trim(),
           manager_name: formData.manager_name.trim() || null,
@@ -132,18 +129,22 @@ export default function SystemAdminBranches({ user, onNavigate }) {
         if (formData.address.trim()) updateData.address = formData.address.trim()
         if (formData.phone.trim()) updateData.phone = formData.phone.trim()
 
-        const { data, error } = await supabase
+        const addressChanged = formData.address.trim() !== (selectedBranch.address || '').trim()
+        if (formData.address.trim() && addressChanged) {
+          const coords = await addressToCoordinates(formData.address, formData.name)
+          if (coords) {
+            updateData.lat = coords.lat
+            updateData.lng = coords.lng
+          }
+        }
+
+        const { error } = await supabase
           .from('branches')
           .update(updateData)
           .eq('id', selectedBranch.id)
           .select()
+        if (error) throw error
 
-        if (error) {
-          console.error('Update error:', error)
-          throw error
-        }
-
-        console.log('Branch updated successfully:', data)
         alert('지점 정보가 수정되었습니다!')
       }
 
