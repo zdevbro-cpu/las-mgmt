@@ -18,7 +18,7 @@ export default function Login({ onNavigate, onLogin }) {
       })
 
       if (authError) {
-        alert('이메일 또는 비밀번호가 올바르지 않습니다.')
+        alert('이메일 또는 비밀번호가 올바르지 않습니다.\n\n오류: ' + authError.message)
         return
       }
 
@@ -30,7 +30,7 @@ export default function Login({ onNavigate, onLogin }) {
         .single()
 
       if (userError || !userData) {
-        alert('사용자 정보를 불러올 수 없습니다.')
+        alert('사용자 정보를 불러올 수 없습니다.\n\n오류: ' + (userError?.message || 'auth_uid 매칭 실패') + '\nUID: ' + authUser.id)
         return
       }
 

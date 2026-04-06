@@ -5,11 +5,16 @@ import {
   ChevronLeft, RotateCcw, Search, Download, X,
   Trophy, Award, Medal, Store, User,
   BarChart3, Users, Calendar, TrendingUp, Package,
-  Edit2, Trash2, Check, Save
+  Edit2, Trash2, Check, Save, FileText
 } from 'lucide-react'
+import { generateDailySalesReport } from '../utils/excelReportUtils'
 
-const formatNumber = (n) => new Intl.NumberFormat('ko-KR').format(n ?? 0)
-const formatWon = (n) => new Intl.NumberFormat('ko-KR').format(n ?? 0) + '원'
+const formatNumber = (n) => {
+  if (n === null || n === undefined || n === "") return "0";
+  const num = typeof n === 'string' ? parseFloat(n.replace(/[^0-9.-]/g, "")) : n;
+  return new Intl.NumberFormat('ko-KR').format(isNaN(num) ? 0 : num);
+}
+const formatWon = (n) => formatNumber(n) + '원'
 
 const toLocalStr = (d) => {
   const y = d.getFullYear()
@@ -507,10 +512,21 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
             검색 결과 <span className="font-bold text-gray-800">{formatNumber(salesData.length)}</span>건
             &nbsp;|&nbsp; 합계 <span className="font-bold text-teal-700">{formatWon(totalAmt)}</span>
           </p>
-          <button onClick={downloadExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
-            <Download className="w-4 h-4" /> 엑셀 다운로드
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => {
+                const targetDate = pending.startDate || todayStr;
+                generateDailySalesReport(salesData, targetDate);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+            >
+              <FileText className="w-4 h-4" /> 매출보고서
+            </button>
+            <button onClick={downloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm">
+              <Download className="w-4 h-4" /> 엑셀 다운로드
+            </button>
+          </div>
         </div>
 
         {/* 목록 테이블 */}

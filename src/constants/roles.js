@@ -32,14 +32,19 @@ export const isContractWorker = (user) => {
 
 export const isOwner = (user) => {
   if (!user) return false
-  return user.user_type === USER_TYPES.OWNER
+  const role = user.user_type || user.userType;
+  return role === USER_TYPES.OWNER
 }
 
 export const canAccessManagement = (user) => {
   if (!user) return false
-  return user.user_type === USER_TYPES.STORE_MANAGER || 
-         user.user_type === USER_TYPES.BRANCH_MANAGER ||
-         user.user_type === USER_TYPES.SYSTEM_ADMIN
+  const role = user.user_type || user.userType;
+  // 문자열 공백 제거 및 대소문자 무관하게 체크 (방항 방어)
+  const normalizedRole = String(role || '').trim();
+  return normalizedRole === USER_TYPES.STORE_MANAGER || 
+         normalizedRole === USER_TYPES.BRANCH_MANAGER ||
+         normalizedRole === USER_TYPES.SYSTEM_ADMIN ||
+         normalizedRole === '점장' // 명시적 점장 권한 추가
 }
 
 export const isBranchManager = (user) => {

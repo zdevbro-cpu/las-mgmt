@@ -172,8 +172,8 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
               </>
             )}
 
-            {/* 교육관리 버튼 - 점주, 점장, 지점관리자, 시스템관리자 */}
-            {(isOwner(user) || canAccessManagement(user)) && (
+            {/* 교육관리 버튼 - 점주, 점장, 지점관리자, 시스템관리자 (또는 개발자 계정) */}
+            {(isOwner(user) || canAccessManagement(user) || user?.id === 'dev-user' || user?.user_type === '점장' || user?.userType === '점장') && (
               <button
                 onClick={() => onNavigate('EducationApproval')}
                 className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
