@@ -5,7 +5,6 @@ import * as XLSX from "xlsx";
 import {
   Plus,
   Trash2,
-  Eye,
   CheckCircle2,
   AlertCircle,
   ShoppingCart,
@@ -29,8 +28,6 @@ import {
   Medal,
   Users,
   FileText,
-  ClipboardCheck,
-  AlertTriangle,
 } from "lucide-react";
 
 // SalesDashboard Component
@@ -59,212 +56,11 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelTargetIdx, setCancelTargetIdx] = useState(0);
-  const [cancelForm, setCancelForm] = useState({ cardNo: "", cardHolder: "", reason: "" });
-  const [cancelOcrLoading, setCancelOcrLoading] = useState(false);
-  const [cancelOcrPreview, setCancelOcrPreview] = useState(null);
-  const [cancelOcrResult, setCancelOcrResult] = useState(null);
-  const [cancelOcrError, setCancelOcrError] = useState("");
-  const [cancelMismatch, setCancelMismatch] = useState([]); // 불일치 항목 목록
-  const cancelReceiptInputRef = useRef(null);
   const itemsPerPage = 20;
 
   const handleRowClick = (record) => {
     setSelectedRecord(record);
     setShowDetailModal(true);
-  };
-
-  const openCancelModal = (cardIdx) => {
-    setCancelTargetIdx(cardIdx);
-    setCancelForm({ cardNo: "", cardHolder: "", reason: "" });
-    setCancelOcrPreview(null);
-    setCancelOcrResult(null);
-    setCancelOcrError("");
-    setShowCancelModal(true);
-  };
-
-  const handleCancelReceiptOcr = (file) => {
-    if (!file) return;
-    setCancelOcrLoading(true);
-    setCancelOcrError("");
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(",")[1];
-        setCancelOcrPreview(reader.result);
-        const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const prompt = `아래는 한국 신용카드 단말기에서 출력된 취소 영수증 이미지입니다.
-다음 항목을 찾아 JSON으로만 응답해줘. 설명 없이 JSON만 출력.
-
-- approvalNo: 승인번호 (숫자, "승인번호" 또는 "승인No" 항목의 값)
-- amount: 결제(취소)금액 (절대값, 숫자만, 콤마·원·마이너스 제외)
-- cardNo: 카드번호 (예: 5425-86-****-5779)
-- issuer: 카드사명 (예: NH카드, 신한카드, KB국민카드)
-- cardHolder: 카드주명 (카드 소지자 이름, 없으면 빈 문자열)
-- serialNo: 일련번호 (숫자)
-- terminalNo: 단말기번호 (숫자)
-- approvalDate: 원거래일자 또는 거래일자 (YYYY-MM-DD 형식, 없으면 빈 문자열)
-
-없는 항목은 빈 문자열. 예시:
-{"approvalNo":"174541873","amount":"2000000","cardNo":"5425-86-****-5779","issuer":"NH카드","cardHolder":"","serialNo":"76250661","terminalNo":"3295581001","approvalDate":"2026-03-03"}`;
-        const geminiResult = await model.generateContent([
-          prompt,
-          { inlineData: { data: base64Data, mimeType: file.type || "image/jpeg" } },
-        ]);
-        const responseText = geminiResult.response.text();
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
-        if (result) {
-          setCancelOcrResult(result);
-          setCancelForm((prev) => ({
-            ...prev,
-            cardNo: result.cardNo || prev.cardNo,
-            cardHolder: result.cardHolder || prev.cardHolder,
-          }));
-        } else {
-          setCancelOcrError("영수증에서 정보를 추출하지 못했습니다. 직접 입력해 주세요.");
-        }
-      } catch (err) {
-        setCancelOcrError("OCR 오류: " + (err?.message || "이미지를 다시 시도해 주세요."));
-      } finally {
-        setCancelOcrLoading(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDeleteRecord = async () => {
-    if (!selectedRecord) return;
-
-    // OCR 결과가 없으면 취소표 촬영 요청
-    if (!cancelOcrResult) {
-      setCancelMismatch([{ label: "안내", stored: "", ocr: "취소표를 먼저 촬영하세요." }]);
-      return;
-    }
-
-    const info = typeof selectedRecord.payment_info === "string"
-      ? JSON.parse(selectedRecord.payment_info)
-      : selectedRecord.payment_info || {};
-    const storedCard = info?.cards?.[cancelTargetIdx] || {};
-    const ocr = cancelOcrResult;
-
-    // 정합성 비교
-    const mismatches = [];
-
-    const normalizeNo = (v) => String(v || "").replace(/\s|-/g, "");
-    const normalizeAmt = (v) => Number(String(v || "0").replace(/[^0-9]/g, ""));
-
-    if (ocr.approvalNo && normalizeNo(ocr.approvalNo) !== normalizeNo(storedCard.approvalNo)) {
-      mismatches.push({
-        label: "승인번호",
-        stored: storedCard.approvalNo || "-",
-        ocr: ocr.approvalNo,
-      });
-    }
-    if (ocr.amount && normalizeAmt(ocr.amount) !== normalizeAmt(storedCard.amount || selectedRecord.deposit_amount)) {
-      mismatches.push({
-        label: "결제금액",
-        stored: Number(storedCard.amount || selectedRecord.deposit_amount || 0).toLocaleString("ko-KR") + "원",
-        ocr: Number(ocr.amount).toLocaleString("ko-KR") + "원",
-      });
-    }
-    if (ocr.issuer && storedCard.issuer && ocr.issuer !== storedCard.issuer) {
-      mismatches.push({
-        label: "카드사",
-        stored: storedCard.issuer,
-        ocr: ocr.issuer,
-      });
-    }
-
-    if (mismatches.length > 0) {
-      setCancelMismatch(mismatches);
-      return;
-    }
-
-    // 모두 일치 → 삭제
-    try {
-      const { error } = await supabase
-        .from("sales")
-        .delete()
-        .eq("id", selectedRecord.id);
-      if (error) throw error;
-      setShowCancelModal(false);
-      setShowDetailModal(false);
-      setSelectedRecord(null);
-      fetchData();
-    } catch (err) {
-      alert("삭제 오류: " + (err?.message || "다시 시도해 주세요."));
-    }
-  };
-
-  const handleCancelSaveExcel = async () => {
-    if (!selectedRecord) return;
-    try {
-      const ExcelJS = (await import("exceljs")).default;
-
-      const info = typeof selectedRecord.payment_info === "string"
-        ? JSON.parse(selectedRecord.payment_info)
-        : selectedRecord.payment_info || {};
-      const storedCard = info?.cards?.[cancelTargetIdx] || {};
-      const ocr = cancelOcrResult || {};
-      const today = new Date();
-      const todayStr = today.toLocaleDateString("ko-KR");
-
-      // OCR 우선, 없으면 저장된 레코드 값
-      const 접수일자 = todayStr;
-      const 사업부명 = selectedRecord.branch_name || "";
-      const 요청자명 = selectedRecord.seller_name || selectedRecord.user_name || "";
-      const 신청일자 = todayStr;
-      const 전화번호 = selectedRecord.phone || "";
-      const 고객명 = selectedRecord.customer_name || "";
-      const 카드승인일 = ocr.approvalDate || new Date(selectedRecord.created_at).toLocaleDateString("ko-KR");
-      const 결제금액 = ocr.amount
-        ? Number(ocr.amount)
-        : Number(String(storedCard.amount || selectedRecord.deposit_amount || 0).replace(/[^0-9]/g, ""));
-      const 승인번호 = ocr.approvalNo || storedCard.approvalNo || "";
-      const 카드번호 = ocr.cardNo || "";
-      const 카드사명 = ocr.issuer || storedCard.issuer || "";
-      const 카드주명 = ocr.cardHolder || "";
-      const 취소사유 = cancelForm.reason || "";
-
-      // 템플릿 로드 (포맷 유지)
-      const res = await fetch("/카드매출 취소신청서.xlsx");
-      const arrayBuffer = await res.arrayBuffer();
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(arrayBuffer);
-      const ws = workbook.worksheets[0];
-
-      // 각 셀에 값 직접 입력 (양식 구조에 맞게)
-      ws.getCell("E2").value = 접수일자;   // 접수일자
-      ws.getCell("C3").value = 사업부명;   // 사업부명
-      ws.getCell("E3").value = 요청자명;   // 요청자명
-      ws.getCell("C4").value = 신청일자;   // 신청일자
-      ws.getCell("E4").value = 전화번호;   // 전화번호
-      ws.getCell("C5").value = 고객명;     // 고객명
-      ws.getCell("E5").value = 카드승인일; // 카드승인일
-      ws.getCell("C6").value = 결제금액;   // 결제금액
-      ws.getCell("E6").value = 승인번호;   // 승인번호
-      ws.getCell("C7").value = 카드번호;   // 카드번호 (C7:E7 병합)
-      ws.getCell("C8").value = 카드사명;   // 카드사명
-      ws.getCell("E8").value = 카드주명;   // 카드주명
-      ws.getCell("B9").value = 취소사유;   // 취소사유 (B9:E9 병합)
-
-      // 다운로드
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `카드매출취소신청서_${고객명 || "고객"}_${today.toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert("파일 생성 오류: " + (err?.message || "다시 시도해 주세요."));
-    }
   };
 
   useEffect(() => {
@@ -429,39 +225,17 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   );
 
   const handleDownloadExcel = () => {
-    const exportData = salesData.map((s) => {
-      let cardInfo = '', cashInfo = '';
-      try {
-        const info = typeof s.payment_info === 'string' ? JSON.parse(s.payment_info) : s.payment_info;
-        
-        // 다중 카드 처리 (최대 3개)
-        if (info?.cards && Array.isArray(info.cards)) {
-          cardInfo = info.cards.slice(0, 3).map(c => 
-            `[카드] ${new Intl.NumberFormat('ko-KR').format(String(c.amount || '0').replace(/[^0-9]/g, ''))}원 (${c.issuer || '-'})`
-          ).join('\n');
-        } else if (info?.card) {
-          cardInfo = `[카드] ${new Intl.NumberFormat('ko-KR').format(String(info.card.amount || '0').replace(/[^0-9]/g, ''))}원 (${info.card.issuer || '-'})`;
-        }
-        
-        if (info?.cash) {
-          cashInfo = `[현금] ${new Intl.NumberFormat('ko-KR').format(String(info.cash.amount || '0').replace(/[^0-9]/g, ''))}원 (${info.cash.bank || '-'})`;
-        }
-      } catch (e) {}
-
-      return {
-        일시: new Date(s.created_at).toLocaleString(),
-        지점: s.branch_name,
-        담당자: s.user_name,
-        구매자: s.customer_name,
-        연락처: s.phone,
-        결제수단: s.payment_method,
-        카드상세: cardInfo,
-        현금상세: cashInfo,
-        수량: s.quantity,
-        금액: s.deposit_amount,
-        상세내용: s.order_details,
-      };
-    });
+    const exportData = salesData.map((s) => ({
+      일시: new Date(s.created_at).toLocaleString(),
+      지점: s.branch_name,
+      담당자: s.user_name,
+      구매자: s.customer_name,
+      연락처: s.phone,
+      결제수단: s.payment_method,
+      수량: s.quantity,
+      금액: s.deposit_amount,
+      상세내용: s.order_details,
+    }));
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "매출내역");
@@ -1058,40 +832,9 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
             </div>
 
             <div className="p-4 bg-gray-50 border-t flex gap-2">
-              {(() => {
-                try {
-                  const info = typeof selectedRecord.payment_info === "string"
-                    ? JSON.parse(selectedRecord.payment_info)
-                    : selectedRecord.payment_info;
-                  const hasCards = info?.cards?.length > 0;
-                  const isCancelled = info?.cancelled;
-                  if (hasCards && !isCancelled) {
-                    return (
-                      <button
-                        onClick={() => openCancelModal(0)}
-                        className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
-                      >
-                        <RotateCcw size={15} />
-                        카드취소
-                      </button>
-                    );
-                  }
-                  if (isCancelled) {
-                    return (
-                      <button
-                        onClick={() => openCancelModal(0)}
-                        className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
-                      >
-                        <RotateCcw size={15} />
-                        결제취소
-                      </button>
-                    );
-                  }
-                } catch { return null; }
-              })()}
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="flex-1 py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
+                className="w-full py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
               >
                 닫기
               </button>
@@ -1099,215 +842,8 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
           </div>
         </div>
       )}
-
-      {/* 카드취소 모달 */}
-      {showCancelModal && selectedRecord && (() => {
-        const info = (() => {
-          try {
-            return typeof selectedRecord.payment_info === "string"
-              ? JSON.parse(selectedRecord.payment_info)
-              : selectedRecord.payment_info || {};
-          } catch { return {}; }
-        })();
-        const card = info?.cards?.[cancelTargetIdx] || {};
-        const fmtAmt = (n) => {
-          const num = Number(String(n || "0").replace(/[^0-9]/g, ""));
-          return isNaN(num) ? "-" : num.toLocaleString("ko-KR") + "원";
-        };
-
-        return (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[300]">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm flex flex-col overflow-hidden">
-
-              {/* 헤더 */}
-              <div className="px-5 py-4 flex items-center justify-between bg-red-500">
-                <div>
-                  <h2 className="font-black text-white text-base">카드매출취소</h2>
-                  <p className="text-[10px] text-white/80 font-bold mt-0.5">취소표를 촬영하면 정보가 자동으로 입력됩니다</p>
-                </div>
-                <button onClick={() => setShowCancelModal(false)} className="p-2 text-white/70 hover:text-white">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="overflow-y-auto max-h-[70vh] p-5 space-y-4">
-
-                {/* 저장된 카드 정보 (참조) */}
-                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
-                  <p className="text-[11px] font-black text-blue-400 mb-2 uppercase tracking-wide">저장된 카드 정보 (참조)</p>
-                  <div className="space-y-1.5 text-sm">
-                    {[
-                      ["카드사", card.issuer],
-                      ["결제금액", fmtAmt(card.amount)],
-                      ["단말기", card.terminalNo],
-                      ["일련번호", card.serialNo],
-                    ].map(([label, val]) => (
-                      <div key={label} className="flex justify-between">
-                        <span className="text-gray-500 font-bold">{label}</span>
-                        <span className="font-black">{val || "-"}</span>
-                      </div>
-                    ))}
-                    <div className="flex justify-between">
-                      <span className="text-gray-500 font-bold">승인번호</span>
-                      <span className="font-black text-red-600">
-                        {'*'.repeat(Math.max(0, (card.approvalNo || "").length - 3)) + (card.approvalNo || "").slice(-3)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 취소 영수증 OCR */}
-                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide">취소표 이미지 인식 (선택)</p>
-                    {cancelOcrLoading && (
-                      <span className="text-[10px] font-black text-orange-500 animate-pulse">분석 중...</span>
-                    )}
-                  </div>
-                  <input
-                    ref={cancelReceiptInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                    onChange={(e) => handleCancelReceiptOcr(e.target.files?.[0])}
-                  />
-                  <button
-                    onClick={() => cancelReceiptInputRef.current?.click()}
-                    disabled={cancelOcrLoading}
-                    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-black text-gray-500 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {cancelOcrLoading ? (
-                      <><RotateCcw size={15} className="animate-spin" /> AI가 취소표를 읽는 중...</>
-                    ) : (
-                      <><FileUp size={15} /> 단말기 취소표 촬영 / 업로드</>
-                    )}
-                  </button>
-                  {cancelOcrPreview && (
-                    <div className="relative">
-                      <img src={cancelOcrPreview} alt="취소표" className="w-full rounded-xl border border-gray-200 max-h-40 object-contain bg-gray-100" />
-                      <button
-                        onClick={() => { setCancelOcrPreview(null); setCancelOcrResult(null); setCancelOcrError(""); }}
-                        className="absolute top-1.5 right-1.5 bg-white/80 rounded-full p-0.5 text-gray-500 hover:text-red-500"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  )}
-                  {cancelOcrError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs font-black text-red-600">
-                      {cancelOcrError}
-                    </div>
-                  )}
-                  {cancelOcrResult && (
-                    <div className="bg-orange-50 rounded-xl border border-orange-200 p-3 space-y-1.5">
-                      <p className="text-[11px] font-black text-orange-500 mb-2 flex items-center gap-1">
-                        <ClipboardCheck size={12} /> 취소표에서 추출된 정보
-                      </p>
-                      {[
-                        ["카드사", cancelOcrResult.issuer],
-                        ["카드번호", cancelOcrResult.cardNo],
-                        ["카드주명", cancelOcrResult.cardHolder],
-                        ["승인번호", cancelOcrResult.approvalNo],
-                        ["취소금액", cancelOcrResult.amount ? Number(cancelOcrResult.amount).toLocaleString("ko-KR") + "원" : ""],
-                        ["원거래일자", cancelOcrResult.approvalDate],
-                        ["일련번호", cancelOcrResult.serialNo],
-                        ["단말기번호", cancelOcrResult.terminalNo],
-                      ].filter(([, v]) => v).map(([label, val]) => (
-                        <div key={label} className="flex justify-between text-xs">
-                          <span className="text-gray-500 font-bold">{label}</span>
-                          <span className="font-black text-gray-800">{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* 취소 사유 */}
-                <div className="bg-white rounded-2xl p-4 border border-gray-200 space-y-2">
-                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide">취소 사유</p>
-                  <textarea
-                    value={cancelForm.reason}
-                    onChange={(e) => setCancelForm(p => ({ ...p, reason: e.target.value }))}
-                    placeholder="취소 사유를 입력하세요 (선택)"
-                    rows={2}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
-                  />
-                </div>
-              </div>
-
-              {/* 정합성 불일치 메시지 */}
-              {cancelMismatch.length > 0 && (
-                <div className="mx-4 mb-2 bg-red-50 border border-red-200 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black text-red-600 flex items-center gap-1.5">
-                      <AlertTriangle size={13} />
-                      {cancelMismatch[0]?.label === "안내" ? "안내" : "정보 불일치 — 매출취소 불가"}
-                    </p>
-                    <button onClick={() => setCancelMismatch([])} className="text-red-400 hover:text-red-600">
-                      <X size={14} />
-                    </button>
-                  </div>
-                  {cancelMismatch[0]?.label === "안내" ? (
-                    <p className="text-xs font-bold text-red-700">{cancelMismatch[0].ocr}</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {cancelMismatch.map(({ label, stored, ocr }) => (
-                        <div key={label} className="text-xs grid grid-cols-3 gap-1 bg-white rounded-xl p-2 border border-red-100">
-                          <span className="font-black text-gray-500">{label}</span>
-                          <div className="text-center">
-                            <p className="text-[10px] text-gray-400 font-bold">저장</p>
-                            <p className="font-black text-gray-700">{stored}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] text-orange-400 font-bold">취소표</p>
-                            <p className="font-black text-orange-600">{ocr}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 하단 버튼 */}
-              <div className="p-4 bg-gray-50 border-t flex gap-2">
-                <button
-                  onClick={handleDeleteRecord}
-                  className="flex-1 py-3 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Trash2 size={15} />
-                  매출취소
-                </button>
-                <button
-                  onClick={handleCancelSaveExcel}
-                  disabled={cancelOcrLoading}
-                  className="flex-1 py-3 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  <Download size={15} />
-                  취소신청서작성
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
-};
-
-const getKSTDateStr = (date = new Date()) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-};
-
-const getKSTTimeStr = (date = new Date()) => {
-  const h = String(date.getHours()).padStart(2, '0');
-  const min = String(date.getMinutes()).padStart(2, '0');
-  const s = String(date.getSeconds()).padStart(2, '0');
-  return `${h}:${min}:${s}`;
 };
 
 export default function SalesManagement({ user, onNavigate }) {
@@ -1324,7 +860,7 @@ export default function SalesManagement({ user, onNavigate }) {
     marketingAgreed: false,
     sellerName: user?.name || "",
     notes: "",
-    paymentDate: getKSTDateStr(),
+    paymentDate: new Date().toISOString().split('T')[0],
   });
 
   // 신규 상태 추가
@@ -1334,7 +870,7 @@ export default function SalesManagement({ user, onNavigate }) {
   const [cardInfos, setCardInfos] = useState([
     { 
       id: Date.now(), 
-      number: "", 
+      number: ["", "", "", ""], 
       issuer: "", 
       approvalNo: "", 
       amount: "", 
@@ -1366,11 +902,6 @@ export default function SalesManagement({ user, onNavigate }) {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [ocrLoadingId, setOcrLoadingId] = useState(null);
-  const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "info" });
-  
-  const showAlert = (title, message, type = "info") => {
-    setAlertModal({ show: true, title, message, type });
-  };
 
   const resetForm = () => {
     setFormData((prev) => ({
@@ -1386,8 +917,7 @@ export default function SalesManagement({ user, onNavigate }) {
       marketingAgreed: false,
       sellerName: prev.sellerName,
       notes: "",
-      notes: "",
-      paymentDate: getKSTDateStr(),
+      paymentDate: new Date().toISOString().split('T')[0],
     }));
     setOrderItems([
       { id: Date.now(), language: "한글", series: "K2", quantity: 1, price: getPrice("K2", "한글") },
@@ -1395,7 +925,7 @@ export default function SalesManagement({ user, onNavigate }) {
     setCardInfos([
       { 
         id: Date.now(), 
-        number: "", 
+        number: ["", "", "", ""], 
         issuer: "", 
         approvalNo: "", 
         amount: "", 
@@ -1547,7 +1077,7 @@ export default function SalesManagement({ user, onNavigate }) {
       ...cardInfos,
       { 
         id: Date.now(), 
-        number: "", 
+        number: ["", "", "", ""], 
         issuer: "", 
         approvalNo: "", 
         amount: "", 
@@ -1584,17 +1114,15 @@ export default function SalesManagement({ user, onNavigate }) {
           const base64Data = reader.result.split(',')[1];
           const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
           const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-          const prompt = `아래는 한국 신용카드 결제 영수증 이미지입니다. 다음 6가지 핵심 항목을 정확히 찾아서 JSON으로만 응답해줘. 설명이나 주석 없이 오직 JSON만 출력해.
+          const prompt = `아래는 한국 신용카드 결제 영수증 이미지입니다. 다음 5가지 항목을 찾아서 JSON으로만 응답해줘. 설명 없이 JSON만 출력.
 
-1. amount: 결제금액 (숫자만, 콤마 제외. 예: "1600000")
-2. issuer: 카드사명 (영수증에 적힌 카드 브랜드명. 예: "KB국민카드", "신한카드", "현대카드", "삼성카드")
-3. approvalNo: 승인번호 (영수증에 적힌 8자리 전후의 숫자. 예: "30014532")
-4. terminalNo: 단말기번호 (영수증의 "단말기번호", "TID", 혹은 "CATID" 항목 옆의 숫자)
-5. serialNo: 일련번호 (영수증의 "일련번호", "S/N" 항목 옆의 숫자)
-6. cardNumber: 카드번호 (**필수 추출 필드**) - "카드번호", "NO.", "번호" 옆에 위치. 1234-****-****-5678 처럼 마스킹된 부분까지 영수증에 보이는 그대로 텍스트 전체를 정확히 추출.
+- amount: 결제금액(숫자만, 콤마 제외)
+- issuer: 카드사명(예: KB국민카드, 신한카드, 현대카드)
+- approvalNo: 승인번호(숫자)
+- terminalNo: 단말기번호 — 영수증에 "단말기번호"라고 적힌 항목의 값(숫자)
+- serialNo: 일련번호 — 영수증에 "일련번호"라고 적힌 항목의 값(숫자)
 
-항목을 찾을 수 없는 경우 빈 문자열("")로 응답해.
-출력 예시: {"amount":"1600000","issuer":"KB국민카드","approvalNo":"30014532","terminalNo":"3295581001","serialNo":"0558","cardNumber":"5570-42**-****-7047"}`;
+없는 항목은 빈 문자열. 예시: {"amount":"1600000","issuer":"KB국민카드","approvalNo":"30014532","terminalNo":"3295581001","serialNo":"0558"}`;
           const geminiResult = await model.generateContent([
             prompt,
             { inlineData: { data: base64Data, mimeType: file.type || 'image/jpeg' } }
@@ -1606,18 +1134,17 @@ export default function SalesManagement({ user, onNavigate }) {
             setCardInfos(prev => prev.map(c => 
               c.id === id ? { 
                 ...c, 
-                amount: result.amount ? String(result.amount).replace(/[^\d]/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",") : c.amount,
+                amount: result.amount ? formatCurrency(result.amount).replace('원', '') : c.amount,
                 issuer: result.issuer || c.issuer,
-                approvalNo: String(result.approvalNo || "").replace(/[^\d]/g, "") || c.approvalNo,
-                terminalNo: result.terminalNo || result.terminal_no || result.tid || c.terminalNo,
-                serialNo: result.serialNo || result.serial_no || result.sn || c.serialNo,
-                number: result.cardNumber || result.card_number || result.cardNo || result.card_no || result.card_number_1 || result.number || c.number || ""
+                approvalNo: result.approvalNo || c.approvalNo,
+                terminalNo: result.terminalNo || c.terminalNo,
+                serialNo: result.serialNo || c.serialNo
               } : c
             ));
           }
         } catch (ocrErr) {
           console.error("AI OCR Error:", ocrErr);
-          showAlert("인식 실패", ocrErr.message || "영수증 분석 중 오류가 발생했습니다.", "error");
+          alert(`❌ AI 영수증 분석 실패: ${ocrErr.message}`);
         } finally {
           setOcrLoadingId(null);
         }
@@ -1658,8 +1185,8 @@ export default function SalesManagement({ user, onNavigate }) {
 
   const validateCardNumber = (id) => {
     const card = cardInfos.find(c => c.id === id);
-    const fullNumber = card.number || "";
-    if (fullNumber.length < 12) {
+    const fullNumber = card.number.join("");
+    if (fullNumber.length !== 16) {
       setCardValidationResult({
         success: false,
         message: "카드번호 16자리를 모두 입력해주세요.",
@@ -1697,47 +1224,6 @@ export default function SalesManagement({ user, onNavigate }) {
     reader.readAsBinaryString(file);
   };
 
-  const handleDownloadTemplate = () => {
-    const headers = [
-      "지점명", "담당자", "판매자", "구매자성함", "연락처", "주소", "생년월일",
-      "배송여부(Y/N)", "계획배송(Y/N)", "구매자구분(일반/구독/관리/시리즈구매)",
-      "상품언어", "상품시리즈", "상품수량", "결제일", "카드결제액", "카드번호", "카드사",
-      "승인번호", "단말기번호", "일련번호", "현금입금액", "입금기관", "입금자명", "기타"
-    ];
-    
-    const sampleData = [{
-      "지점명": user?.branch || "지점명",
-      "담당자": user?.name || "담당자",
-      "판매자": user?.name || "판매자",
-      "구매자성함": "홍길동",
-      "연락처": "010-0000-0000",
-      "주소": "서울특별시...",
-      "생년월일": "19900101",
-      "배송여부(Y/N)": "N",
-      "계획배송(Y/N)": "N",
-      "구매자구분(일반/구독/관리/시리즈구매)": "구독",
-      "상품언어": "한글",
-      "상품시리즈": "K2",
-      "상품수량": 1,
-      "결제일": getKSTDateStr().replace(/-/g, '.'),
-      "카드결제액": 0,
-      "카드번호": "",
-      "카드사": "",
-      "승인번호": "",
-      "단말기번호": "",
-      "일련번호": "",
-      "현금입금액": 0,
-      "입금기관": "",
-      "입금자명": "",
-      "기타": ""
-    }];
-
-    const ws = XLSX.utils.json_to_sheet(sampleData, { header: headers });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "템플릿");
-    XLSX.writeFile(wb, "매출업로드_템플릿.xlsx");
-  };
-
   const handleBatchSalesUpload = async (rawData) => {
     setLoading(true);
     try {
@@ -1773,7 +1259,7 @@ export default function SalesManagement({ user, onNavigate }) {
             approvalNo: row["승인번호"] || "",
             terminalNo: row["단말기번호"] || "",
             serialNo: row["일련번호"] || "",
-            number: row["카드번호"]?.toString() || ""
+            number: ["", "", "", ""]
           });
         }
 
@@ -1828,20 +1314,13 @@ export default function SalesManagement({ user, onNavigate }) {
           notes: header["기타"] || null,
           created_at: (() => {
             const raw = header["결제일"];
-            const timeStr = getKSTTimeStr();
-            
-            if (!raw) return `${getKSTDateStr()}T${timeStr}+09:00`;
-            
+            if (!raw) return new Date().toISOString();
             if (typeof raw === 'number') {
-              // 엑셀 시리얼 날짜 → JS Date (버그 방지를 위해 기준일과 오프셋을 사용)
-              // 엑셀 기준일인 1899-12-30에서 일(day)을 강제로 더해 날짜만 뽑아냅니다.
-              const excelEpoch = new Date(1899, 11, 30); // 1899년 12월 30일
-              excelEpoch.setDate(excelEpoch.getDate() + raw);
-              return `${getKSTDateStr(excelEpoch)}T${timeStr}+09:00`;
+              // 엑셀 시리얼 날짜 → JS Date 변환
+              return new Date(Math.round((raw - 25569) * 86400 * 1000)).toISOString();
             }
-            
             const dateStr = raw.toString().replace(/\./g, '-').trim();
-            return `${dateStr}T${timeStr}+09:00`;
+            return `${dateStr}T${new Date().toISOString().split('T')[1]}`;
           })(),
           payment_info: JSON.stringify({
             cards: cards,
@@ -1854,11 +1333,11 @@ export default function SalesManagement({ user, onNavigate }) {
       const { error } = await supabase.from("sales").insert(insertPromises);
       if (error) throw error;
 
-      showAlert("성공", `${insertPromises.length}건의 매출 데이터가 성공적으로 일괄 업로드되었습니다.`, "success");
+      alert(`${insertPromises.length}건의 매출 데이터가 성공적으로 일괄 업로드되었습니다.`);
       setActiveTab("dashboard"); 
     } catch (err) {
       console.error("Batch upload error:", err);
-      showAlert("오류", "일괄 업로드 오류:\n" + (err?.message || JSON.stringify(err)), "error");
+      alert("일괄 업로드 오류:\n" + (err?.message || JSON.stringify(err)));
     } finally {
       setLoading(false);
     }
@@ -1895,21 +1374,21 @@ export default function SalesManagement({ user, onNavigate }) {
   // 필수 입력 검증
   const validateForm = () => {
     if (orderItems.length === 0) {
-      showAlert("안내", "상품을 하나 이상 선택해주세요.", "info");
+      alert("상품을 하나 이상 선택해주세요.");
       return false;
     }
 
     if (formData.needsShipping) {
       if (!formData.customerName?.trim()) {
-        showAlert("안내", "배송을 위해 구매자 이름을 입력해주세요", "info");
+        alert("배송을 위해 구매자 이름을 입력해주세요");
         return false;
       }
       if (!formData.address?.trim()) {
-        showAlert("안내", "배송을 위해 주소를 입력해주세요", "info");
+        alert("배송을 위해 주소를 입력해주세요");
         return false;
       }
       if (!formData.phone?.trim()) {
-        showAlert("안내", "배송을 위해 연락처를 입력해주세요", "info");
+        alert("배송을 위해 연락처를 입력해주세요");
         return false;
       }
     }
@@ -1920,15 +1399,13 @@ export default function SalesManagement({ user, onNavigate }) {
     const totalOrder = calculateTotal();
 
     if (totalPaid === 0) {
-      showAlert("안내", "결제 금액을 입력해주세요.", "info");
+      alert("결제 금액을 입력해주세요.");
       return false;
     }
 
     if (totalPaid !== totalOrder) {
-      showAlert(
-        "금액 불일치",
+      alert(
         `주문 합계(${formatCurrency(totalOrder)})와 결제 합계(${formatCurrency(totalPaid)})가 일치하지 않습니다. 금액을 정확히 입력해주세요.`,
-        "error"
       );
       return false;
     }
@@ -1939,11 +1416,11 @@ export default function SalesManagement({ user, onNavigate }) {
         const cAmt = parseInt(c.amount?.replace(/[^0-9]/g, "") || 0);
         if (cAmt > 0) {
           if (!c.issuer) {
-            showAlert("안내", "카드사를 입력해주세요", "info");
+            alert("카드사를 입력해주세요");
             return false;
           }
           if (!c.approvalNo) {
-            showAlert("안내", "승인번호를 입력해주세요", "info");
+            alert("승인번호를 입력해주세요");
             return false;
           }
         }
@@ -1954,18 +1431,18 @@ export default function SalesManagement({ user, onNavigate }) {
     if (totalPaidCards !== totalOrder) {
       if (cashAmount > 0) {
         if (!cashInfo.bank) {
-          showAlert("안내", "입금기관명을 입력해주세요", "info");
+          alert("입금기관명을 입력해주세요");
           return false;
         }
         if (!cashInfo.depositor) {
-          showAlert("안내", "입금자명을 입력해주세요", "info");
+          alert("입금자명을 입력해주세요");
           return false;
         }
       }
     }
 
     if (!formData.privacyAgreed) {
-      showAlert("안내", "개인정보 수집 및 이용에 동의해주세요", "info");
+      alert("개인정보 수집 및 이용에 동의해주세요");
       return false;
     }
 
@@ -1999,11 +1476,7 @@ export default function SalesManagement({ user, onNavigate }) {
       else if (cashAmount > 0) paymentMethodStr = "입금";
 
       const insertData = {
-        created_at: (() => {
-          const d = formData.paymentDate || getKSTDateStr();
-          const t = getKSTTimeStr();
-          return `${d}T${t}+09:00`;
-        })(),
+        created_at: formData.paymentDate ? `${formData.paymentDate}T${new Date().toISOString().split('T')[1]}` : new Date().toISOString(),
         user_id: user?.id || null,
         branch_name: user?.branch || null,
         user_name: formData.sellerName || user?.name || null,
@@ -2037,11 +1510,11 @@ export default function SalesManagement({ user, onNavigate }) {
 
       if (error) throw error;
 
-      showAlert("성공", "저장되었습니다!", "success");
+      alert("저장되었습니다!");
       resetForm();
     } catch (err) {
       console.error("저장 오류:", err);
-      showAlert("오류", "데이터 저장 중 오류가 발생했습니다. 입력값 확인 후 다시 시도해 주시기 바랍니다.", "error");
+      alert("데이터 저장 중 오류가 발생했습니다. 입력값 확인 후 다시 시도해 주시기 바랍니다.");
     } finally {
       setLoading(false);
     }
@@ -2295,13 +1768,14 @@ export default function SalesManagement({ user, onNavigate }) {
                     구매상품
                   </h3>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleDownloadTemplate}
+                    <a
+                      href="/sales_upload_template.xlsx"
+                      download="sales_upload_template.xlsx"
                       className="flex items-center gap-1 px-2 py-1 bg-gray-50 text-gray-500 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors border border-gray-200"
                     >
                       <Download size={14} />
                       템플릿
-                    </button>
+                    </a>
                     <label className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold cursor-pointer hover:bg-blue-100 transition-colors border border-blue-100">
                       <FileUp size={14} />
                       엑셀업로드
@@ -2497,7 +1971,7 @@ export default function SalesManagement({ user, onNavigate }) {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-1 pt-2 border-t border-gray-200">
+                      <div className="grid grid-cols-4 gap-1 pt-2 border-t border-gray-200">
                         <div>
                           <label className="block mb-0.5 text-[10px] font-bold text-gray-400">단말기번호</label>
                           <input
@@ -2534,32 +2008,20 @@ export default function SalesManagement({ user, onNavigate }) {
                             className="w-full px-1 py-1 border border-gray-200 rounded-lg text-[10px] font-bold text-center outline-none focus:border-teal-500 bg-white"
                           />
                         </div>
-                        <div className="col-span-2">
-                          <label className="block mb-0.5 text-[10px] font-bold text-gray-400">카드번호</label>
-                          <input
-                            type="text"
-                            value={card.number}
-                            onChange={(e) => handleCardInfoChange(card.id, "number", e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-teal-500 bg-white"
-                            placeholder="카드번호 (**** 형식 가능)"
-                          />
-                        </div>
                       </div>
 
-                      <div className="mt-2.5 flex items-center justify-between gap-2">
-                        <label className={`flex-1 flex items-center justify-center px-3 h-8 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-500 cursor-pointer hover:bg-gray-50 transition-colors ${ocrLoadingId === card.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <label className={`flex-1 flex items-center justify-center gap-2 h-8 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-500 cursor-pointer hover:bg-gray-50 transition-colors ${ocrLoadingId === card.id ? 'opacity-50 pointer-events-none' : ''}`}>
                           {ocrLoadingId === card.id ? (
-                            <div className="flex items-center justify-center gap-2 animate-pulse text-teal-600">
+                            <div className="flex items-center gap-2 animate-pulse text-teal-600">
                               <div className="w-3 h-3 border-2 border-teal-600 border-t-transparent rounded-full animate-spin text-[8px]"></div>
-                              <span className="text-[10px]">AI 분석 중...</span>
+                              AI 분석 중...
                             </div>
                           ) : (
-                            <div className="flex items-center justify-center gap-2 w-full">
-                              <FileUp size={14} className="flex-shrink-0" />
-                              <span className="truncate">
-                                {card.receiptName || "영수증 첨부"}
-                              </span>
-                            </div>
+                            <>
+                              <FileUp size={14} />
+                              {card.receiptName ? card.receiptName : "영수증 첨부"}
+                            </>
                           )}
                           <input
                             type="file"
@@ -2570,30 +2032,26 @@ export default function SalesManagement({ user, onNavigate }) {
                             disabled={ocrLoadingId === card.id}
                           />
                         </label>
-
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => {
-                              if (card.receiptUrl) {
+                        {card.receiptUrl && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setCardInfos(prev => prev.map(c => c.id === card.id ? { ...c, receiptUrl: "", receiptName: "", amount: "", issuer: "", approvalNo: "", terminalNo: "", serialNo: "" } : c))}
+                              className="w-8 h-8 bg-red-50 text-red-400 border border-red-100 rounded-lg text-[11px] font-bold hover:bg-red-100 transition-colors flex items-center justify-center shadow-sm active:scale-95"
+                              title="영수증 삭제"
+                            >
+                              <X size={13} />
+                            </button>
+                            <button
+                              onClick={() => {
                                 setSelectedReceipt({ url: card.receiptUrl, name: card.receiptName });
                                 setShowReceiptModal(true);
-                              } else {
-                                showAlert("안내", "첨부된 영수증이 없습니다.", "info");
-                              }
-                            }}
-                            className={`w-8 h-8 bg-teal-50 text-teal-600 border border-teal-100 rounded-lg text-[11px] font-bold hover:bg-teal-100 transition-colors flex items-center justify-center shadow-sm active:scale-95 ${!card.receiptUrl ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            title="보기"
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => setCardInfos(prev => prev.map(c => c.id === card.id ? { ...c, receiptUrl: "", receiptName: "", amount: "", issuer: "", approvalNo: "", terminalNo: "", serialNo: "", number: "" } : c))}
-                            className="w-8 h-8 bg-red-50 text-red-500 border border-red-100 rounded-lg text-[11px] font-bold hover:bg-red-100 transition-colors flex items-center justify-center shadow-sm active:scale-95"
-                            title="삭제"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
+                              }}
+                              className="px-3 h-8 bg-teal-50 text-teal-600 border border-teal-100 rounded-lg text-[11px] font-bold hover:bg-teal-100 transition-colors flex items-center justify-center shadow-sm active:scale-95"
+                            >
+                              보기
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -2863,9 +2321,6 @@ export default function SalesManagement({ user, onNavigate }) {
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mt-1.5 px-2 py-1.5 bg-white rounded-lg">
-                      <div className="col-span-2 flex justify-between">
-                        <span>카드번호:</span> <span className="font-bold text-gray-700">{c.number || "-"}</span>
-                      </div>
                       <div className="flex justify-between">
                         <span>단말기:</span> <span className="font-bold text-gray-700">{c.terminalNo || "-"}</span>
                       </div>
@@ -2995,7 +2450,7 @@ export default function SalesManagement({ user, onNavigate }) {
                 <table className="text-xs whitespace-nowrap border-collapse">
                   <thead className="sticky top-0 z-10">
                     <tr>
-                      {["No","지점명","담당자","판매자","구매자","연락처","주소","생년월일","배송","계획배송","구매자구분","언어","시리즈","수량","결제일","카드금액","카드번호","카드사","승인번호","단말기번호","일련번호","현금금액","입금기관","입금자명","기타"].map(h => (
+                      {["No","지점명","담당자","판매자","구매자","연락처","주소","생년월일","배송","계획배송","구매자구분","언어","시리즈","수량","결제일","카드금액","카드사","승인번호","단말기번호","일련번호","현금금액","입금기관","입금자명","기타"].map(h => (
                         <th key={h} className="px-3 py-2 text-left border border-gray-200 bg-gray-100 font-bold text-gray-500">{h}</th>
                       ))}
                     </tr>
@@ -3019,7 +2474,6 @@ export default function SalesManagement({ user, onNavigate }) {
                         <td className="px-3 py-2 text-center border border-gray-100">{row["상품수량"] || "-"}</td>
                         <td className="px-3 py-2 text-gray-500 border border-gray-100">{row["결제일"] || "-"}</td>
                         <td className="px-3 py-2 text-right font-bold border border-gray-100">{row["카드결제액"] ? Number(row["카드결제액"].toString().replace(/[^\d]/g, "")).toLocaleString() : "-"}</td>
-                        <td className="px-3 py-2 border border-gray-100 font-bold text-teal-600">{row["카드번호"] || "-"}</td>
                         <td className="px-3 py-2 border border-gray-100">{row["카드사"] || "-"}</td>
                         <td className="px-3 py-2 border border-gray-100">{row["승인번호"] || "-"}</td>
                         <td className="px-3 py-2 border border-gray-100">{row["단말기번호"] || "-"}</td>
@@ -3172,38 +2626,6 @@ export default function SalesManagement({ user, onNavigate }) {
                 닫기
               </button>
             </div>
-          </div>
-        </div>
-      )}
-      {/* 모달: 커스텀 알림 (Alert) */}
-      {alertModal.show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[300] animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
-            <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
-              alertModal.type === 'success' ? 'bg-teal-100 text-teal-600' :
-              alertModal.type === 'error' ? 'bg-red-100 text-red-600' :
-              'bg-blue-100 text-blue-600'
-            }`}>
-              {alertModal.type === 'success' ? <CheckCircle2 size={32} /> :
-               alertModal.type === 'error' ? <AlertCircle size={32} /> :
-               <Info size={32} />}
-            </div>
-            <h3 className="text-lg font-black text-gray-800 mb-2">
-              {alertModal.title}
-            </h3>
-            <p className="text-sm text-gray-500 font-medium leading-relaxed whitespace-pre-wrap mb-6">
-              {alertModal.message}
-            </p>
-            <button
-              onClick={() => setAlertModal({ ...alertModal, show: false })}
-              className={`w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all active:scale-95 ${
-                alertModal.type === 'success' ? 'bg-teal-600 hover:bg-teal-700 shadow-teal-500/20' :
-                alertModal.type === 'error' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20' :
-                'bg-blue-600 hover:bg-blue-700 shadow-blue-500/20'
-              }`}
-            >
-              확인
-            </button>
           </div>
         </div>
       )}

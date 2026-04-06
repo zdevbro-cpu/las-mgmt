@@ -48,8 +48,8 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       else if (viewMode === 'admin') query = query.eq('branch_name', user.branch)
       if (filters.branch) query = query.eq('branch_name', filters.branch)
       if (filters.userName && filters.userName !== "전체") query = query.or(`user_name.ilike.%${filters.userName}%,seller_name.ilike.%${filters.userName}%`)
-      if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00`)
-      if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59`)
+      if (filters.startDate) query = query.gte('created_at', `${filters.startDate}T00:00:00+09:00`)
+      if (filters.endDate) query = query.lte('created_at', `${filters.endDate}T23:59:59+09:00`)
       const { data, error } = await query
       if (error) throw error
       setSalesData(data || [])
@@ -127,8 +127,20 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
       let cardInfo = '', cashInfo = '';
       try {
         const info = typeof s.payment_info === 'string' ? JSON.parse(s.payment_info) : s.payment_info;
-        if (info?.card) cardInfo = `[카드] ${new Intl.NumberFormat('ko-KR').format(info.card.amount.toString().replace(/[^0-9]/g, ''))}원 (${info.card.issuer || '-'})`;
-        if (info?.cash) cashInfo = `[현금] ${new Intl.NumberFormat('ko-KR').format(info.cash.amount.toString().replace(/[^0-9]/g, ''))}원 (${info.cash.bank || '-'})`;
+        
+        // 다중 카드 처리 (최대 3개)
+        if (info?.cards && Array.isArray(info.cards)) {
+          cardInfo = info.cards.slice(0, 3).map(c => 
+            `[카드] ${new Intl.NumberFormat('ko-KR').format(String(c.amount || '0').replace(/[^0-9]/g, ''))}원 (${c.issuer || '-'})`
+          ).join('\n');
+        } else if (info?.card) {
+          // 하위 호환성
+          cardInfo = `[카드] ${new Intl.NumberFormat('ko-KR').format(String(info.card.amount || '0').replace(/[^0-9]/g, ''))}원 (${info.card.issuer || '-'})`;
+        }
+        
+        if (info?.cash) {
+          cashInfo = `[현금] ${new Intl.NumberFormat('ko-KR').format(String(info.cash.amount || '0').replace(/[^0-9]/g, ''))}원 (${info.cash.bank || '-'})`;
+        }
       } catch (e) {}
 
       return {

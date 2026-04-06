@@ -137,17 +137,38 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
 
   useEffect(() => { loadAll() }, [])
 
-  const loadAll = async () => {
+  const loadAll = async (f = {}) => {
     setLoading(true)
     try {
-      const { data, error } = await supabase
-        .from('sales').select('*').order('created_at', { ascending: false })
+      let query = supabase.from('sales').select('*').order('created_at', { ascending: false })
+      
+      if (f.branch && f.branch !== "전체") query = query.eq('branch_name', f.branch)
+      if (f.userName && f.userName.trim() !== "") query = query.or(`user_name.ilike.%${f.userName}%,seller_name.ilike.%${f.userName}%`)
+      if (f.startDate) query = query.gte('created_at', `${f.startDate}T00:00:00+09:00`)
+      if (f.endDate) query = query.lte('created_at', `${f.endDate}T23:59:59+09:00`)
+
+      const { data, error } = await query
       if (error) throw error
       const rows = data || []
-      setAllData(rows)
-      setSalesData(rows)
-      computeMeta(rows)
-      computeRankings(rows)
+      
+      // 시리즈 필터는 JSON 내부에 있어 서버 사이드 처리가 복잡하므로 클라이언트에서 추가 필터링
+      let filteredRows = rows
+      if (f.series) {
+        filteredRows = rows.filter(r => {
+          try {
+            const info = typeof r.payment_info === 'string' ? JSON.parse(r.payment_info) : r.payment_info
+            return info?.items?.some(i => i.series === f.series)
+          } catch { return false }
+        })
+      }
+
+      setSalesData(filteredRows)
+      if (!f.startDate && !f.endDate && !f.branch && !f.userName) {
+        // 초기 로드 시에만 메타/랭킹 계산 (전체 데이터 기준)
+        setAllData(rows)
+        computeMeta(rows)
+        computeRankings(rows)
+      }
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
   }
@@ -189,33 +210,7 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
   }
 
   const applyFilters = (f) => {
-    let rows = [...allData]
-    if (f.branch) {
-      rows = rows.filter(r => r.branch_name === f.branch)
-    }
-    if (f.userName) {
-      const search = f.userName.toLowerCase()
-      rows = rows.filter(r => 
-        (r.user_name || '').toLowerCase().includes(search) || 
-        (r.seller_name || '').toLowerCase().includes(search)
-      )
-    }
-    if (f.series) {
-      rows = rows.filter(r => {
-        try {
-          const info = typeof r.payment_info === 'string' ? JSON.parse(r.payment_info) : r.payment_info
-          return info?.items?.some(i => i.series === f.series)
-        } catch { return false }
-      })
-    }
-    if (f.startDate) {
-      rows = rows.filter(r => toLocalStr(new Date(r.created_at)) >= f.startDate)
-    }
-    if (f.endDate) {
-      rows = rows.filter(r => toLocalStr(new Date(r.created_at)) <= f.endDate)
-    }
-    setSalesData(rows)
-    // 랭킹 카드는 필터와 무관하게 전사 현황을 유지하도록 computeRankings(rows) 호출 제거
+    loadAll(f)
     setCurrentPage(1)
   }
 
@@ -672,7 +667,7 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
             </div>
             <div className="border-t flex">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 py-3.5 font-bold text-gray-600 hover:bg-gray-50 border-r">취소</button>
-              <button onClick={handleDelete} className="flex-1 py-3.5 font-black text-red-500 hover:bg-red-50">삭제</button>
+              <button autoFocus onClick={handleDelete} className="flex-1 py-3.5 font-black text-red-500 hover:bg-red-50">삭제</button>
             </div>
           </div>
         </div>

@@ -2,209 +2,226 @@ import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 
 /**
- * 전사 매출 데이터를 바탕으로 단말기별 일일 매출 보고서를 생성합니다.
- * @param {Array} salesData - 매출 데이터 배열
- * @param {string} selectedDate - 보고서 대상 날짜 (YYYY-MM-DD)
+ * 템플릿(일일매출현황취합.xlsx) 포맷을 그대로 유지하여 매출보고서를 생성합니다.
  */
 export const generateDailySalesReport = async (salesData, selectedDate) => {
+  // 1. 템플릿 로드
+  const res = await fetch('/일일매출현황취합.xlsx');
+  const arrayBuffer = await res.arrayBuffer();
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('일일 매출보고');
+  await workbook.xlsx.load(arrayBuffer);
 
-  // 데이터 그룹화: 단말기 번호별
+  const templateWs = workbook.worksheets[0];
+
+  // 2. 단말기별 그룹화
   const terminalGroups = {};
   salesData.forEach(sale => {
-    let paymentInfo = {};
+    let info = {};
     try {
-      paymentInfo = typeof sale.payment_info === 'string' 
-        ? JSON.parse(sale.payment_info) 
+      info = typeof sale.payment_info === 'string'
+        ? JSON.parse(sale.payment_info)
         : (sale.payment_info || {});
-    } catch (e) {
-      console.error('Payment info parsing error', e);
-    }
-
-    // 단말기 번호 추출 (첫 번째 카드 정보에서 가져오거나 미지정 처리)
-    const terminalNo = paymentInfo.cards?.[0]?.terminalNo || '미지정';
-    if (!terminalGroups[terminalNo]) {
-      terminalGroups[terminalNo] = [];
-    }
-    terminalGroups[terminalNo].push({ ...sale, parsedPaymentInfo: paymentInfo });
+    } catch {}
+    const terminalNo = info.cards?.[0]?.terminalNo || '미지정';
+    if (!terminalGroups[terminalNo]) terminalGroups[terminalNo] = [];
+    terminalGroups[terminalNo].push({ ...sale, info });
   });
 
-  let currentRow = 1;
+  // 3. 날짜 포맷
+  const dateObj = new Date(selectedDate);
+  const dateStr = dateObj.toLocaleDateString('ko-KR', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+  });
 
-  // 단말기별로 섹션 생성
-  for (const [terminalNo, data] of Object.entries(terminalGroups)) {
-    // 1. 타이틀 영역
-    const titleRow = worksheet.getRow(currentRow);
-    titleRow.values = ['라벤 구독회원 일일 매출보고', '', '', `단말기 번호: ${terminalNo}`];
-    worksheet.mergeCells(currentRow, 1, currentRow, 3);
-    titleRow.font = { name: '돋움', size: 14, bold: true };
-    titleRow.alignment = { vertical: 'middle', horizontal: 'left' };
-    currentRow++;
+  // 4. 헬퍼: 셀 스타일 안전 복사
+  const copyStyle = (cell) => {
+    try { return JSON.parse(JSON.stringify(cell.style)); } catch { return {}; }
+  };
 
-    // 2. 메타 정보 영역 (소속, 날짜)
-    const metaRow = worksheet.getRow(currentRow);
-    const dateFormatted = new Date(selectedDate).toLocaleDateString('ko-KR', {
-      year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+  // 5. 헬퍼: 템플릿 한 행 전체를 출력 시트에 복사 (값 제외)
+  const copyRowStyle = (srcRow, dstRow) => {
+    srcRow.eachCell({ includeEmpty: true }, (srcCell, col) => {
+      const dstCell = dstRow.getCell(col);
+      dstCell.style = copyStyle(srcCell);
     });
-    metaRow.values = [`소속 : ${data[0]?.branch_name || '전체'}`, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', `${dateFormatted}`];
-    worksheet.mergeCells(currentRow, 1, currentRow, 4);
-    worksheet.mergeCells(currentRow, 17, currentRow, 22);
-    metaRow.font = { name: '돋움', size: 10, bold: true };
-    metaRow.alignment = { vertical: 'middle' };
-    currentRow++;
+    dstRow.height = srcRow.height || 15;
+  };
 
-    // 3. 테이블 헤더 (구독회원 정보, 한글버전, 영문버전, 결제 정보 등)
-    // 3.1 상단 대분류 헤더
-    const header1 = worksheet.getRow(currentRow);
-    header1.values = [
-      '순번', '구독회원 정보', '', '', '', 
-      '한글버전', '', '', '', 
-      '영문버전', '', '', '', 
-      '결제 정보', '', '', '', '', '', 
-      '판매자'
-    ];
-    worksheet.mergeCells(currentRow, 1, currentRow + 1, 1); // 순번
-    worksheet.mergeCells(currentRow, 2, currentRow, 5);     // 구독회원 정보
-    worksheet.mergeCells(currentRow, 6, currentRow, 9);     // 한글버전
-    worksheet.mergeCells(currentRow, 10, currentRow, 13);   // 영문버전
-    worksheet.mergeCells(currentRow, 14, currentRow, 19);   // 결제 정보
-    worksheet.mergeCells(currentRow, 20, currentRow + 1, 20); // 판매자
+  // 6. 헬퍼: 카드 정보 여러 장 -> 줄바꿈 문자열 (최대 3개)
+  const multiLine = (cards, fn) => (cards || []).slice(0, 3).map(fn).join('\n');
 
-    // 3.2 하단 중분류 헤더
-    const header2 = worksheet.getRow(currentRow + 1);
-    header2.values = [
-      '', '이름', '생년월일', '핸드폰', '주소', 
-      'K2', 'K5', 'S2', 'G1', 
-      'K2', 'K5', 'S2', 'G1', 
-      '합계', '현금', '카드', '카드명', '승인번호', '카드번호'
-    ];
+  // 7. 항목 체크 (items 배열에서 언어+시리즈 매칭)
+  const flag = (items, lang, ser) =>
+    items?.find(i => i.language === lang && i.series === ser) ? 'O' : '';
 
-    // 헤더 스타일링
-    [header1, header2].forEach(row => {
-      row.eachCell(cell => {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
-        cell.border = {
-          top: { style: 'thin' }, left: { style: 'thin' },
-          bottom: { style: 'thin' }, right: { style: 'thin' }
-        };
-        cell.font = { name: '돋움', size: 9, bold: true };
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      });
+  // 8. 금액 정규화
+  const toNum = (v) => Number(String(v || '0').replace(/[^0-9]/g, '')) || 0;
+
+  // 9. 출력용 워크시트 생성 (템플릿 복제 후 데이터만 교체)
+  const outputWb = new ExcelJS.Workbook();
+  const outputWs = outputWb.addWorksheet('일일매출보고');
+
+  // 컬럼 너비 복사 (A~T = 1~20)
+  for (let c = 1; c <= 20; c++) {
+    outputWs.getColumn(c).width = templateWs.getColumn(c).width || 10;
+  }
+
+  // 10. 템플릿 헤더 블록 구조 (rows 1~5 기준)
+  //   row1: 타이틀 / 단말기번호
+  //   row2: 소속 / 날짜
+  //   row3: 대분류 헤더
+  //   row4: 소분류 헤더
+  //   row5: 단가행
+  const HEADER_ROW_COUNT = 5;
+  const TEMPLATE_DATA_START = 6; // 템플릿에서 데이터가 시작되는 행
+
+  // 메인 처리: 단말기 순서대로 섹션 생성
+  let outRow = 1;
+  const terminals = Object.entries(terminalGroups);
+
+  for (let ti = 0; ti < terminals.length; ti++) {
+    const [terminalNo, groupData] = terminals[ti];
+    const branch = groupData[0]?.branch_name || '';
+
+    // --- 헤더 5행 복사 (스타일만) ---
+    for (let hr = 1; hr <= HEADER_ROW_COUNT; hr++) {
+      const srcRow = templateWs.getRow(hr);
+      const dstRow = outputWs.getRow(outRow + hr - 1);
+      copyRowStyle(srcRow, dstRow);
+    }
+
+    // 병합 정보 복사 (헤더 범위 내)
+    templateWs._merges && Object.values(templateWs._merges).forEach(merge => {
+      const m = merge.model;
+      if (m.top >= 1 && m.bottom <= HEADER_ROW_COUNT) {
+        try {
+          outputWs.mergeCells(
+            outRow + m.top - 1, m.left,
+            outRow + m.bottom - 1, m.right
+          );
+        } catch {}
+      }
     });
-    currentRow += 2;
 
-    // 4. 데이터 영역
-    let terminalTotal = 0;
-    data.forEach((sale, index) => {
-      const row = worksheet.getRow(currentRow);
-      const info = sale.parsedPaymentInfo;
+    // 헤더 값 채우기
+    const r1 = outRow;
+    outputWs.getCell(r1, 1).value = '라벤 구독회원 일일 매출보고';
+    outputWs.getCell(r1, 5).value = `단말기 번호: ${terminalNo}`;
 
-      // 버전별 체크 로직
-      const getItemFlag = (lang, ser) => {
-        const found = info.items?.find(i => i.language === lang && i.series === ser);
-        return found ? '○' : '';
-      };
+    const r2 = outRow + 1;
+    outputWs.getCell(r2, 1).value = `소속 : ${branch}`;
+    outputWs.getCell(r2, 14).value = `    ${dateStr}`;
 
-      const cleanNum = (val) => {
-        if (!val) return 0;
-        const cleaned = val.toString().replace(/[^0-9-]/g, "");
-        return parseInt(cleaned, 10) || 0;
-      };
+    const r3 = outRow + 2;
+    outputWs.getCell(r3, 1).value = '순번';
+    outputWs.getCell(r3, 2).value = '구독회원 정보';
+    outputWs.getCell(r3, 6).value = '한글버전';
+    outputWs.getCell(r3, 10).value = '영문버전';
+    outputWs.getCell(r3, 14).value = '결제 정보';
+    outputWs.getCell(r3, 20).value = '판매자';
 
-      const cardInfo = info.cards?.[0] || {};
-      const cashAmount = info.cash ? cleanNum(info.cash.amount) : 0;
-      const cardAmount = info.cards ? info.cards.reduce((sum, c) => sum + cleanNum(c.amount), 0) : 0;
-      
-      const cardAmounts = info.cards ? info.cards.map(c => cleanNum(c.amount).toLocaleString('ko-KR')).join('\r\n') : '';
-      const cardIssuers = info.cards ? info.cards.map(c => c.issuer || '-').join('\r\n') : '';
-      const cardApprovals = info.cards ? info.cards.map(c => c.approvalNo || '-').join('\r\n') : '';
-      const cardNumbers = info.cards ? info.cards.map(c => (c.number ? c.number.join('-') : '----')).join('\r\n') : '';
+    const r4 = outRow + 3;
+    ['', '이름', '생년\n월일', '핸드폰', '주소',
+     'K2', 'K5', 'S2', 'G1',
+     'K2', 'K5', 'S2', 'G1',
+     '합계', '현금', '카드', '카드명', '승인번호', '카드번호', '판매자'
+    ].forEach((v, i) => { outputWs.getCell(r4, i + 1).value = v; });
 
-      row.values = [
-        index + 1,
-        sale.customer_name || '-',
-        sale.age || '-',
-        sale.phone || '-',
-        sale.address || '-',
-        getItemFlag('한글', 'K2'), getItemFlag('한글', 'K5'), getItemFlag('한글', 'S2'), getItemFlag('한글', 'G1'),
-        getItemFlag('영문', 'K2'), getItemFlag('영문', 'K5'), getItemFlag('영문', 'S2'), getItemFlag('영문', 'G1'),
-        parseInt(sale.deposit_amount || 0),
-        cashAmount.toLocaleString('ko-KR'), // 현금 콤마 추가
-        cardAmounts, // 개별 카드 금액 리스트 (줄바꿈 포함)
-        cardIssuers,  // 개별 카드사 리스트 (줄바꿈 포함)
-        cardApprovals, // 개별 승인번호 리스트 (줄바꿈 포함)
-        cardNumbers,  // 개별 카드번호 리스트 (줄바꿈 포함)
-        sale.user_name || sale.seller_name || '-'
-      ];
+    const r5 = outRow + 4;
+    [, , , , , '160만원', '160만원', '220만원', '340만원',
+     '320만원', '320만원', '440만원', '680만원'
+    ].forEach((v, i) => { if (v) outputWs.getCell(r5, i + 1).value = v; });
 
-      // 다중 결제인 경우 행 높이 조절
-      if (info.cards && info.cards.length > 1) {
-        row.height = 15 * info.cards.length + 10;
+    outRow += HEADER_ROW_COUNT;
+
+    // --- 데이터 행 ---
+    // 템플릿 데이터행 스타일 참조 (row 6)
+    const templateDataRow = templateWs.getRow(TEMPLATE_DATA_START);
+
+    let sectionTotal = 0;
+
+    groupData.forEach((sale, idx) => {
+      const { info } = sale;
+      const cards = info.cards || [];
+      const items = info.items || [];
+      const cash = info.cash;
+
+      const cashAmt = cash ? toNum(cash.amount) : 0;
+      const cardAmt = cards.reduce((s, c) => s + toNum(c.amount), 0);
+      const total = toNum(sale.deposit_amount) || cashAmt + cardAmt;
+      sectionTotal += total;
+
+      const dstRow = outputWs.getRow(outRow);
+
+      // 스타일 복사
+      copyRowStyle(templateDataRow, dstRow);
+
+      // 카드 정보가 있으면 행 높이 조정 (최대 3개 지원)
+      if (cards.length > 0) {
+        const lineCount = Math.min(cards.length, 3);
+        dstRow.height = Math.max(30, 20 * lineCount);
       }
 
-      terminalTotal += parseInt(sale.deposit_amount || 0);
+      dstRow.getCell(1).value  = idx + 1;                                   // 순번
+      dstRow.getCell(2).value  = sale.customer_name || '-';                  // 이름
+      dstRow.getCell(3).value  = sale.age ? String(sale.age) : '-';         // 생년월일
+      dstRow.getCell(4).value  = sale.phone || '-';                          // 핸드폰
+      dstRow.getCell(5).value  = sale.address || '-';                        // 주소
+      dstRow.getCell(6).value  = flag(items, '한글', 'K2');
+      dstRow.getCell(7).value  = flag(items, '한글', 'K5');
+      dstRow.getCell(8).value  = flag(items, '한글', 'S2');
+      dstRow.getCell(9).value  = flag(items, '한글', 'G1');
+      dstRow.getCell(10).value = flag(items, '영문', 'K2');
+      dstRow.getCell(11).value = flag(items, '영문', 'K5');
+      dstRow.getCell(12).value = flag(items, '영문', 'S2');
+      dstRow.getCell(13).value = flag(items, '영문', 'G1');
+      dstRow.getCell(14).value = total;                                       // 합계
+      dstRow.getCell(15).value = cashAmt || '';                               // 현금
+      // 카드 (최대 3개까지 줄바꿈 표시)
+      dstRow.getCell(16).value = cards.length > 0 
+        ? multiLine(cards, c => toNum(c.amount).toLocaleString('ko-KR'))
+        : '';
+      dstRow.getCell(17).value = multiLine(cards, c => c.issuer || '-');     // 카드명
+      dstRow.getCell(18).value = multiLine(cards, c => c.approvalNo || '-'); // 승인번호
+      dstRow.getCell(19).value = multiLine(cards, c => c.number || c.cardNo || '');      // 카드번호
+      dstRow.getCell(20).value = sale.seller_name || sale.user_name || '-';  // 판매자
 
-      row.eachCell(cell => {
-        const colIdx = cell.col;
-        
-        // 기본 스타일 설정
-        cell.border = {
-          top: { style: 'thin' }, left: { style: 'thin' },
-          bottom: { style: 'thin' }, right: { style: 'thin' }
+      // 셀 정렬
+      dstRow.eachCell({ includeEmpty: false }, (cell, col) => {
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: (col >= 14 && col <= 16) ? 'right' : 'center',
+          wrapText: true,
         };
-        cell.font = { name: '돋움', size: 9 };
-
-        // 정렬 및 줄바꿈 설정 통합
-        const isAmountCol = colIdx >= 14 && colIdx <= 16;
-        cell.alignment = { 
-          vertical: 'middle', 
-          horizontal: isAmountCol ? 'right' : 'center', 
-          wrapText: true 
-        };
-
-        // 금액 포맷 (단일 숫자일 때 작동하도록 설정하되 문자열은 무시됨)
-        if (isAmountCol) {
-          cell.numFmt = '#,##0';
-        }
       });
-      
-      currentRow++;
+
+      outRow++;
     });
 
-    // 5. 단말기별 합계행 추가
-    const totalRow = worksheet.getRow(currentRow);
-    totalRow.values = ['소계 (단말기 합계)', '', '', '', '', '', '', '', '', '', '', '', '', terminalTotal];
-    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    // --- 소계행 ---
+    const totalRow = outputWs.getRow(outRow);
+    outputWs.mergeCells(outRow, 1, outRow, 13);
+    totalRow.getCell(1).value = '소 계';
+    totalRow.getCell(14).value = sectionTotal;
+    totalRow.getCell(14).numFmt = '#,##0';
     totalRow.font = { name: '돋움', size: 9, bold: true };
-    totalRow.eachCell(cell => {
+    totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+    totalRow.getCell(14).alignment = { horizontal: 'right', vertical: 'middle' };
+    totalRow.eachCell({ includeEmpty: false }, cell => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFE0' } };
       cell.border = {
         top: { style: 'thin' }, left: { style: 'thin' },
-        bottom: { style: 'thin' }, right: { style: 'thin' }
+        bottom: { style: 'thin' }, right: { style: 'thin' },
       };
     });
-    const subTotalCell = totalRow.getCell(14);
-    subTotalCell.alignment = { horizontal: 'right' };
-    subTotalCell.numFmt = '#,##0';
 
-    currentRow += 3; // 다음 단말기 그룹 간 간격
+    outRow += 2; // 섹션 간격
   }
 
-  // 컬럼 너비 설정
-  worksheet.getColumn(1).width = 5;   // 순번
-  worksheet.getColumn(2).width = 10;  // 이름
-  worksheet.getColumn(3).width = 12;  // 생년월일
-  worksheet.getColumn(4).width = 15;  // 핸드폰
-  worksheet.getColumn(5).width = 30;  // 주소
-  worksheet.getColumn(14).width = 12; // 합계
-  worksheet.getColumn(15).width = 12; // 현금
-  worksheet.getColumn(16).width = 12; // 카드
-  worksheet.getColumn(17).width = 10; // 카드명
-  worksheet.getColumn(18).width = 15; // 승인번호
-  worksheet.getColumn(19).width = 20; // 카드번호
-  worksheet.getColumn(20).width = 10; // 판매자
-
-  const buffer = await workbook.xlsx.writeBuffer();
-  saveAs(new Blob([buffer]), `매출현황보고서_${selectedDate}.xlsx`);
+  // 11. 다운로드
+  const buffer = await outputWb.xlsx.writeBuffer();
+  saveAs(
+    new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+    `매출보고서_${selectedDate}.xlsx`
+  );
 };
