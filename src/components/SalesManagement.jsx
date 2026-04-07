@@ -33,6 +33,41 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
+const compressImage = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height && width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        resolve(dataUrl);
+      };
+      img.onerror = () => reject(new Error("이미지 로딩 실패"));
+      img.src = event.target.result;
+    };
+    reader.onerror = () => reject(new Error("파일 읽기 실패"));
+    reader.readAsDataURL(file);
+  });
+};
+
 // SalesDashboard Component
 const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const [loading, setLoading] = useState(true);
@@ -84,40 +119,6 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
     setShowCancelModal(true);
   };
 
-  const compressImage = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1200;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height && width > maxDim) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else if (height > maxDim) {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-          
-          const canvas = document.createElement("canvas");
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-          resolve(dataUrl);
-        };
-        img.onerror = () => reject(new Error("이미지 로딩 실패"));
-        img.src = event.target.result;
-      };
-      reader.onerror = () => reject(new Error("파일 읽기 실패"));
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleCancelReceiptOcr = async (file) => {
     if (!file) return;
