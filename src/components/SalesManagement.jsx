@@ -237,19 +237,19 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       const ws = workbook.worksheets[0];
 
       // 각 셀에 값 직접 입력 (양식 구조에 맞게)
-      ws.getCell("E2").value = 접수일자;   // 접수일자
-      ws.getCell("C3").value = 사업부명;   // 사업부명
-      ws.getCell("E3").value = 요청자명;   // 요청자명
-      ws.getCell("C4").value = 신청일자;   // 신청일자
-      ws.getCell("E4").value = 전화번호;   // 전화번호
-      ws.getCell("C5").value = 고객명;     // 고객명
-      ws.getCell("E5").value = 카드승인일; // 카드승인일
-      ws.getCell("C6").value = 결제금액;   // 결제금액
-      ws.getCell("E6").value = 승인번호;   // 승인번호
-      ws.getCell("C7").value = 카드번호;   // 카드번호 (C7:E7 병합)
-      ws.getCell("C8").value = 카드사명;   // 카드사명
-      ws.getCell("E8").value = 카드주명;   // 카드주명
-      ws.getCell("B9").value = 취소사유;   // 취소사유 (B9:E9 병합)
+      ws.getCell("F2").value = 접수일자;   // 접수일자
+      ws.getCell("D3").value = 사업부명;   // 사업부명
+      ws.getCell("F3").value = 요청자명;   // 요청자명
+      ws.getCell("D4").value = 신청일자;   // 신청일자
+      ws.getCell("F4").value = 전화번호;   // 전화번호
+      ws.getCell("D5").value = 고객명;     // 고객명
+      ws.getCell("F5").value = 카드승인일; // 카드승인일
+      ws.getCell("D6").value = 결제금액;   // 결제금액
+      ws.getCell("F6").value = 승인번호;   // 승인번호
+      ws.getCell("D7").value = 카드번호;   // 카드번호 (D7:F7 병합)
+      ws.getCell("D8").value = 카드사명;   // 카드사명
+      ws.getCell("F8").value = 카드주명;   // 카드주명
+      ws.getCell("C9").value = 취소사유;   // 취소사유 (C9:F9 병합)
 
       // 다운로드
       const buffer = await workbook.xlsx.writeBuffer();
@@ -1362,6 +1362,8 @@ export default function SalesManagement({ user, onNavigate }) {
   const [showExcelPreview, setShowExcelPreview] = useState(false);
   const [batchPreview, setBatchPreview] = useState(null);
   const [showBatchPreview, setShowBatchPreview] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateResult, setDuplicateResult] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -1679,7 +1681,7 @@ export default function SalesManagement({ user, onNavigate }) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const bstr = evt.target.result;
       const wb = XLSX.read(bstr, { type: "binary" });
       const wsname = wb.SheetNames[0];
@@ -1687,14 +1689,84 @@ export default function SalesManagement({ user, onNavigate }) {
       const data = XLSX.utils.sheet_to_json(ws);
 
       if (data && data.length > 0 && data[0]["지점명"]) {
-        setBatchPreview(data);
-        setShowBatchPreview(true);
+        setLoading(true);
+        try {
+          const { data: existingSales, error } = await supabase
+            .from("sales")
+            .select("payment_info, customer_name, deposit_amount");
+
+          if (error) throw error;
+
+          const existingApprovalNos = new Set();
+          const existingCombos = new Set();
+
+          existingSales.forEach(sale => {
+            let info = sale.payment_info;
+            if (typeof info === 'string') {
+              try { info = JSON.parse(info); } catch(e) {}
+            }
+            if (info && info.cards) {
+              info.cards.forEach(card => {
+                if (card.approvalNo) existingApprovalNos.add(card.approvalNo.toString().trim());
+              });
+            }
+            existingCombos.add(`${sale.customer_name}_${sale.deposit_amount}`);
+          });
+
+          const newBatch = [];
+          const duplicateBatch = [];
+
+          data.forEach(row => {
+            const approvalNo = (row["승인번호"] || "").toString().trim();
+            const customerName = (row["구매자성함"] || "").toString().trim();
+            const depositAmount = parseInt(row["카드결제액"]?.toString().replace(/[^\d]/g, "") || 0) + 
+                                  parseInt(row["현금입금액"]?.toString().replace(/[^\d]/g, "") || 0);
+
+            let isDuplicate = false;
+            if (approvalNo && existingApprovalNos.has(approvalNo)) {
+              isDuplicate = true;
+            } else if (!approvalNo && existingCombos.has(`${customerName}_${depositAmount}`)) {
+              isDuplicate = true;
+            }
+
+            if (isDuplicate) {
+              duplicateBatch.push(row);
+            } else {
+              newBatch.push(row);
+            }
+          });
+
+          if (duplicateBatch.length > 0) {
+            setDuplicateResult({
+              total: data.length,
+              newCount: newBatch.length,
+              dupCount: duplicateBatch.length,
+              duplicates: duplicateBatch
+            });
+            setShowDuplicateModal(true);
+          }
+
+          if (newBatch.length > 0) {
+            setBatchPreview(newBatch);
+            setShowBatchPreview(true);
+          } else if (duplicateBatch.length === 0) {
+            showAlert("안내", "업로드할 데이터가 없습니다.", "info");
+          } else {
+            showAlert("안내", "모든 데이터가 이미 서버에 등록된 중복 데이터입니다.", "info");
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert("오류", "중복 검증 중 오류가 발생했습니다.", "error");
+        } finally {
+          setLoading(false);
+        }
       } else {
         setExcelPreview(data);
         setShowExcelPreview(true);
       }
     };
     reader.readAsBinaryString(file);
+    e.target.value = null; // 초기화
   };
 
   const handleDownloadTemplate = () => {
@@ -2973,6 +3045,52 @@ export default function SalesManagement({ user, onNavigate }) {
             >
               확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 모달: 중복 데이터 안내 */}
+      {showDuplicateModal && duplicateResult && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[130] animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden border border-gray-100">
+            <div className="p-4 border-b flex items-center justify-between bg-orange-50">
+              <h3 className="font-bold text-orange-600 flex items-center gap-2">
+                <AlertTriangle size={20} />
+                중복 데이터 검증 결과
+              </h3>
+              <button onClick={() => setShowDuplicateModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="bg-orange-50/50 p-4 rounded-xl border border-orange-100 mb-4 text-center">
+                <p className="text-sm font-bold text-gray-700">총 {duplicateResult.total}건 중 <span className="text-teal-600">{duplicateResult.newCount}건 업로드 가능</span></p>
+                <p className="text-xs font-black text-orange-600 mt-1">{duplicateResult.dupCount}건의 기존 등록 데이터가 발견되어 제외되었습니다.</p>
+              </div>
+              <p className="text-xs font-bold text-gray-500 mb-2">제외된 목록 (미리보기):</p>
+              <div className="space-y-2">
+                {duplicateResult.duplicates.slice(0, 5).map((dup, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 border border-gray-100 rounded-lg text-xs flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-gray-700">{dup["구매자성함"] || "이름없음"} <span className="text-gray-400">({dup["승인번호"] || "승인번호 없음"})</span></p>
+                      <p className="text-gray-500 mt-0.5">{dup["단말기번호"] || "단말기번호 없음"} · {dup["지점명"] || "지점명 없음"}</p>
+                    </div>
+                    <span className="font-black text-orange-500">제외됨</span>
+                  </div>
+                ))}
+                {duplicateResult.dupCount > 5 && (
+                  <p className="text-center text-xs text-gray-400 pt-2">+ 외 {duplicateResult.dupCount - 5}건</p>
+                )}
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-bold shadow-sm hover:bg-gray-700 transition-colors text-sm"
+              >
+                닫기
+              </button>
+            </div>
           </div>
         </div>
       )}
