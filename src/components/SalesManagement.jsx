@@ -31,6 +31,7 @@ import {
   FileText,
   ClipboardCheck,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 
 const compressImage = (file) => {
@@ -103,7 +104,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const [cancelOcrError, setCancelOcrError] = useState("");
   const [cancelMismatch, setCancelMismatch] = useState([]); // 불일치 항목 목록
   const cancelReceiptInputRef = useRef(null);
-  const itemsPerPage = 20;
+  const itemsPerPage = 9999;
 
   const handleRowClick = (record) => {
     setSelectedRecord(record);
@@ -517,8 +518,8 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   );
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-5 pb-20">
-      <div className="flex justify-between items-center bg-white/50 py-2">
+    <div className="max-w-7xl mx-auto p-2 sm:p-3 space-y-2 pb-4">
+      <div className="flex justify-between items-center bg-white/50 py-1">
         <div>
           <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
             <BarChart3 className="text-teal-600" size={22} />
@@ -539,10 +540,10 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       </div>
 
       {/* 필터 (시리즈/판매자/시작일/종료일 2row 배치) - 상단으로 이동 */}
-      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm mb-4">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm mb-2">
+        <div className="grid grid-cols-4 gap-2">
           <div className="flex flex-col">
-            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+            <label className="block text-[10px] font-black text-gray-400 mb-1 ml-1">
               시리즈
             </label>
             <select
@@ -550,7 +551,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
               onChange={(e) =>
                 setFilters((p) => ({ ...p, series: e.target.value }))
               }
-              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+              className="w-full h-8 px-2 bg-gray-50 border-none rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
             >
               <option value="">전체</option>
               {[
@@ -566,7 +567,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
           </div>
 
           <div className="flex flex-col">
-            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+            <label className="block text-[10px] font-black text-gray-400 mb-1 ml-1">
               판매자
             </label>
             <div className="relative">
@@ -575,7 +576,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                 onChange={(e) =>
                   setFilters((p) => ({ ...p, userName: e.target.value }))
                 }
-                className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
+                className="w-full h-8 px-2 bg-gray-50 border-none rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none"
               >
                 <option value="전체">전체</option>
                 {availableUsers.map((name) => (
@@ -588,7 +589,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
           </div>
 
           <div className="flex flex-col">
-            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+            <label className="block text-[10px] font-black text-gray-400 mb-1 ml-1">
               시작일
             </label>
             <input
@@ -597,12 +598,12 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
               onChange={(e) =>
                 setFilters((p) => ({ ...p, startDate: e.target.value }))
               }
-              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+              className="w-full h-8 px-2 bg-gray-50 border-none rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all"
             />
           </div>
 
           <div className="flex flex-col">
-            <label className="block text-xs font-black text-gray-500 mb-2 ml-1">
+            <label className="block text-[10px] font-black text-gray-400 mb-1 ml-1">
               종료일
             </label>
             <input
@@ -611,17 +612,17 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
               onChange={(e) =>
                 setFilters((p) => ({ ...p, endDate: e.target.value }))
               }
-              className="w-full h-11 px-3 bg-gray-50 border-none rounded-xl text-sm font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all font-bold"
+              className="w-full h-8 px-2 bg-gray-50 border-none rounded-lg text-xs font-bold outline-none focus:ring-2 focus:ring-teal-500 transition-all"
             />
           </div>
         </div>
 
-        <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-50">
-          <div className="bg-[#effefb] px-4 py-2.5 rounded-2xl flex items-center gap-1.5">
-            <span className="text-xs font-bold text-[#249689]">
+        <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-50">
+          <div className="bg-[#effefb] px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-[#249689]">
               검색 필터 합계:{" "}
             </span>
-            <span className="font-black text-[#249689] text-base">
+            <span className="font-black text-[#249689] text-sm">
               {fmt(stats.totalAmount)}
             </span>
             <span className="text-[10px] text-gray-300 ml-1">
@@ -647,64 +648,64 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       </div>
 
       {/* 총 누적 매출 */}
-      <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-2xl p-5 text-white relative overflow-hidden">
-        <div className="absolute -right-3 -bottom-3 opacity-10">
-          <ShoppingCart size={80} />
+      <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl px-3 py-2 text-white flex items-center justify-between">
+        <div>
+          <p className="text-teal-100 text-[10px] font-bold mb-0.5">총 누적 매출</p>
+          <h3 className="text-xl font-black leading-none">{fmt(stats.totalAmount)}</h3>
         </div>
-        <p className="text-teal-100 text-xs font-bold mb-1">총 누적 매출</p>
-        <h3 className="text-2xl font-black">{fmt(stats.totalAmount)}</h3>
-        <p className="text-[10px] text-teal-200 mt-2">
-          총 {stats.totalCount}건
-        </p>
+        <div className="text-right">
+          <p className="text-teal-100 text-[10px] font-bold mb-0.5">총 건수</p>
+          <p className="text-xl font-black leading-none">{stats.totalCount}건</p>
+        </div>
       </div>
 
       {/* 2x2 매출 카드 */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <p className="text-gray-400 text-xs font-bold">오늘</p>
-            <div className="p-1.5 bg-teal-50 text-teal-600 rounded-lg">
-              <Calendar size={14} />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-gray-400 text-[10px] font-bold">오늘</p>
+            <div className="p-1 bg-teal-50 text-teal-600 rounded-lg">
+              <Calendar size={12} />
             </div>
           </div>
-          <h3 className="text-base font-black text-gray-800">
+          <h3 className="text-sm font-black text-gray-800">
             {fmt(stats.todayAmount)}
           </h3>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-          <div className="flex justify-between items-start mb-2">
-            <p className="text-gray-400 text-xs font-bold">이번 달</p>
-            <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
-              <Trophy size={14} />
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-gray-400 text-[10px] font-bold">이번 달</p>
+            <div className="p-1 bg-purple-50 text-purple-600 rounded-lg">
+              <Trophy size={12} />
             </div>
           </div>
-          <h3 className="text-base font-black text-gray-800">
+          <h3 className="text-sm font-black text-gray-800">
             {fmt(stats.monthAmount)}
           </h3>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
           <div className="flex justify-between items-start mb-0.5">
-            <p className="text-gray-400 text-xs font-bold">이번 주</p>
-            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
-              <BarChart3 size={14} />
+            <p className="text-gray-400 text-[10px] font-bold">이번 주</p>
+            <div className="p-1 bg-blue-50 text-blue-600 rounded-lg">
+              <BarChart3 size={12} />
             </div>
           </div>
-          <p className="text-[10px] text-gray-300 mb-1">{stats.weekRange}</p>
-          <h3 className="text-base font-black text-gray-800">
+          <p className="text-[9px] text-gray-300 mb-0.5">{stats.weekRange}</p>
+          <h3 className="text-sm font-black text-gray-800">
             {fmt(stats.weekAmount)}
           </h3>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-100 p-3 shadow-sm">
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5 shadow-sm">
           <div className="flex justify-between items-start mb-0.5">
-            <p className="text-gray-400 text-xs font-bold">지난 주</p>
-            <div className="p-1.5 bg-orange-50 text-orange-500 rounded-lg">
-              <BarChart3 size={14} />
+            <p className="text-gray-400 text-[10px] font-bold">지난 주</p>
+            <div className="p-1 bg-orange-50 text-orange-500 rounded-lg">
+              <BarChart3 size={12} />
             </div>
           </div>
-          <p className="text-[10px] text-gray-300 mb-1">
+          <p className="text-[9px] text-gray-300 mb-0.5">
             {stats.lastWeekRange}
           </p>
-          <h3 className="text-base font-black text-gray-800">
+          <h3 className="text-sm font-black text-gray-800">
             {fmt(stats.lastWeekAmount)}
           </h3>
         </div>
@@ -712,22 +713,22 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
 
       {/* 시리즈별 */}
       {Object.keys(seriesStats).length > 0 && (
-        <div className="pt-2">
-          <h4 className="text-sm font-black text-gray-600 mb-2 flex items-center gap-1.5">
-            <Package size={14} className="text-teal-500" /> 시리즈별 판매
+        <div>
+          <h4 className="text-xs font-black text-gray-600 mb-1.5 flex items-center gap-1">
+            <Package size={12} className="text-teal-500" /> 시리즈별 판매
           </h4>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {Object.entries(seriesStats)
               .sort()
               .map(([series, count]) => (
                 <div
                   key={series}
-                  className="bg-white px-3 py-2 rounded-xl border border-gray-100 shadow-sm flex items-center gap-2"
+                  className="bg-white px-2 py-1 rounded-lg border border-gray-100 shadow-sm flex items-center gap-1.5"
                 >
-                  <span className="font-black text-gray-800 text-sm">
+                  <span className="font-black text-gray-800 text-xs">
                     {series}
                   </span>
-                  <span className="bg-teal-100 text-teal-700 text-xs font-black px-2 py-0.5 rounded-full">
+                  <span className="bg-teal-100 text-teal-700 text-[10px] font-black px-1.5 py-0.5 rounded-full">
                     {count}개
                   </span>
                 </div>
@@ -737,12 +738,12 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       )}
 
       {/* 개인매출현황 (랭킹) */}
-      <div className="pt-4">
-        <h3 className="text-sm font-black text-gray-800 flex items-center gap-2 mb-3">
-          <Award className="text-blue-500" size={16} />
+      <div>
+        <h3 className="text-xs font-black text-gray-800 flex items-center gap-1.5 mb-1.5">
+          <Award className="text-blue-500" size={13} />
           개인매출현황
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5">
           {Object.entries(
             salesData.reduce((acc, curr) => {
               const name = curr.user_name || "알 수 없음";
@@ -755,17 +756,17 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
             .map(([name, amount], idx) => (
               <div
                 key={name}
-                className="bg-white p-3 rounded-xl border border-gray-100 flex items-center gap-3 shadow-sm"
+                className="bg-white p-2 rounded-lg border border-gray-100 flex items-center gap-2 shadow-sm"
               >
                 <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 ${idx === 0 ? "bg-yellow-400" : idx === 1 ? "bg-gray-400" : idx === 2 ? "bg-orange-400" : "bg-gray-200 text-gray-500"}`}
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0 ${idx === 0 ? "bg-yellow-400" : idx === 1 ? "bg-gray-400" : idx === 2 ? "bg-orange-400" : "bg-gray-200 text-gray-500"}`}
                 >
                   {idx + 1}
                 </div>
-                <span className="flex-1 font-bold text-gray-700 text-sm truncate">
+                <span className="flex-1 font-bold text-gray-700 text-xs truncate">
                   {name}
                 </span>
-                <span className="font-black text-sm shrink-0 text-blue-700">
+                <span className="font-black text-xs shrink-0 text-blue-700">
                   {fmt(amount)}
                 </span>
               </div>
@@ -773,143 +774,98 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         </div>
       </div>
 
-      {/* 모바일 카드 */}
-      <div className="md:hidden space-y-3">
-        {currentItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm active:bg-gray-50 transition-colors"
-            onClick={() => handleRowClick(item)}
-          >
-            {/* 1행: 시간, 구매자(변경), 금액 */}
-            <div className="flex justify-between items-center mb-1.5 pb-1.5 border-b border-gray-50">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-black px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">
-                  {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      {/* 매출 내역 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-gray-50 border-b border-gray-100 px-3 py-1.5 flex items-center justify-between">
+          <span className="text-[10px] font-black text-gray-400">매출 내역</span>
+          <span className="text-[10px] font-black text-gray-400">{salesData.length}건</span>
+        </div>
+        {/* 모바일 카드 */}
+        <div className="md:hidden overflow-y-auto" style={{ maxHeight: "280px" }}>
+          {salesData.map((item) => (
+            <div
+              key={item.id}
+              className="bg-white p-2 border-b border-gray-50 active:bg-gray-50 transition-colors"
+              onClick={() => handleRowClick(item)}
+            >
+              <div className="flex justify-between items-center mb-0.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] font-black px-1 py-0.5 bg-gray-100 text-gray-400 rounded">
+                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  <span className="text-[11px] font-black text-gray-800">{item.customer_name || "구매자 미입력"}</span>
+                </div>
+                <span className="text-xs font-black text-[#249689]">
+                  {fmt(item.deposit_amount)}
                 </span>
-                <span className="text-xs font-black text-gray-800">{item.customer_name || "구매자 미입력"}</span>
               </div>
-              <span className="text-[13px] font-black text-[#249689]">
-                {fmt(item.deposit_amount)}
-              </span>
-            </div>
-
-            {/* 2행: 상세내용, 상세보기 화살표 */}
-            <div className="flex justify-between items-end">
-              <div className="flex-1 overflow-hidden mr-2">
-                <div className="flex items-center gap-1.5">
-                  <Package size={10} className="text-teal-400 shrink-0" />
-                  <p className="text-[11px] font-bold text-gray-600 truncate">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-1">
+                  <Package size={9} className="text-teal-400 shrink-0" />
+                  <p className="text-[10px] font-bold text-gray-500 truncate max-w-[200px]">
                     {item.order_details || "-"}
                   </p>
                 </div>
-              </div>
-              <div className="shrink-0 flex items-center gap-0.5 text-[#249689] font-black text-[10px] opacity-80">
-                상세보기 <ChevronRight size={10} />
+                <div className="shrink-0 flex items-center gap-0.5 text-[#249689] font-black text-[9px] opacity-80">
+                  상세보기 <ChevronRight size={9} />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-        {salesData.length === 0 && !loading && (
-          <p className="text-center text-gray-400 py-10 text-sm">
-            판매 내역이 없습니다.
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b border-gray-100 hidden md:table-header-group">
-            <tr>
-              <th className="px-5 py-3 text-[11px] font-black text-gray-400">매출 내역</th>
-              <th className="px-5 py-3 text-[11px] font-black text-gray-400 text-right">금액</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {currentItems.map((item) => (
-              <tr
-                key={item.id}
-                className="hover:bg-teal-50/30 transition-colors cursor-pointer group"
-                onClick={() => handleRowClick(item)}
-              >
-                <td className="px-5 py-4" colSpan="2">
-                  {/* 1행: 일시 및 구매자 */}
-                  <div className="flex justify-between items-start mb-1.5">
-                    <div className="flex items-center gap-3">
-                       <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded leading-tight">
-                         {new Date(item.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                       </span>
-                       <span className="text-sm font-black text-gray-800 flex items-center gap-1.5">
-                         <User size={14} className="text-blue-500" />
-                         {item.customer_name || "구매자 미입력"}
-                       </span>
-                    </div>
-                    <div className="text-right">
-                       <span className="text-base font-black text-[#249689]">
-                         {fmt(item.deposit_amount)}
-                       </span>
-                    </div>
-                  </div>
-                  
-                  {/* 2행: 주문 상세 */}
-                  <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 mt-1">
-                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1.5 overflow-hidden">
-                           <Package size={14} className="text-teal-400 shrink-0" />
-                           <span className="text-xs text-gray-600 font-bold truncate max-w-[200px] md:max-w-md">
-                             {item.order_details || "-"}
-                           </span>
-                        </div>
-                     </div>
-                     <div className="flex items-center gap-1 text-[#249689] font-black text-[11px] group-hover:translate-x-1 transition-transform">
-                        상세보기 <ChevronRight size={14} />
-                     </div>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {salesData.length === 0 && !loading && (
-              <tr>
-                <td
-                  colSpan="2"
-                  className="px-5 py-20 text-center text-gray-400 text-sm font-bold"
-                >
-                  판매 내역이 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* 페이징 */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-400 disabled:opacity-30 hover:bg-gray-50"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          {[...Array(Math.min(totalPages, 10))].map((_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => setCurrentPage(i + 1)}
-              className={`w-8 h-8 rounded-lg font-bold text-xs transition-all ${currentPage === i + 1 ? "bg-teal-600 text-white shadow-md" : "bg-white text-gray-400 border border-gray-100 hover:bg-gray-50"}`}
-            >
-              {i + 1}
-            </button>
           ))}
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-400 disabled:opacity-30 hover:bg-gray-50"
-          >
-            <ChevronRight size={18} />
-          </button>
+          {salesData.length === 0 && !loading && (
+            <p className="text-center text-gray-400 py-8 text-xs">판매 내역이 없습니다.</p>
+          )}
         </div>
-      )}
+        {/* 데스크탑 테이블 */}
+        <div className="hidden md:block overflow-y-auto" style={{ maxHeight: "300px" }}>
+          <table className="w-full text-left">
+            <tbody className="divide-y divide-gray-50">
+              {salesData.map((item) => (
+                <tr
+                  key={item.id}
+                  className="hover:bg-teal-50/30 transition-colors cursor-pointer group"
+                  onClick={() => handleRowClick(item)}
+                >
+                  <td className="px-3 py-2" colSpan="2">
+                    <div className="flex justify-between items-start mb-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded leading-tight">
+                          {new Date(item.created_at).toLocaleString('ko-KR', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-xs font-black text-gray-800 flex items-center gap-1">
+                          <User size={11} className="text-blue-500" />
+                          {item.customer_name || "구매자 미입력"}
+                        </span>
+                      </div>
+                      <span className="text-sm font-black text-[#249689]">
+                        {fmt(item.deposit_amount)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-gray-50/50 p-1.5 rounded-lg border border-gray-100 mt-0.5">
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        <Package size={11} className="text-teal-400 shrink-0" />
+                        <span className="text-[11px] text-gray-500 font-bold truncate max-w-[200px] md:max-w-md">
+                          {item.order_details || "-"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-0.5 text-[#249689] font-black text-[10px] group-hover:translate-x-1 transition-transform">
+                        상세보기 <ChevronRight size={11} />
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {salesData.length === 0 && !loading && (
+                <tr>
+                  <td colSpan="2" className="px-5 py-10 text-center text-gray-400 text-xs font-bold">
+                    판매 내역이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
 
 
@@ -997,15 +953,27 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                 <div className="space-y-2">
                   {(() => {
                     try {
-                      const info = typeof selectedRecord.payment_info === 'string' 
-                        ? JSON.parse(selectedRecord.payment_info) 
+                      const info = typeof selectedRecord.payment_info === 'string'
+                        ? JSON.parse(selectedRecord.payment_info)
                         : selectedRecord.payment_info;
-                      return info?.items?.map((item, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm bg-white p-2 rounded-lg border border-gray-100">
-                           <span className="font-bold text-gray-600">{item.language} {item.series}</span>
-                           <span className="font-black text-teal-700">{item.quantity}세트</span>
-                        </div>
-                      ));
+                      const items = info?.items || [];
+                      const extra = info?.extraProduct;
+                      return (
+                        <>
+                          {items.map((item, i) => (
+                            <div key={i} className="flex justify-between items-center text-sm bg-white p-2 rounded-lg border border-gray-100">
+                               <span className="font-bold text-gray-600">{item.language} {item.series} {item.quantity}세트</span>
+                               <span className="font-black text-teal-700">{fmt(item.price * item.quantity)}</span>
+                            </div>
+                          ))}
+                          {extra && (
+                            <div className="flex justify-between items-center text-sm bg-teal-50/30 p-2 rounded-lg border border-teal-100 italic">
+                              <span className="font-bold text-teal-700">별도구매: {extra.name}</span>
+                              <span className="font-black text-[#249689]">{fmt(extra.price)}</span>
+                            </div>
+                          )}
+                        </>
+                      );
                     } catch {
                       return <p className="text-sm font-bold text-gray-500">{selectedRecord.order_details}</p>;
                     }
