@@ -159,6 +159,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         }
       } catch (err) {
         setCancelOcrError("OCR 오류: " + (err?.message || "이미지를 다시 시도해 주세요."));
+      } finally {
         setCancelOcrLoading(false);
       }
   };
