@@ -17,27 +17,51 @@ export default function Login({ onNavigate, onLogin }) {
         password
       })
 
+      let userData = null
+
       if (authError) {
-        alert('이메일 또는 비밀번호가 올바르지 않습니다.\n\n오류: ' + authError.message)
-        return
-      }
+        // [수정] 임시 비밀번호 폴백 로직 추가
+        const isTemporaryPassword = password === 'las0000' || password === '123456'
+        
+        if (isTemporaryPassword) {
+          // users 테이블에서 직접 비밀번호 확인
+          const { data: tempUserData, error: tempUserError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .eq('password', password)
+            .single()
 
-      // 2. users 테이블에서 추가 프로필 정보 조회
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_uid', authUser.id)
-        .single()
+          if (!tempUserError && tempUserData) {
+            userData = tempUserData
+            console.log('✅ 임시 비밀번호로 로그인 성공:', email)
+          } else {
+            alert('이메일 또는 비밀번호가 올바르지 않습니다.\n\n오류: ' + authError.message)
+            return
+          }
+        } else {
+          alert('이메일 또는 비밀번호가 올바르지 않습니다.\n\n오류: ' + authError.message)
+          return
+        }
+      } else {
+        // [기존] 정상 Auth 로그인 성공 시 프로필 조회
+        const { data: profileData, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_uid', authUser.id)
+          .single()
 
-      if (userError || !userData) {
-        alert('사용자 정보를 불러올 수 없습니다.\n\n오류: ' + (userError?.message || 'auth_uid 매칭 실패') + '\nUID: ' + authUser.id)
-        return
+        if (profileError || !profileData) {
+          alert('사용자 정보를 불러올 수 없습니다.\n\n오류: ' + (profileError?.message || 'auth_uid 매칭 실패'))
+          return
+        }
+        userData = profileData
       }
 
       // 승인 상태 확인
       if (userData.status !== 'approved') {
         alert('관리자 승인 대기 중입니다. 승인 후 로그인이 가능합니다.')
-        await supabase.auth.signOut()
+        if (authUser) await supabase.auth.signOut()
         return
       }
 
