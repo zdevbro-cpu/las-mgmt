@@ -1197,8 +1197,8 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                     ref={cancelReceiptInputRef}
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     className="hidden"
+                    onClick={(e) => { e.target.value = null; }}
                     onChange={(e) => handleCancelReceiptOcr(e.target.files?.[0])}
                   />
                   <button
