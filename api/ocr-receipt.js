@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Image data is required' });
   }
 
-  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "AIzaSyB8U1iWVEqla7U0MlXH3KAHKXDKgluqL4k";
   if (!apiKey) {
     return res.status(500).json({ error: 'Gemini API key not configured' });
   }
