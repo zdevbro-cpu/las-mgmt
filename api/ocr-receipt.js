@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Image data is required' });
   }
 
-  const apiKey = process.env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'Gemini API key not configured' });
   }
@@ -55,6 +55,18 @@ export default async function handler(req, res) {
 
 없는 항목은 빈 문자열. 예시:
 {"approvalNo":"174541873","amount":"2000000","cardNo":"5425-86-****-5779","issuer":"NH카드","cardHolder":"","serialNo":"76250661","terminalNo":"3295581001","approvalDate":"2026-03-03"}`;
+  } else if (type === 'sales') {
+    prompt = `아래는 한국 신용카드 결제 영수증 이미지입니다. 다음 6가지 핵심 항목을 정확히 찾아서 JSON으로만 응답해줘. 설명이나 주석 없이 오직 JSON만 출력해.
+
+1. amount: 결제금액 (숫자만, 콤마 제외. 예: "1600000")
+2. issuer: 카드사명 (영수증에 적힌 카드 브랜드명. 예: "KB국민카드", "신한카드", "현대카드", "삼성카드")
+3. approvalNo: 승인번호 (영수증에 적힌 8자리 전후의 숫자. 예: "30014532")
+4. terminalNo: 단말기번호 (영수증의 "단말기번호", "TID", 혹은 "CATID" 항목 옆의 숫자)
+5. serialNo: 일련번호 (영수증의 "일련번호", "S/N" 항목 옆의 숫자)
+6. cardNumber: 카드번호 (**필수 추출 필드**) - "카드번호", "NO.", "번호" 옆에 위치. 1234-****-****-5678 처럼 마스킹된 부분까지 영수증에 보이는 그대로 텍스트 전체를 정확히 추출.
+
+항목을 찾을 수 없는 경우 빈 문자열("")로 응답해.
+출력 예시: {"amount":"1600000","issuer":"KB국민카드","approvalNo":"30014532","terminalNo":"3295581001","serialNo":"0558","cardNumber":"5570-42**-****-7047"}`;
   }
 
   try {
