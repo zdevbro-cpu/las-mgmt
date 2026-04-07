@@ -93,29 +93,24 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       try {
         const base64Data = reader.result.split(",")[1];
         setCancelOcrPreview(reader.result);
-        const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-        const prompt = `아래는 한국 신용카드 단말기에서 출력된 취소 영수증 이미지입니다.
-다음 항목을 찾아 JSON으로만 응답해줘. 설명 없이 JSON만 출력.
+        
+        const response = await fetch('/api/ocr-receipt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64Data,
+            mimeType: file.type || "image/jpeg",
+            type: "cancel"
+          })
+        });
 
-- approvalNo: 승인번호 (숫자, "승인번호" 또는 "승인No" 항목의 값)
-- amount: 결제(취소)금액 (절대값, 숫자만, 콤마·원·마이너스 제외)
-- cardNo: 카드번호 (예: 5425-86-****-5779)
-- issuer: 카드사명 (예: NH카드, 신한카드, KB국민카드)
-- cardHolder: 카드주명 (카드 소지자 이름, 없으면 빈 문자열)
-- serialNo: 일련번호 (숫자)
-- terminalNo: 단말기번호 (숫자)
-- approvalDate: 원거래일자 또는 거래일자 (YYYY-MM-DD 형식, 없으면 빈 문자열)
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'OCR 분석 중 오류가 발생했습니다.');
+        }
 
-없는 항목은 빈 문자열. 예시:
-{"approvalNo":"174541873","amount":"2000000","cardNo":"5425-86-****-5779","issuer":"NH카드","cardHolder":"","serialNo":"76250661","terminalNo":"3295581001","approvalDate":"2026-03-03"}`;
-        const geminiResult = await model.generateContent([
-          prompt,
-          { inlineData: { data: base64Data, mimeType: file.type || "image/jpeg" } },
-        ]);
-        const responseText = geminiResult.response.text();
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+        const result = await response.json();
+        
         if (result) {
           setCancelOcrResult(result);
           setCancelForm((prev) => ({

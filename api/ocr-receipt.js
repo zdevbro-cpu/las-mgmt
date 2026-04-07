@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { imageBase64, mimeType } = req.body;
+  const { imageBase64, mimeType, type } = req.body;
   if (!imageBase64) {
     return res.status(400).json({ error: 'Image data is required' });
   }
@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-  const prompt = `
+  let prompt = `
     신용카드 결제 영수증 이미지에서 다음 정보를 추출하여 JSON 형식으로 응답해줘.
     응답은 반드시 아래 JSON 스키마를 따라야 하며, 정보가 없는 경우 빈 문자열("")을 넣어줘.
     금액은 콤마 없이 숫자만 추출해줘.
@@ -39,6 +39,23 @@ export default async function handler(req, res) {
       "serialNo": "0001"
     }
   `;
+
+  if (type === 'cancel') {
+    prompt = `아래는 한국 신용카드 단말기에서 출력된 취소 영수증 이미지입니다.
+다음 항목을 찾아 JSON으로만 응답해줘. 설명 없이 JSON만 출력.
+
+- approvalNo: 승인번호 (숫자, "승인번호" 또는 "승인No" 항목의 값)
+- amount: 결제(취소)금액 (절대값, 숫자만, 콤마·원·마이너스 제외)
+- cardNo: 카드번호 (예: 5425-86-****-5779)
+- issuer: 카드사명 (예: NH카드, 신한카드, KB국민카드)
+- cardHolder: 카드주명 (카드 소지자 이름, 없으면 빈 문자열)
+- serialNo: 일련번호 (숫자)
+- terminalNo: 단말기번호 (숫자)
+- approvalDate: 원거래일자 또는 거래일자 (YYYY-MM-DD 형식, 없으면 빈 문자열)
+
+없는 항목은 빈 문자열. 예시:
+{"approvalNo":"174541873","amount":"2000000","cardNo":"5425-86-****-5779","issuer":"NH카드","cardHolder":"","serialNo":"76250661","terminalNo":"3295581001","approvalDate":"2026-03-03"}`;
+  }
 
   try {
     const result = await model.generateContent([

@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
                 throw new Error('.env 파일에 VITE_GEMINI_API_KEY를 설정해주세요.');
               }
 
-              const { imageBase64, mimeType } = req.body;
+              const { imageBase64, mimeType, type } = req.body;
               
               // 1. 모델 캐싱 로직: 글로벌 변수를 사용하여 속도 극대화
               if (!global._bestModel) {
@@ -42,11 +42,29 @@ export default defineConfig(({ mode }) => {
                 }
               }
 
+              let promptText = "영수증 본문에서 amount, issuer, approvalNo, terminalNo, serialNo를 JSON으로 추출해줘.";
+              if (type === 'cancel') {
+                promptText = `아래는 한국 신용카드 단말기에서 출력된 취소 영수증 이미지입니다.
+다음 항목을 찾아 JSON으로만 응답해줘. 설명 없이 JSON만 출력.
+
+- approvalNo: 승인번호 (숫자, "승인번호" 또는 "승인No" 항목의 값)
+- amount: 결제(취소)금액 (절대값, 숫자만, 콤마·원·마이너스 제외)
+- cardNo: 카드번호 (예: 5425-86-****-5779)
+- issuer: 카드사명 (예: NH카드, 신한카드, KB국민카드)
+- cardHolder: 카드주명 (카드 소지자 이름, 없으면 빈 문자열)
+- serialNo: 일련번호 (숫자)
+- terminalNo: 단말기번호 (숫자)
+- approvalDate: 원거래일자 또는 거래일자 (YYYY-MM-DD 형식, 없으면 빈 문자열)
+
+없는 항목은 빈 문자열. 예시:
+{"approvalNo":"174541873","amount":"2000000","cardNo":"5425-86-****-5779","issuer":"NH카드","cardHolder":"","serialNo":"76250661","terminalNo":"3295581001","approvalDate":"2026-03-03"}`;
+              }
+
               try {
                 const genAI = new GoogleGenerativeAI(geminiKey);
                 const model = genAI.getGenerativeModel({ model: global._bestModel });
                 const result = await model.generateContent([
-                  "영수증 본문에서 amount, issuer, approvalNo, terminalNo, serialNo를 JSON으로 추출해줘.",
+                  promptText,
                   { inlineData: { data: imageBase64, mimeType: mimeType || "image/jpeg" } }
                 ]);
 
