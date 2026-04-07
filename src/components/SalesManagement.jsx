@@ -84,15 +84,50 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
     setShowCancelModal(true);
   };
 
-  const handleCancelReceiptOcr = (file) => {
+  const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height && width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(dataUrl);
+        };
+        img.onerror = () => reject(new Error("이미지 로딩 실패"));
+        img.src = event.target.result;
+      };
+      reader.onerror = () => reject(new Error("파일 읽기 실패"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCancelReceiptOcr = async (file) => {
     if (!file) return;
     setCancelOcrLoading(true);
     setCancelOcrError("");
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const base64Data = reader.result.split(",")[1];
-        setCancelOcrPreview(reader.result);
+    
+    try {
+      const compressedDataUrl = await compressImage(file);
+      const base64Data = compressedDataUrl.split(",")[1];
+      setCancelOcrPreview(compressedDataUrl);
         
         const response = await fetch('/api/ocr-receipt', {
           method: 'POST',
@@ -123,11 +158,8 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         }
       } catch (err) {
         setCancelOcrError("OCR 오류: " + (err?.message || "이미지를 다시 시도해 주세요."));
-      } finally {
         setCancelOcrLoading(false);
       }
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleDeleteRecord = async () => {
@@ -1383,7 +1415,6 @@ export default function SalesManagement({ user, onNavigate }) {
       marketingAgreed: false,
       sellerName: prev.sellerName,
       notes: "",
-      notes: "",
       paymentDate: getKSTDateStr(),
     }));
     setOrderItems([
@@ -1575,10 +1606,9 @@ export default function SalesManagement({ user, onNavigate }) {
     // 1. 즉시 로컬 파일로 AI 분석 시작 (업로드 성공 여부와 무관)
     try {
       setOcrLoadingId(id);
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64Data = reader.result.split(',')[1];
+      
+      const compressedDataUrl = await compressImage(file);
+      const base64Data = compressedDataUrl.split(',')[1];
           
           const response = await fetch('/api/ocr-receipt', {
             method: 'POST',
@@ -1609,16 +1639,10 @@ export default function SalesManagement({ user, onNavigate }) {
               } : c
             ));
           }
-        } catch (ocrErr) {
-          console.error("AI OCR Error:", ocrErr);
-          showAlert("인식 실패", ocrErr.message || "영수증 분석 중 오류가 발생했습니다.", "error");
-        } finally {
-          setOcrLoadingId(null);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error("OCR Preparation Error:", err);
+    } catch (ocrErr) {
+      console.error("AI OCR Error:", ocrErr);
+      showAlert("인식 실패", ocrErr.message || "영수증 분석 중 오류가 발생했습니다.", "error");
+    } finally {
       setOcrLoadingId(null);
     }
 
