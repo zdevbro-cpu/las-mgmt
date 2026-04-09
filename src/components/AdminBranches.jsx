@@ -71,27 +71,33 @@ export default function AdminBranches({ user, onNavigate }) {
 
     setLoading(true)
     try {
-      const insertData = {
-        name: formData.name,
-        address: formData.address,
-        phone: formData.phone,
-        show_on_map: formData.show_on_map,
-        created_by: user.id,
-        is_active: true
-      }
+      let lat = null
+      let lng = null
 
       if (formData.address.trim()) {
+        console.log('Attempting geocoding for new branch:', formData.address)
         const coords = await addressToCoordinates(formData.address, formData.name)
         if (coords) {
-          insertData.lat = coords.lat
-          insertData.lng = coords.lng
+          lat = coords.lat
+          lng = coords.lng
         }
+      }
+
+      const insertData = {
+        name: formData.name.trim(),
+        address: formData.address.trim() || null,
+        phone: formData.phone.trim() || null,
+        show_on_map: formData.show_on_map,
+        created_by: user.id,
+        is_active: true,
+        lat,
+        lng
       }
 
       const { error } = await supabase.from('branches').insert(insertData)
       if (error) throw error
 
-      alert('지점이 추가되었습니다.')
+      alert(lat ? '지점이 추가되었습니다! (위치정보 포함)' : '지점이 추가되었습니다. (위치정보를 찾을 수 없습니다)')
       setShowAddModal(false)
       loadBranches()
     } catch (err) {
@@ -110,29 +116,38 @@ export default function AdminBranches({ user, onNavigate }) {
 
     setLoading(true)
     try {
-      const updateData = {
-        name: formData.name,
-        address: formData.address,
-        phone: formData.phone,
-        show_on_map: formData.show_on_map
-      }
+      let lat = editingBranch.lat
+      let lng = editingBranch.lng
 
       const addressChanged = formData.address.trim() !== (editingBranch.address || '').trim()
-      if (formData.address.trim() && addressChanged) {
+      const coordsMissing = !editingBranch.lat || !editingBranch.lng
+
+      if (formData.address.trim() && (addressChanged || coordsMissing)) {
+        console.log('Attempting geocoding for update:', formData.address)
         const coords = await addressToCoordinates(formData.address, formData.name)
         if (coords) {
-          updateData.lat = coords.lat
-          updateData.lng = coords.lng
+          lat = coords.lat
+          lng = coords.lng
         }
+      }
+
+      const updateData = {
+        name: formData.name.trim(),
+        address: formData.address.trim() || null,
+        phone: formData.phone.trim() || null,
+        show_on_map: formData.show_on_map,
+        lat,
+        lng
       }
 
       const { error } = await supabase
         .from('branches')
         .update(updateData)
         .eq('id', editingBranch.id)
+      
       if (error) throw error
 
-      alert('지점 정보가 수정되었습니다.')
+      alert(lat ? '지점 정보가 수정되었습니다!' : '지점 정보가 수정되었습니다. (위치정보를 찾을 수 없습니다)')
       setEditingBranch(null)
       loadBranches()
     } catch (err) {
@@ -249,7 +264,14 @@ export default function AdminBranches({ user, onNavigate }) {
                         {branch.name}
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
-                        {branch.address || '-'}
+                        <div className="flex flex-col">
+                          <span>{branch.address || '-'}</span>
+                          {branch.address && (
+                            <span className={`text-[10px] font-bold ${branch.lat ? 'text-blue-500' : 'text-red-500'}`}>
+                              {branch.lat ? '● 위치정보 등록됨' : '○ 위치정보 없음'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3" style={{ fontSize: '15px' }}>
                         {branch.phone || '-'}

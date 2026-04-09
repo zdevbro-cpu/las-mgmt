@@ -97,55 +97,65 @@ export default function SystemAdminBranches({ user, onNavigate }) {
 
     setLoading(true)
     try {
+      let lat = null
+      let lng = null
+
+      // 지점 생성 또는 수정 시 주소가 있으면 좌표 변환 시도
+      if (formData.address.trim()) {
+        const needsGeocoding = modalMode === 'create' || 
+                             formData.address.trim() !== (selectedBranch.address || '').trim() ||
+                             !selectedBranch.lat || !selectedBranch.lng
+
+        if (needsGeocoding) {
+          console.log('Attempting geocoding for:', formData.address)
+          const coords = await addressToCoordinates(formData.address, formData.name)
+          if (coords) {
+            lat = coords.lat
+            lng = coords.lng
+            console.log('Geocoding success:', coords)
+          } else {
+            console.warn('Geocoding failed for:', formData.address)
+          }
+        } else {
+          lat = selectedBranch.lat
+          lng = selectedBranch.lng
+        }
+      }
+
       if (modalMode === 'create') {
         const insertData = {
           name: formData.name.trim(),
           manager_name: formData.manager_name.trim() || null,
-          show_on_map: formData.show_on_map
+          show_on_map: formData.show_on_map,
+          address: formData.address.trim() || null,
+          phone: formData.phone.trim() || null,
+          lat,
+          lng
         }
 
-        if (formData.address.trim()) insertData.address = formData.address.trim()
-        if (formData.phone.trim()) insertData.phone = formData.phone.trim()
-
-        if (formData.address.trim()) {
-          const coords = await addressToCoordinates(formData.address, formData.name)
-          if (coords) {
-            insertData.lat = coords.lat
-            insertData.lng = coords.lng
-          }
-        }
-
-        const { error } = await supabase.from('branches').insert([insertData]).select()
+        const { error } = await supabase.from('branches').insert([insertData])
         if (error) throw error
 
-        alert('지점이 생성되었습니다!')
+        alert(lat ? '지점이 생성되었습니다! (위치정보 포함)' : '지점이 생성되었습니다. (위치정보를 찾을 수 없어 주소만 저장되었습니다)')
       } else {
         const updateData = {
           name: formData.name.trim(),
           manager_name: formData.manager_name.trim() || null,
-          show_on_map: formData.show_on_map
-        }
-
-        if (formData.address.trim()) updateData.address = formData.address.trim()
-        if (formData.phone.trim()) updateData.phone = formData.phone.trim()
-
-        const addressChanged = formData.address.trim() !== (selectedBranch.address || '').trim()
-        if (formData.address.trim() && addressChanged) {
-          const coords = await addressToCoordinates(formData.address, formData.name)
-          if (coords) {
-            updateData.lat = coords.lat
-            updateData.lng = coords.lng
-          }
+          show_on_map: formData.show_on_map,
+          address: formData.address.trim() || null,
+          phone: formData.phone.trim() || null,
+          lat,
+          lng
         }
 
         const { error } = await supabase
           .from('branches')
           .update(updateData)
           .eq('id', selectedBranch.id)
-          .select()
+        
         if (error) throw error
 
-        alert('지점 정보가 수정되었습니다!')
+        alert(lat ? '지점 정보가 수정되었습니다!' : '지점 정보가 수정되었습니다. (위치정보를 찾을 수 없습니다)')
       }
 
       setShowModal(false)
@@ -205,6 +215,40 @@ export default function SystemAdminBranches({ user, onNavigate }) {
       alert('지도 표시 상태 변경 중 오류가 발생했습니다.')
       // Revert optimization if needed or just let the user retry
       fetchBranches()
+    }
+  }
+
+  const handleBulkFix = async () => {
+    const missing = branches.filter(b => b.address && (!b.lat || !b.lng))
+    if (missing.length === 0) {
+      alert('위치 정보가 누락된 지점이 없습니다.')
+      return
+    }
+
+    if (!window.confirm(`${missing.length}개 지점의 위치 정보를 자동 복구하시겠습니까?`)) return
+
+    setLoading(true)
+    let successCount = 0
+    try {
+      for (const branch of missing) {
+        console.log(`Bulk fixing ${branch.name}...`)
+        const coords = await addressToCoordinates(branch.address, branch.name)
+        if (coords) {
+          const { error } = await supabase
+            .from('branches')
+            .update({ lat: coords.lat, lng: coords.lng })
+            .eq('id', branch.id)
+          
+          if (!error) successCount++
+        }
+      }
+      alert(`${successCount}개 지점의 위치 정보가 복구되었습니다.`)
+      fetchBranches()
+    } catch (err) {
+      console.error('Bulk fix error:', err)
+      alert('복구 중 오류가 발생했습니다.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -278,6 +322,15 @@ export default function SystemAdminBranches({ user, onNavigate }) {
               지점수 {branches.length.toString().padStart(2, '0')}
             </div>
             <div className="flex gap-2">
+              <button
+                onClick={handleBulkFix}
+                disabled={loading}
+                className="px-4 py-2 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2 disabled:opacity-50"
+                style={{ backgroundColor: '#f59e0b', borderRadius: '10px', fontSize: '15px' }}
+                title="누락된 좌표 정보를 검색하여 자동 복구합니다"
+              >
+                위치정보 일괄복구
+              </button>
               <button
                 onClick={handleExcelDownload}
                 disabled={loading}
@@ -354,7 +407,14 @@ export default function SystemAdminBranches({ user, onNavigate }) {
                         {branch.name}
                       </td>
                       <td className="px-3 py-3 align-middle" style={{ fontSize: '14px' }}>
-                        {branch.address || '-'}
+                        <div className="flex flex-col">
+                          <span>{branch.address || '-'}</span>
+                          {branch.address && (
+                            <span className={`text-[10px] font-bold ${branch.lat ? 'text-blue-500' : 'text-red-500'}`}>
+                              {branch.lat ? '● 위치정보 등록됨' : '○ 위치정보 없음'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-3 text-center align-middle" style={{ fontSize: '14px', whiteSpace: 'nowrap' }}>
                         {branch.manager_name || '-'}

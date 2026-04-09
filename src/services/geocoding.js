@@ -10,11 +10,15 @@ export const addressToCoordinates = async (address, branchName) => {
   const variants = buildAddressVariants(address, branchName);
 
   for (const variant of variants) {
+    console.log('[Geocoding] Trying variant:', variant);
     const result = await requestGeocode(variant);
-    if (result) return result;
+    if (result) {
+      console.log('[Geocoding] Success with variant:', variant);
+      return result;
+    }
   }
 
-  console.warn('[Geocoding] 결과 없음:', address);
+  console.warn('[Geocoding] No results for:', address);
   return null;
 };
 
@@ -32,7 +36,7 @@ const requestGeocode = async (query) => {
       };
     }
   } catch (err) {
-    console.error('[Geocoding] 요청 오류:', err);
+    console.error('[Geocoding] Request error:', err);
   }
   return null;
 };
@@ -64,10 +68,18 @@ const buildAddressVariants = (input, name) => {
   push(input);
   push(base);
 
+  // 공백 제거 버전 (가끔 네이버는 공백 없는 검색을 더 잘함)
+  push(base.replace(/\s/g, ''));
+
   // 동/호 제거
   push(base.replace(/\s*\d+\s*(동|호)\s*/g, ' '));
   // 층 제거
   push(base.replace(/(지하|지상)?\s*\d+\s*층|B\s*\d+\s*층|B\s*\d+/g, ' '));
+
+  // 번길 관련 처리 (공백 허용)
+  if (base.includes('번길')) {
+    push(base.replace(/(\d+)번길/, ' $1번길 '));
+  }
 
   // 지역명 확장
   const regionKey = Object.keys(regionMap).find((k) => base.startsWith(`${k} `));
@@ -80,7 +92,9 @@ const buildAddressVariants = (input, name) => {
   // 지점명으로 검색
   if (name) {
     push(name);
-    push(`${base.split(' ')[0]} ${name}`);
+    const city = base.split(' ')[0];
+    push(`${city} ${name}`);
+    push(`${city} ${normalize(name)}`);
   }
 
   return Array.from(variants);
