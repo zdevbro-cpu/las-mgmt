@@ -103,6 +103,17 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const [cancelOcrResult, setCancelOcrResult] = useState(null);
   const [cancelOcrError, setCancelOcrError] = useState("");
   const [cancelMismatch, setCancelMismatch] = useState([]); // 불일치 항목 목록
+  const [isManualInput, setIsManualInput] = useState(false);
+  const [manualCancelData, setManualCancelData] = useState({
+    approvalNo: "",
+    amount: "",
+    issuer: "",
+    terminalNo: "",
+    serialNo: "",
+    cardNo: "",
+    cardHolder: "",
+    approvalDate: "",
+  });
   const cancelReceiptInputRef = useRef(null);
   const itemsPerPage = 9999;
 
@@ -117,6 +128,18 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
     setCancelOcrPreview(null);
     setCancelOcrResult(null);
     setCancelOcrError("");
+    setCancelMismatch([]);
+    setIsManualInput(false);
+    setManualCancelData({
+      approvalNo: "",
+      amount: "",
+      issuer: "",
+      terminalNo: "",
+      serialNo: "",
+      cardNo: "",
+      cardHolder: "",
+      approvalDate: "",
+    });
     setShowCancelModal(true);
   };
 
@@ -168,9 +191,10 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
   const handleDeleteRecord = async () => {
     if (!selectedRecord) return;
 
-    // OCR 결과가 없으면 취소표 촬영 요청
-    if (!cancelOcrResult) {
-      setCancelMismatch([{ label: "안내", stored: "", ocr: "취소표를 먼저 촬영하세요." }]);
+    const cancelData = isManualInput ? manualCancelData : cancelOcrResult;
+
+    if (!cancelData) {
+      setCancelMismatch([{ label: "안내", stored: "", ocr: isManualInput ? "필수 정보를 입력하세요." : "취소표를 먼저 촬영하세요." }]);
       return;
     }
 
@@ -178,33 +202,27 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       ? JSON.parse(selectedRecord.payment_info)
       : selectedRecord.payment_info || {};
     const storedCard = info?.cards?.[cancelTargetIdx] || {};
-    const ocr = cancelOcrResult;
-
-    // 정합성 비교
+    
+    // 정합성 비교 (승인번호와 금액만 필수 체크)
     const mismatches = [];
-
     const normalizeNo = (v) => String(v || "").replace(/\s|-/g, "");
     const normalizeAmt = (v) => Number(String(v || "0").replace(/[^0-9]/g, ""));
 
-    if (ocr.approvalNo && normalizeNo(ocr.approvalNo) !== normalizeNo(storedCard.approvalNo)) {
+    // 1. 승인번호 비교
+    if (normalizeNo(cancelData.approvalNo) !== normalizeNo(storedCard.approvalNo)) {
       mismatches.push({
         label: "승인번호",
         stored: storedCard.approvalNo || "-",
-        ocr: ocr.approvalNo,
+        ocr: cancelData.approvalNo || "(미입력)",
       });
     }
-    if (ocr.amount && normalizeAmt(ocr.amount) !== normalizeAmt(storedCard.amount || selectedRecord.deposit_amount)) {
+
+    // 2. 금액 비교
+    if (normalizeAmt(cancelData.amount) !== normalizeAmt(storedCard.amount || selectedRecord.deposit_amount)) {
       mismatches.push({
         label: "결제금액",
         stored: Number(storedCard.amount || selectedRecord.deposit_amount || 0).toLocaleString("ko-KR") + "원",
-        ocr: Number(ocr.amount).toLocaleString("ko-KR") + "원",
-      });
-    }
-    if (ocr.issuer && storedCard.issuer && ocr.issuer !== storedCard.issuer) {
-      mismatches.push({
-        label: "카드사",
-        stored: storedCard.issuer,
-        ocr: ocr.issuer,
+        ocr: cancelData.amount ? Number(cancelData.amount).toLocaleString("ko-KR") + "원" : "(미입력)",
       });
     }
 
@@ -238,7 +256,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         ? JSON.parse(selectedRecord.payment_info)
         : selectedRecord.payment_info || {};
       const storedCard = info?.cards?.[cancelTargetIdx] || {};
-      const ocr = cancelOcrResult || {};
+      const ocr = (isManualInput ? manualCancelData : cancelOcrResult) || {};
       const today = new Date();
       const todayStr = today.toLocaleDateString("ko-KR");
 
@@ -1153,69 +1171,214 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                   </div>
                 </div>
 
-                {/* 취소 영수증 OCR */}
+                {/* 취소 영수증 OCR / 수동 입력 */}
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide">취소표 이미지 인식 (선택)</p>
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-wide">
+                      {isManualInput ? "직접 정보 입력" : "취소표 이미지 인식 (선택)"}
+                    </p>
                     {cancelOcrLoading && (
                       <span className="text-[10px] font-black text-orange-500 animate-pulse">분석 중...</span>
                     )}
                   </div>
-                  <input
-                    ref={cancelReceiptInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onClick={(e) => { e.target.value = null; }}
-                    onChange={(e) => handleCancelReceiptOcr(e.target.files?.[0])}
-                  />
-                  <button
-                    onClick={() => cancelReceiptInputRef.current?.click()}
-                    disabled={cancelOcrLoading}
-                    className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-black text-gray-500 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {cancelOcrLoading ? (
-                      <><RotateCcw size={15} className="animate-spin" /> AI가 취소표를 읽는 중...</>
-                    ) : (
-                      <><FileUp size={15} /> 단말기 취소표 촬영 / 업로드</>
-                    )}
-                  </button>
-                  {cancelOcrPreview && (
-                    <div className="relative">
-                      <img src={cancelOcrPreview} alt="취소표" className="w-full rounded-xl border border-gray-200 max-h-40 object-contain bg-gray-100" />
+
+                  {!isManualInput ? (
+                    <div className="space-y-2">
+                      <input
+                        ref={cancelReceiptInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onClick={(e) => { e.target.value = null; }}
+                        onChange={(e) => handleCancelReceiptOcr(e.target.files?.[0])}
+                      />
                       <button
-                        onClick={() => { setCancelOcrPreview(null); setCancelOcrResult(null); setCancelOcrError(""); }}
-                        className="absolute top-1.5 right-1.5 bg-white/80 rounded-full p-0.5 text-gray-500 hover:text-red-500"
+                        onClick={() => cancelReceiptInputRef.current?.click()}
+                        disabled={cancelOcrLoading}
+                        className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-black text-gray-500 hover:border-red-400 hover:text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <X size={14} />
+                        {cancelOcrLoading ? (
+                          <><RotateCcw size={15} className="animate-spin" /> AI가 취소표를 읽는 중...</>
+                        ) : (
+                          <><FileUp size={15} /> 단말기 취소표 촬영 / 업로드</>
+                        )}
                       </button>
-                    </div>
-                  )}
-                  {cancelOcrError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs font-black text-red-600">
-                      {cancelOcrError}
-                    </div>
-                  )}
-                  {cancelOcrResult && (
-                    <div className="bg-orange-50 rounded-xl border border-orange-200 p-3 space-y-1.5">
-                      <p className="text-[11px] font-black text-orange-500 mb-2 flex items-center gap-1">
-                        <ClipboardCheck size={12} /> 취소표에서 추출된 정보
-                      </p>
-                      {[
-                        ["카드사", cancelOcrResult.issuer],
-                        ["카드번호", cancelOcrResult.cardNo],
-                        ["카드주명", cancelOcrResult.cardHolder],
-                        ["승인번호", cancelOcrResult.approvalNo],
-                        ["취소금액", cancelOcrResult.amount ? Number(cancelOcrResult.amount).toLocaleString("ko-KR") + "원" : ""],
-                        ["원거래일자", cancelOcrResult.approvalDate],
-                        ["일련번호", cancelOcrResult.serialNo],
-                        ["단말기번호", cancelOcrResult.terminalNo],
-                      ].filter(([, v]) => v).map(([label, val]) => (
-                        <div key={label} className="flex justify-between text-xs">
-                          <span className="text-gray-500 font-bold">{label}</span>
-                          <span className="font-black text-gray-800">{val}</span>
+                      
+                      <div className="flex items-center gap-2 px-1">
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                        <span className="text-[10px] font-black text-gray-300">OR</span>
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                      </div>
+
+                      <button 
+                        onClick={() => {
+                          setIsManualInput(true);
+                          setCancelOcrError("");
+                          setCancelMismatch([]);
+                        }}
+                        className="w-full py-3 bg-white border border-blue-200 rounded-xl text-[11px] font-black text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <RotateCcw size={13} /> 정보 직접 입력하기
+                      </button>
+
+                      {cancelOcrPreview && (
+                        <div className="relative mt-2">
+                          <img src={cancelOcrPreview} alt="취소표" className="w-full rounded-xl border border-gray-200 max-h-40 object-contain bg-gray-100" />
+                          <button
+                            onClick={() => { setCancelOcrPreview(null); setCancelOcrResult(null); setCancelOcrError(""); }}
+                            className="absolute top-1.5 right-1.5 bg-white/80 rounded-full p-0.5 text-gray-500 hover:text-red-500"
+                          >
+                            <X size={14} />
+                          </button>
                         </div>
-                      ))}
+                      )}
+                      {cancelOcrError && (
+                        <div className="bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs font-black text-red-600 mt-2">
+                          {cancelOcrError}
+                        </div>
+                      )}
+                      {cancelOcrResult && (
+                        <div className="bg-orange-50 rounded-xl border border-orange-200 p-3 space-y-1.5 mt-2">
+                          <p className="text-[11px] font-black text-orange-500 mb-2 flex items-center gap-1">
+                            <ClipboardCheck size={12} /> 취소표에서 추출된 정보
+                          </p>
+                          {[
+                            ["카드사", cancelOcrResult.issuer],
+                            ["카드번호", cancelOcrResult.cardNo],
+                            ["카드주명", cancelOcrResult.cardHolder],
+                            ["승인번호", cancelOcrResult.approvalNo],
+                            ["취소금액", cancelOcrResult.amount ? Number(cancelOcrResult.amount).toLocaleString("ko-KR") + "원" : ""],
+                            ["원거래일자", cancelOcrResult.approvalDate],
+                            ["일련번호", cancelOcrResult.serialNo],
+                            ["단말기번호", cancelOcrResult.terminalNo],
+                          ].filter(([, v]) => v).map(([label, val]) => (
+                            <div key={label} className="flex justify-between text-xs">
+                              <span className="text-gray-500 font-bold">{label}</span>
+                              <span className="font-black text-gray-800">{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4 pt-1 animate-in slide-in-from-top-2 duration-200">
+                      <button 
+                        onClick={() => {
+                          setIsManualInput(false);
+                          setCancelMismatch([]);
+                        }}
+                        className="w-full py-2 bg-gray-100 border border-gray-200 rounded-lg text-[10px] font-black text-gray-500 hover:bg-gray-200 transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <RotateCcw size={12} /> 이미지 인식 모드로 전환
+                      </button>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-gray-500 ml-1">승인번호 *</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-gray-300"
+                            value={manualCancelData.approvalNo}
+                            onChange={(e) => setManualCancelData(p => ({ ...p, approvalNo: e.target.value }))}
+                            placeholder="숫자 입력"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-gray-500 ml-1">취소금액 *</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-gray-300"
+                            value={manualCancelData.amount}
+                            onChange={(e) => setManualCancelData(p => ({ ...p, amount: e.target.value.replace(/[^0-9]/g, "") }))}
+                            placeholder="금액(숫자만)"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-gray-500 ml-1">단말기번호</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-gray-300"
+                            value={manualCancelData.terminalNo}
+                            onChange={(e) => setManualCancelData(p => ({ ...p, terminalNo: e.target.value }))}
+                            placeholder="TID (선택)"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black text-gray-500 ml-1">일련번호</label>
+                          <input 
+                            type="text" 
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-gray-300"
+                            value={manualCancelData.serialNo}
+                            onChange={(e) => setManualCancelData(p => ({ ...p, serialNo: e.target.value }))}
+                            placeholder="S/N (선택)"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-gray-500 ml-1">카드사</label>
+                        <input 
+                          type="text" 
+                          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-blue-100 placeholder:text-gray-300"
+                          value={manualCancelData.issuer}
+                          onChange={(e) => setManualCancelData(p => ({ ...p, issuer: e.target.value }))}
+                          placeholder="카드사명 (선택)"
+                        />
+                      </div>
+                      <div className="pt-2">
+                         <p className="text-[10px] font-black text-gray-400 mb-1.5 ml-1 uppercase">증빙 이미지 (선택)</p>
+                         <div className="space-y-2">
+                           <div className="flex items-center gap-2">
+                             <input
+                               type="file"
+                               id="manual-res-img"
+                               accept="image/*"
+                               className="hidden"
+                               onChange={(e) => {
+                                 const file = e.target.files?.[0];
+                                 if (file) compressImage(file).then(setCancelOcrPreview);
+                               }}
+                             />
+                             <label 
+                               htmlFor="manual-res-img"
+                               className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black cursor-pointer flex items-center justify-center gap-2 transition-all border ${
+                                 cancelOcrPreview 
+                                   ? "bg-green-50 border-green-200 text-green-700 hover:bg-green-100" 
+                                   : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                               }`}
+                             >
+                               {cancelOcrPreview ? (
+                                 <><Check size={14} /> 취소표 사진 첨부 완료</>
+                               ) : (
+                                 <><FileUp size={14} /> 취소표 사진 첨부 (촬영)</>
+                               )}
+                             </label>
+                             {cancelOcrPreview && (
+                                <button 
+                                  onClick={() => setCancelOcrPreview(null)}
+                                  className="p-2.5 text-red-500 bg-red-50 rounded-xl hover:bg-red-100 border border-red-100 transition-colors"
+                                  title="첨부 취소"
+                                >
+                                  <X size={14} />
+                                </button>
+                             )}
+                           </div>
+                           
+                           {cancelOcrPreview && (
+                             <div className="relative animate-in zoom-in-95 duration-200">
+                               <img 
+                                 src={cancelOcrPreview} 
+                                 alt="증빙 미리보기" 
+                                 className="w-full rounded-xl border border-green-100 max-h-32 object-contain bg-gray-50 p-1" 
+                               />
+                               <div className="absolute bottom-2 right-2 bg-green-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm flex items-center gap-1">
+                                 <Check size={8} /> 첨부됨
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                      </div>
                     </div>
                   )}
                 </div>
