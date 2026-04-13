@@ -6,6 +6,61 @@ export default function MathLetterLanding() {
   const [email, setEmail] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
   const navigate = useNavigate()
+  
+  // 🔒 접근 제어 상태
+  const [accessDenied, setAccessDenied] = useState(false)
+  const [isValidating, setIsValidating] = useState(true)
+
+  // 🔒 추천인 링크 필수 검증
+  useEffect(() => {
+    const validateAccess = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search)
+        const refCode = params.get('ref')
+
+        // 개발 환경 체크
+        // 개발 환경 체크 (Vite)
+        const isDevelopment = import.meta.env.DEV || 
+          window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1'
+
+        if (!refCode) {
+          if (isDevelopment) {
+            setIsValidating(false)
+            return
+          }
+          setAccessDenied(true)
+          setIsValidating(false)
+          return
+        }
+
+        // DB에서 코드 존재 여부 확인
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('referral_code', refCode.trim().toUpperCase())
+          .maybeSingle()
+
+        if (error || !data) {
+          if (!isDevelopment) setAccessDenied(true)
+        }
+        
+        setIsValidating(false)
+      } catch (err) {
+        setAccessDenied(true)
+        setIsValidating(false)
+      }
+    }
+
+    validateAccess()
+  }, [])
+
+  // 신청서 페이지로 직접 이동
+  const navigateToEvent = () => {
+    const params = new URLSearchParams(window.location.search)
+    const refCode = params.get('ref')
+    navigate(refCode ? `/event?ref=${encodeURIComponent(refCode)}` : '/event')
+  }
 
   // 이메일 유효성 검사
   const isValidEmail = (email) => {
@@ -67,6 +122,40 @@ export default function MathLetterLanding() {
       console.error('❌ 오류:', err)
       alert(`오류가 발생했습니다.\n\n${err.message}`)
     }
+  }
+
+  // 🔒 검증 중 화면
+  if (isValidating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+      </div>
+    )
+  }
+
+  // 🔒 접근 차단 화면
+  if (accessDenied) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-full bg-red-50 text-red-600">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-bold mb-4 text-gray-800">접근이 제한되었습니다</h2>
+          <p className="text-gray-600 mb-6 font-medium">이 페이지는 추천인의 초대 링크를<br /> 통해서만 접근할 수 있습니다.</p>
+          <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-500 text-left mb-6">
+            <p className="font-bold mb-2">💡 올바른 접근 방법</p>
+            <ul className="space-y-1">
+              <li>• 추천인에게 직접 받은 링크 사용</li>
+              <li>• 배포된 전용 QR 코드 스캔</li>
+            </ul>
+          </div>
+          <p className="text-xs text-red-500 mb-8 opacity-70">※ 직접 주소를 입력하여 접근할 수 없습니다.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -991,9 +1080,9 @@ export default function MathLetterLanding() {
             <p className="hero-subtitle">
               아이와 부모가 함께 읽는<br />무료 뉴스레터,<strong>'라스북 수학편지'</strong>로<br />수학의 진짜 의미를 발견하세요.
             </p>
-            <button className="cta-btn-primary" onClick={scrollToSubscribe}>
+            <button className="cta-btn-primary" onClick={navigateToEvent}>
               <i className="fas fa-envelope"></i>
-              무료 구독하기
+              무료로 구독하기
             </button>
             <p className="hero-note">매일 한 통의 수학 이야기가<br />  이메일로 도착합니다.</p>
           </div>
@@ -1159,7 +1248,6 @@ export default function MathLetterLanding() {
               <div className="stat-number">100%</div>
               <div className="stat-label">무료</div>
             </div>
-                <label className="email-label">이메일 (선택)</label>
           </div>
         </div>
       </section>
@@ -1179,27 +1267,18 @@ export default function MathLetterLanding() {
                 지금 구독하고, 아이와 함께 <br /><strong>'생각이 자라는 수학 시간'</strong>을<br />시작하세요.
               </p>
               
-              {/* Subscription Form */}
-              <form className="subscribe-form" onSubmit={handleSubscribe}>
-                <label className="email-label">이메일 (선택)</label>
+              <div className="subscribe-form">
                 <div className="form-group">
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="email-input" 
-                    placeholder="이메일 주소를 입력하세요"
-                  />
-                  <button type="submit" className="submit-btn">
+                  <button onClick={navigateToEvent} className="submit-btn w-full justify-center py-5 text-xl">
                     <i className="fas fa-paper-plane"></i>
-                    무료로 구독하기
+                    수학편지 신청하러 가기
                   </button>
                 </div>
                 <p className="form-note">
                   <i className="fas fa-lock"></i>
-                    언제든지 구독을 취소할 수 있습니다.<br />개인정보는 안전하게 보호됩니다.
+                  신청 페이지로 이동하여 상세 정보를 입력해주세요.<br />추천인의 고유번호가 필요합니다.
                 </p>
-              </form>
+              </div>
             </div>
           </div>
         </div>

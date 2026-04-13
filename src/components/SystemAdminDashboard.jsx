@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3, BookOpen, FileText } from 'lucide-react'
+import { LogOut, Users, ShoppingCart, Building2, Package, Truck, BarChart3, BookOpen, FileText, QrCode } from 'lucide-react'
 
 export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
   return (
@@ -143,6 +143,16 @@ export default function SystemAdminDashboard({ user, onNavigate, onLogout }) {
             >
               <BarChart3 size={20} />
               이벤트관리
+            </button>
+
+            {/* ⭐ 내정보관리 (추가) */}
+            <button
+              onClick={() => onNavigate('MyInfo')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#1E5A6A', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <QrCode size={20} />
+              내정보 / 홍보관리
             </button>
 
             <button

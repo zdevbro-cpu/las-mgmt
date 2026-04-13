@@ -64,11 +64,7 @@ export const canAccessAllBranches = (user) => {
 }
 
 export const canGetReferralCode = (user) => {
-  if (!user) return false
-  return user.user_type === USER_TYPES.MONITORING_AGENT ||
-         user.user_type === USER_TYPES.CONTRACT_WORKER ||
-         user.user_type === USER_TYPES.OWNER ||
-         user.user_type === USER_TYPES.STORE_MANAGER
+  return !!user // 모든 인증된 사용자는 고유번호를 가질 수 있음
 }
 
 export const canGetSalesCommission = (user) => {
@@ -239,11 +235,13 @@ export const hasHigherPermission = (userA, userB) => {
  * - 계약근무: LAS5000 ~ LAS6999
  */
 
-const REFERRAL_CODE_RANGES = {
+export const REFERRAL_CODE_RANGES = {
   [USER_TYPES.OWNER]: { prefix: 'LAS', start: 1000, end: 2999 },
   [USER_TYPES.STORE_MANAGER]: { prefix: 'LAS', start: 1000, end: 2999 },
   [USER_TYPES.MONITORING_AGENT]: { prefix: 'LAS', start: 3000, end: 4999 },
-  [USER_TYPES.CONTRACT_WORKER]: { prefix: 'LAS', start: 5000, end: 6999 }
+  [USER_TYPES.CONTRACT_WORKER]: { prefix: 'LAS', start: 5000, end: 6999 },
+  [USER_TYPES.BRANCH_MANAGER]: { prefix: 'LAS', start: 7000, end: 7999 },
+  [USER_TYPES.SYSTEM_ADMIN]: { prefix: 'LAS', start: 9000, end: 9999 }
 }
 
 export const generateReferralCode = (user, existingCodes = []) => {
@@ -279,7 +277,7 @@ export const validateReferralCodeFormat = (code) => {
   
   const trimmedCode = code.trim().toUpperCase()
   
-  const pattern = /^LAS\d{4}$/
+  const pattern = /^LAS\d{3,4}$/
   
   if (!pattern.test(trimmedCode)) {
     return {
@@ -294,7 +292,9 @@ export const validateReferralCodeFormat = (code) => {
   const isInValidRange = 
     (number >= 1000 && number <= 2999) ||
     (number >= 3000 && number <= 4999) ||
-    (number >= 5000 && number <= 6999)
+    (number >= 5000 && number <= 6999) ||
+    (number >= 7000 && number <= 7999) ||
+    (number >= 9000 && number <= 9999)
   
   if (!isInValidRange) {
     return {
@@ -315,6 +315,8 @@ export const getUserTypeFromReferralCode = (code) => {
   if (number >= 1000 && number <= 2999) return '직원 (점주/점장)'
   if (number >= 3000 && number <= 4999) return '모니터링요원'
   if (number >= 5000 && number <= 6999) return '계약근무'
+  if (number >= 7000 && number <= 7999) return '지점관리자'
+  if (number >= 9000 && number <= 9999) return '시스템관리자'
   
   return '알 수 없음'
 }

@@ -11,7 +11,8 @@ export default function EventLandingPage() {
     inquiry: '',
     referrerCode: '',
     privacyAgreed: false,
-    marketingAgreed: false
+    marketingAgreed: false,
+    email: ''
   })
   const [loading, setLoading] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
@@ -43,7 +44,7 @@ export default function EventLandingPage() {
         const refCode = params.get('ref')
 
         // 개발 환경 체크
-        const isDevelopment = process.env.NODE_ENV === 'development' ||
+        const isDevelopment = import.meta.env.DEV || 
           window.location.hostname === 'localhost' ||
           window.location.hostname === '127.0.0.1'
 
@@ -94,6 +95,7 @@ export default function EventLandingPage() {
     const email = localStorage.getItem('mathLetterEmail')
     if (email) {
       setSavedEmail(email)
+      setFormData(prev => ({ ...prev, email: email }))
       console.log('✅ 저장된 이메일:', email)
     }
   }, [])
@@ -339,7 +341,7 @@ export default function EventLandingPage() {
       const savedEmail = localStorage.getItem('mathLetterEmail')
 
       const participantData = {
-        email: savedEmail || null,  // ✅ 이메일 추가
+        email: formData.email.trim() || savedEmail || null,  // 이메일 추가
         event_name: '수학편지 구독',  // ✅ 이벤트명 추가
         parent_name: formData.parentName.trim(),
         phone: phoneOnly,
@@ -556,6 +558,22 @@ export default function EventLandingPage() {
         </div>
 
         <div className="space-y-2" style={{ marginTop: '16px' }}>
+
+          {/* 이메일 (선택) */}
+          <div className="mb-4">
+            <label className="block mb-1 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              📧 이메일 <span className="text-gray-400 font-normal text-xs ml-1">(편지 수령을 위해 권장)</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="이메일 주소를 입력해주세요 (선택)"
+              className="w-full px-4 py-2 border border-gray-300"
+              style={{ borderRadius: '10px', fontSize: '15px' }}
+            />
+          </div>
 
           {/* 학부모 이름 */}
           <div>

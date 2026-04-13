@@ -23,16 +23,11 @@ export default function MyQRCode({ user, onBack }) {
   const [isIdentityCardMode, setIsIdentityCardMode] = useState(true)
 
   const eventUrl = selectedEvent 
-    ? `${selectedEvent.landing_url}?ref=${referralCode}`
-    : `https://lasmanager.vercel.app/event?ref=${referralCode}`
+    ? `${selectedEvent.landing_url}${selectedEvent.landing_url.includes('?') ? '&' : '?'}ref=${referralCode}`
+    : `${window.location.origin}/mathletter?ref=${referralCode}`
 
   useEffect(() => {
     fetchActiveEvents()
-    
-    // 초기 로드 시 기본 QR 명함 생성
-    if (user) {
-      setTimeout(() => generateIdentityCard(), 500)
-    }
   }, [user])
 
   const fetchActiveEvents = async () => {
@@ -45,9 +40,21 @@ export default function MyQRCode({ user, onBack }) {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setEvents(data || [])
+      
+      const fetchedEvents = data || []
+      setEvents(fetchedEvents)
+      
+      // 수학편지 이벤트가 있으면 우선적으로 생성
+      if (fetchedEvents.length > 0) {
+        setSelectedEvent(fetchedEvents[0])
+        setTimeout(() => generateQRWithTemplate(fetchedEvents[0]), 500)
+      } else {
+        // 이벤트가 없으면 기본 QR 명함 생성 (데이터는 수학편지 링크)
+        setTimeout(() => generateIdentityCard(), 500)
+      }
     } catch (error) {
       console.error('이벤트 조회 실패:', error)
+      if (user) generateIdentityCard()
     } finally {
       setLoading(false)
     }
@@ -97,7 +104,7 @@ export default function MyQRCode({ user, onBack }) {
       }
 
       // 4. QR 코드 생성
-      const qrData = referralCode
+      const qrData = `${window.location.origin}/mathletter?ref=${referralCode}`
       const qrDataUrl = await QRCode.toDataURL(qrData, {
         width: 1000,
         margin: 2,
@@ -132,6 +139,10 @@ export default function MyQRCode({ user, onBack }) {
       }
 
       // 6. 하단 정보
+      ctx.fillStyle = '#249689'
+      ctx.font = 'bold 30px Malgun Gothic, sans-serif'
+      ctx.fillText('수학편지 무료구독', canvas.width / 2, 150)
+
       ctx.fillStyle = '#000000'
       ctx.textAlign = 'center'
       
@@ -175,7 +186,11 @@ export default function MyQRCode({ user, onBack }) {
       canvas.height = templateImg.height
       ctx.drawImage(templateImg, 0, 0)
 
-      const qrDataUrl = await QRCode.toDataURL(eventUrl, {
+      const currentEventUrl = event.landing_url 
+        ? `${event.landing_url}${event.landing_url.includes('?') ? '&' : '?'}ref=${referralCode}`
+        : `${window.location.origin}/mathletter?ref=${referralCode}`
+
+      const qrDataUrl = await QRCode.toDataURL(currentEventUrl, {
         width: 1000,
         margin: 1
       })
@@ -236,13 +251,12 @@ export default function MyQRCode({ user, onBack }) {
           </button>
           <div className="flex items-center gap-2">
             <img src="/images/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
-            <h1 className="text-lg font-bold text-teal-600">내 QR 코드</h1>
+            <h1 className="text-lg font-bold text-teal-600">수학편지 홍보 관리</h1>
           </div>
           <div className="w-20"></div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 왼쪽: 미리보기 및 액션 */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl shadow-md p-6 text-center">
               {generating ? (
@@ -273,6 +287,28 @@ export default function MyQRCode({ user, onBack }) {
               )}
             </div>
 
+            {/* 링크 복사 영역 */}
+            {generatedImageUrl && (
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">홍보용 링크</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    readOnly 
+                    value={eventUrl}
+                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono text-gray-600"
+                  />
+                  <button 
+                    onClick={copyLink}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-colors ${linkCopied ? 'bg-green-100 text-green-700' : 'bg-teal-50 text-teal-700 hover:bg-teal-100'}`}
+                  >
+                    {linkCopied ? <Check size={14} /> : <Copy size={14} />}
+                    {linkCopied ? '복사됨' : '복사'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* 본인 정보 요약 */}
             <div className="bg-white rounded-xl shadow-md p-4 flex items-center justify-between text-sm">
               <div>
@@ -289,28 +325,10 @@ export default function MyQRCode({ user, onBack }) {
           {/* 오른쪽: 모드 선택 및 템플릿 */}
           <div className="space-y-4">
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
-                <h2 className="font-bold text-gray-700">📜 통합 관리</h2>
-              </div>
-              <div className="p-4 space-y-3">
-                <button 
-                  onClick={generateIdentityCard}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${isIdentityCardMode ? 'border-teal-500 bg-teal-50 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-teal-600">
-                      <QrIcon size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-sm">담당자 확인용 QR</h3>
-                      <p className="text-xs text-gray-500">내 정보를 담은 기본 QR 명함</p>
-                    </div>
-                  </div>
-                </button>
-
-                {events.length > 0 && (
-                  <div className="pt-4 mt-4 border-t border-gray-100">
-                    <h3 className="text-xs font-bold text-gray-500 mb-3 ml-1">이벤트 홍보용 템플릿</h3>
+                {/* 이벤트 템플릿 목록 (수학편지 우선) */}
+                {events.length > 0 ? (
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-gray-500 ml-1">홍보용 이벤트 템플릿</h3>
                     <div className="grid grid-cols-2 gap-2">
                       {events.map(event => (
                         <button
@@ -318,27 +336,49 @@ export default function MyQRCode({ user, onBack }) {
                           onClick={() => generateQRWithTemplate(event)}
                           className={`p-2 rounded-lg border text-xs text-left transition-all ${selectedEvent?.id === event.id ? 'border-teal-500 bg-teal-50' : 'border-gray-100 hover:border-gray-200'}`}
                         >
-                          <div className="aspect-video bg-gray-100 rounded mb-1 overflow-hidden">
+                          <div className="aspect-video bg-white rounded mb-1 overflow-hidden border border-gray-100">
                             <img src={event.template_image_url} alt="" className="w-full h-full object-cover" />
                           </div>
-                          <p className="font-medium truncate">{event.name}</p>
+                          <p className="font-bold truncate text-gray-700">{event.name}</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">클릭하여 QR 생성</p>
                         </button>
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="py-8 text-center border-2 border-dashed border-gray-100 rounded-xl">
+                    <p className="text-xs text-gray-400">진행 중인 이벤트 템플릿용 이미지가 없습니다.</p>
+                  </div>
                 )}
+
+                <div className="pt-4 mt-4 border-t border-gray-100">
+                  <h3 className="text-xs font-bold text-gray-500 mb-3 ml-1">기본 본인 확인 도구</h3>
+                  <button 
+                    onClick={generateIdentityCard}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${isIdentityCardMode ? 'border-teal-500 bg-teal-50 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-teal-600">
+                        <QrIcon size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm">담당자 확인용 QR</h3>
+                        <p className="text-xs text-gray-500">내 정보를 담은 기본 QR 명함</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
             
-            <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
-              <p className="text-xs text-yellow-800 leading-relaxed font-medium">
-                💡 팁: 태블릿 대여 시 담당자 확인용 QR을 스캔하면 빠르게 처리할 수 있습니다. 이미지를 저장하여 휴대폰에 보관하세요.
+            <div className="p-4 bg-teal-50 rounded-xl border border-teal-100">
+              <p className="text-xs text-teal-800 leading-relaxed font-medium">
+                💡 팁: 이벤트용 QR 혹은 링크를 배포하여 신규 회원을 모집하세요. 본인의 고유코드가 포함되어 실적으로 자동 집계됩니다.
               </p>
             </div>
           </div>
         </div>
+        <canvas ref={canvasRef} style={{ display: "none" }} />
       </div>
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-    </div>
   )
 }

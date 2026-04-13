@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, Mail, Building2, Briefcase, Phone, Edit2, Lock, QrCode } from 'lucide-react'
+import { ArrowLeft, User, Mail, Building2, Briefcase, Phone, Edit2, Lock, QrCode, Sparkles } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { generateReferralCode } from '../constants/roles'
 
 export default function MyInfo({ user, onBack, onNavigate }) {
   const [userInfo, setUserInfo] = useState(null)
@@ -159,6 +160,47 @@ export default function MyInfo({ user, onBack, onNavigate }) {
     })
   }
 
+  const handleGenerateCode = async () => {
+    if (loading) return
+    if (!window.confirm('나만의 홍보용 고유번호를 발급받으시겠습니까?')) return
+
+    setLoading(true)
+    try {
+      // 1. 기존 코드 전체 조회 (중복 방지용)
+      const { data: allUsers, error: fetchError } = await supabase
+        .from('users')
+        .select('referral_code')
+        .not('referral_code', 'is', null)
+
+      if (fetchError) throw fetchError
+
+      const existingCodes = allUsers.map(u => u.referral_code)
+      
+      // 2. 새 코드 생성
+      const newCode = generateReferralCode(userInfo, existingCodes)
+      
+      if (!newCode) {
+        throw new Error('고유번호 생성에 실패했습니다. 관리자에게 문의하세요.')
+      }
+
+      // 3. DB 업데이트
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ referral_code: newCode })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      alert(`고유번호가 발급되었습니다: ${newCode}\n이제 수학편지 홍보용 QR과 링크를 사용할 수 있습니다.`)
+      fetchUserInfo()
+    } catch (err) {
+      console.error('고유번호 발급 오류:', err)
+      alert(err.message || '고유번호 발급에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (loading && !userInfo) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -283,36 +325,46 @@ export default function MyInfo({ user, onBack, onNavigate }) {
             />
           </div>
 
-          {/* 고유코드 - 강조 스타일 */}
-          {userInfo?.referral_code && (
-            <div>
-              <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
-                <QrCode size={18} />
-                고유코드
-              </label>
+          {/* 고유코드 영역 */}
+          <div className="mt-2">
+            <label className="flex items-center gap-1.5 mb-2 font-bold" style={{ color: '#000000', fontSize: '15px' }}>
+              <QrCode size={18} />
+              홍보용 고유코드
+            </label>
+            
+            {userInfo?.referral_code ? (
               <div 
-                className="w-full px-4 py-3 border-2 font-bold"
+                className="w-full px-4 py-3 border-2 font-bold flex items-center justify-between"
                 style={{ 
                   borderRadius: '10px', 
                   backgroundColor: '#D1FAE5',
                   borderColor: '#14B8A6',
                   color: '#0D9488',
                   fontSize: '16px',
-                  letterSpacing: '0.5px'
+                  letterSpacing: '1px'
                 }}
               >
                 {userInfo.referral_code}
+                <span className="text-[10px] bg-white px-1.5 py-0.5 rounded border border-teal-200 uppercase">Active</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                * 이벤트 참가자 추천 시 이 코드를 알려주세요
-              </p>
-              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-xs leading-relaxed" style={{ color: '#92400E' }}>
-                  💡 <span className="font-bold">안내:</span> 이름과 전화번호는 직접 수정할 수 있습니다. 지점이나 구분(직급) 변경이 필요한 경우 관리자에게 문의해 주세요
-                </p>
-              </div>
-            </div>
-          )}
+            ) : (
+              <button
+                onClick={handleGenerateCode}
+                disabled={loading}
+                className="w-full px-4 py-3 border-2 border-dashed border-teal-400 text-teal-600 font-bold flex items-center justify-center gap-2 hover:bg-teal-50 transition-colors"
+                style={{ borderRadius: '10px', fontSize: '15px' }}
+              >
+                <Sparkles size={18} />
+                {loading ? '발급 중...' : '홍보용 고유코드 발급받기'}
+              </button>
+            )}
+            
+            <p className="text-xs text-gray-500 mt-2 ml-1">
+              {userInfo?.referral_code 
+                ? '* 이벤트(수학편지) 홍보 시 이 코드가 링크에 포함됩니다.' 
+                : '* 수학편지 홍보를 위해 먼저 고유번호를 발급받아 주세요.'}
+            </p>
+          </div>
 
           {/* 버튼 영역 */}
           <div className="mt-6 space-y-2.5">
@@ -417,17 +469,22 @@ export default function MyInfo({ user, onBack, onNavigate }) {
                   정보 수정
                 </button>
 
-                {/* 내 QR 코드 버튼 */}
-                {userInfo?.referral_code && (
-                  <button
-                    onClick={() => onNavigate('MyQRCode')}
-                    className="w-full py-3 flex items-center justify-center gap-2 font-bold rounded-lg hover:opacity-90 transition-opacity"
-                    style={{ color: 'white', border: 'none', backgroundColor: '#5B9BD5', borderRadius: '10px', fontSize: '15px' }}
-                  >
-                    <QrCode size={18} />
-                    내 QR 코드
-                  </button>
-                )}
+                {/* 수학편지/이벤트 QR 관리 버튼 */}
+                <button
+                  onClick={() => onNavigate('MyQRCode')}
+                  className="w-full py-3.5 flex items-center justify-center gap-2 font-bold rounded-lg hover:opacity-90 transition-opacity"
+                  style={{ 
+                    color: 'white', 
+                    border: 'none', 
+                    backgroundColor: '#1E5A6A', 
+                    borderRadius: '10px', 
+                    fontSize: '16px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                >
+                  <QrCode size={20} />
+                  수학편지 홍보 QR / 링크 관리
+                </button>
 
                 <button
                   onClick={() => setChangingPassword(true)}

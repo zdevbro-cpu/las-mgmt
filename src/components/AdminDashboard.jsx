@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LogOut, Users, FileText, ShoppingCart, UserCircle, Calendar, BarChart3, X } from 'lucide-react'
+import { LogOut, Users, FileText, ShoppingCart, UserCircle, Calendar, BarChart3, X, QrCode } from 'lucide-react'
 import { LOGIN_MODES, canAccessEventDashboard } from '../constants/roles'
 import NoticeFloatingButton from './NoticeFloatingButton'
 import SalesDashboard from './SalesDashboard'
@@ -212,6 +212,16 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
               </button>
             )}
             
+            {/* 내정보관리 버튼 (추가) */}
+            <button
+              onClick={() => onNavigate('MyInfo')}
+              className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#1E5A6A', borderRadius: '10px', fontSize: '15px' }}
+            >
+              <QrCode size={20} />
+              내정보 / 홍보관리
+            </button>
+
             <button
               onClick={onLogout}
               className="w-full py-4 font-bold rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5"
