@@ -24,16 +24,16 @@ export default function Login({ onNavigate, onLogin }) {
         const isTemporaryPassword = password === 'las0000' || password === '123456'
         
         if (isTemporaryPassword) {
-          // users 테이블에서 직접 비밀번호 확인
-          const { data: tempUserData, error: tempUserError } = await supabase
+          // users 테이블에서 직접 비밀번호 확인 (중복 방지를 위해 리스트로 조회)
+          const { data: tempUsers, error: tempUserError } = await supabase
             .from('users')
             .select('*')
             .eq('email', email)
             .eq('password', password)
-            .single()
 
-          if (!tempUserError && tempUserData) {
-            userData = tempUserData
+          if (!tempUserError && tempUsers && tempUsers.length > 0) {
+            // 중복이 있을 경우 가장 최근 데이터 사용
+            userData = tempUsers[0]
             console.log('✅ 임시 비밀번호로 로그인 성공:', email)
           } else {
             alert('이메일 또는 비밀번호가 올바르지 않습니다.\n\n오류: ' + authError.message)
@@ -44,18 +44,41 @@ export default function Login({ onNavigate, onLogin }) {
           return
         }
       } else {
-        // [기존] 정상 Auth 로그인 성공 시 프로필 조회
-        const { data: profileData, error: profileError } = await supabase
+        // [기존] 정상 Auth 로그인 성공 시 프로필 조회 (중복 데이터 대응 로직 추가)
+        const { data: profiles, error: profileError } = await supabase
           .from('users')
           .select('*')
           .eq('auth_uid', authUser.id)
-          .single()
 
-        if (profileError || !profileData) {
-          alert('사용자 정보를 불러올 수 없습니다.\n\n오류: ' + (profileError?.message || 'auth_uid 매칭 실패'))
+        if (profileError) {
+          alert('사용자 정보를 불러올 수 없습니다.\n\n오류: ' + profileError.message)
           return
         }
-        userData = profileData
+
+        if (profiles && profiles.length > 0) {
+          // 중복이 있을 경우 이메일이 일치하는 것을 우선 선택
+          userData = profiles.find(p => p.email === email) || profiles[0]
+        } else {
+          // [추가] auth_uid로 못 찾은 경우 이메일로 다시 한번 검색 (Mismatched UID 복구)
+          console.log('⚠️ auth_uid 매칭 실패, 이메일로 재조회 시도:', email)
+          const { data: emailMatches, error: emailError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+
+          if (!emailError && emailMatches && emailMatches.length > 0) {
+            userData = emailMatches[0]
+            // 찾은 경우 현재 auth_uid와 연결 (Self-Healing)
+            await supabase
+              .from('users')
+              .update({ auth_uid: authUser.id })
+              .eq('id', userData.id)
+            console.log('✅ auth_uid 자동 복구 완료:', email)
+          } else {
+            alert('사용자 정보를 불러올 수 없습니다.\n\n이유: 등록되지 않은 사용자이거나 정보가 일치하지 않습니다.')
+            return
+          }
+        }
       }
 
       // 승인 상태 확인

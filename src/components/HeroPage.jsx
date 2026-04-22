@@ -16,17 +16,18 @@ export default function HeroPage({ onNavigate, onAutoLogin }) {
       
       if (session && session.user) {
         // 세션이 있으면 사용자 정보 가져오기 (auth_uid로 조회)
-        const { data: userData, error: userError } = await supabase
+        const { data: userList, error: userError } = await supabase
           .from('users')
           .select('*')
           .eq('auth_uid', session.user.id)
-          .single()
         
         if (userError) {
           console.error('사용자 정보 조회 오류:', userError)
           setIsChecking(false)
           return
         }
+
+        const userData = userList && userList.length > 0 ? userList[0] : null
 
         if (userData && userData.status === 'approved') {
           // ✅ 승인된 사용자면 자동 로그인 (user_type 체크는 App.jsx에서 처리)
