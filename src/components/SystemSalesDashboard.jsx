@@ -286,6 +286,42 @@ export default function SystemSalesDashboard({ user, onNavigate, branchFilter })
     return pages
   }
 
+  const handleGenerateReport = async () => {
+    const targetDate = pending.startDate || todayStr
+    const target = new Date(`${targetDate}T00:00:00+09:00`)
+    const prev = new Date(target)
+    prev.setDate(prev.getDate() - 1)
+    const prevDayStr = toLocalStr(prev)
+
+    try {
+      let query = supabase.from('sales').select('*').order('created_at', { ascending: false })
+        .gte('created_at', `${prevDayStr}T20:00:00+09:00`)
+        .lte('created_at', `${targetDate}T19:59:59+09:00`)
+
+      const effectiveBranch = branchFilter || (pending.branch && pending.branch !== '전체' ? pending.branch : null)
+      if (effectiveBranch) query = query.eq('branch_name', effectiveBranch)
+      if (pending.userName && pending.userName.trim() !== '')
+        query = query.or(`user_name.ilike.%${pending.userName}%,seller_name.ilike.%${pending.userName}%`)
+
+      const { data, error } = await query
+      if (error) throw error
+
+      let reportData = data || []
+      if (pending.series) {
+        reportData = reportData.filter(r => {
+          try {
+            const info = typeof r.payment_info === 'string' ? JSON.parse(r.payment_info) : r.payment_info
+            return info?.items?.some(i => i.series === pending.series)
+          } catch { return false }
+        })
+      }
+
+      generateDailySalesReport(reportData, targetDate)
+    } catch (err) {
+      alert('보고서 데이터 조회 오류: ' + err.message)
+    }
+  }
+
   const downloadExcel = () => {
     const rows = salesData.map(r => ({
       '일시': new Date(r.created_at).toLocaleString('ko-KR'),
@@ -515,11 +551,8 @@ export default function SystemSalesDashboard({ user, onNavigate, branchFilter })
             &nbsp;|&nbsp; 합계 <span className="font-bold text-teal-700">{formatWon(totalAmt)}</span>
           </p>
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => {
-                const targetDate = pending.startDate || todayStr;
-                generateDailySalesReport(salesData, targetDate);
-              }}
+            <button
+              onClick={handleGenerateReport}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
             >
               <FileText className="w-4 h-4" /> 매출보고서
