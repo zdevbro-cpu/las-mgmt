@@ -128,7 +128,8 @@ function AppContent() {
       'EducationApproval': '/admin/education/approval',
       'EducationAdminDashboard': '/admin/education/dashboard',
       'AdminProductPrices': '/admin/product-prices',
-      'SystemSalesDashboard': '/system-admin/sales'
+      'SystemSalesDashboard': '/system-admin/sales',
+      'AdminSalesDashboard': '/admin/sales'
     }
     
     const targetPath = pageMap[trimmedPage]
@@ -554,15 +555,26 @@ function AppContent() {
           } 
         />
 
-        <Route 
-          path="/system-admin/sales" 
+        <Route
+          path="/system-admin/sales"
           element={
             user && user.user_type === '시스템관리자' ? (
               <SystemSalesDashboard user={user} onNavigate={handleNavigate} />
             ) : (
               <Navigate to="/system-admin" replace />
             )
-          } 
+          }
+        />
+
+        <Route
+          path="/admin/sales"
+          element={
+            user && canAccessManagement(user) ? (
+              <SystemSalesDashboard user={user} onNavigate={handleNavigate} branchFilter={user.branch} />
+            ) : (
+              <Navigate to="/admin" replace />
+            )
+          }
         />
 
         <Route 

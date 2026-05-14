@@ -113,7 +113,7 @@ function RankCard({ item, idx, onClick, titleKey, subKey, valueKey, isBlue }) {
 }
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────
-export default function SystemSalesDashboard({ user, onNavigate }) {
+export default function SystemSalesDashboard({ user, onNavigate, branchFilter }) {
   const [allData, setAllData]         = useState([])
   const [salesData, setSalesData]     = useState([])
   const [loading, setLoading]         = useState(true)
@@ -133,16 +133,17 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
   const [editRow, setEditRow]       = useState(null)   // 수정 중인 row 복사본
   const [deleteTarget, setDeleteTarget] = useState(null) // 삭제 확인 대상 row
 
-  const [pending, setPending] = useState({ branch: '', userName: '', series: '', startDate: '', endDate: '' })
+  const [pending, setPending] = useState({ branch: branchFilter || '', userName: '', series: '', startDate: '', endDate: '' })
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => { loadAll(branchFilter ? { branch: branchFilter } : {}) }, [])
 
   const loadAll = async (f = {}) => {
     setLoading(true)
     try {
       let query = supabase.from('sales').select('*').order('created_at', { ascending: false })
-      
-      if (f.branch && f.branch !== "전체") query = query.eq('branch_name', f.branch)
+
+      const effectiveBranch = branchFilter || (f.branch && f.branch !== "전체" ? f.branch : null)
+      if (effectiveBranch) query = query.eq('branch_name', effectiveBranch)
       if (f.userName && f.userName.trim() !== "") query = query.or(`user_name.ilike.%${f.userName}%,seller_name.ilike.%${f.userName}%`)
       if (f.startDate) query = query.gte('created_at', `${f.startDate}T00:00:00+09:00`)
       if (f.endDate) query = query.lte('created_at', `${f.endDate}T23:59:59+09:00`)
@@ -217,10 +218,9 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
   const handleSearch = () => applyFilters(pending)
 
   const resetFilters = () => {
-    const empty = { branch: '', userName: '', series: '', startDate: '', endDate: '' }
+    const empty = { branch: branchFilter || '', userName: '', series: '', startDate: '', endDate: '' }
     setPending(empty)
     setSalesData(allData)
-    // 초기화 시에는 전체 데이터 기준 랭킹 복구
     computeRankings(allData)
     setCurrentPage(1)
   }
@@ -363,7 +363,7 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
 
         {/* 헤더 */}
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => onNavigate('SystemAdminDashboard')}
+          <button onClick={() => onNavigate(branchFilter ? 'AdminDashboard' : 'SystemAdminDashboard')}
             className="flex items-center text-teal-600 hover:text-teal-700">
             <ChevronLeft className="w-5 h-5 mr-1" /><span>나가기</span>
           </button>
@@ -372,9 +372,9 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
               onError={e => e.target.style.display = 'none'} />
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-teal-700 flex items-center gap-2">
-                <BarChart3 className="w-6 h-6" /> 전사 매출 현황
+                <BarChart3 className="w-6 h-6" /> {branchFilter ? `${branchFilter} 매출 현황` : '전사 매출 현황'}
               </h1>
-              <p className="text-sm text-gray-500 mt-0.5">전체 판매 실적 현황</p>
+              <p className="text-sm text-gray-500 mt-0.5">{branchFilter ? `${branchFilter} 판매 실적 현황` : '전체 판매 실적 현황'}</p>
             </div>
           </div>
           <div className="w-20" />
@@ -408,22 +408,24 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
           <SeriesBarPanel label="S 시리즈" color="#E91E63" keys={['S2','S3','S4','S5']}           seriesAgg={seriesAgg} />
         </div>
 
-        {/* Top 12 지점 */}
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-teal-800 flex items-center gap-2 mb-4">
-            <Trophy className="w-6 h-6 text-yellow-500" /> 지점별 매출 Top 12
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {topBranches.length === 0
-              ? <p className="text-gray-400 text-sm col-span-4 text-center py-4">데이터가 없습니다.</p>
-              : topBranches.map((item, idx) => (
-                <RankCard key={idx} item={item} idx={idx}
-                  onClick={() => handleCardBranch(item.branch)}
-                  titleKey="branch" valueKey="amount" isBlue={false} />
-              ))
-            }
+        {/* Top 12 지점 - 특정 지점 필터 시 숨김 */}
+        {!branchFilter && (
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-teal-800 flex items-center gap-2 mb-4">
+              <Trophy className="w-6 h-6 text-yellow-500" /> 지점별 매출 Top 12
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {topBranches.length === 0
+                ? <p className="text-gray-400 text-sm col-span-4 text-center py-4">데이터가 없습니다.</p>
+                : topBranches.map((item, idx) => (
+                  <RankCard key={idx} item={item} idx={idx}
+                    onClick={() => handleCardBranch(item.branch)}
+                    titleKey="branch" valueKey="amount" isBlue={false} />
+                ))
+              }
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Top 12 개인 */}
         <div className="mb-10">
@@ -447,11 +449,16 @@ export default function SystemSalesDashboard({ user, onNavigate }) {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">지점</label>
-              <select value={pending.branch} onChange={e => setPending(p => ({ ...p, branch: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
-                <option value="">전체 지점</option>
-                {branches.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
+              {branchFilter ? (
+                <input type="text" value={branchFilter} readOnly
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed" />
+              ) : (
+                <select value={pending.branch} onChange={e => setPending(p => ({ ...p, branch: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                  <option value="">전체 지점</option>
+                  {branches.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">시리즈</label>

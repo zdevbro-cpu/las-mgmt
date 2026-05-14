@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import * as XLSX from 'xlsx'
-import { ShoppingCart, Trophy, Award, BarChart3, Search, RotateCcw, Download, ChevronLeft, ChevronRight, Calendar, Package, X } from 'lucide-react'
+import { ShoppingCart, Trophy, Award, BarChart3, Search, RotateCcw, Download, ChevronLeft, ChevronRight, Calendar, Package, X, Edit2, Save } from 'lucide-react'
 
 // ══════════════════════════════════════════════
 // 매출 현황 대시보드 - 재사용 가능 컴포넌트
@@ -32,6 +32,7 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
   const [availableUsers, setAvailableUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20
+  const [editRow, setEditRow] = useState(null)
 
   useEffect(() => { if (viewMode) fetchData() }, [filters, viewMode])
 
@@ -116,6 +117,27 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
     setSeriesStats(sMap)
     setTopBranches(Object.entries(branchMap).map(([n, a]) => ({ name: n, amount: a })).sort((a, b) => b.amount - a.amount).slice(0, 12))
     setTopPerformers(Object.entries(userMap).map(([n, a]) => ({ name: n, amount: a })).sort((a, b) => b.amount - a.amount).slice(0, 12))
+  }
+
+  const handleEditSave = async () => {
+    if (!editRow) return
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .update({
+          customer_name:  editRow.customer_name,
+          phone:          editRow.phone,
+          payment_method: editRow.payment_method,
+          deposit_amount: editRow.deposit_amount,
+          order_details:  editRow.order_details,
+        })
+        .eq('id', editRow.id)
+      if (error) throw error
+      setSalesData(prev => prev.map(r => r.id === editRow.id ? { ...r, ...editRow } : r))
+      setEditRow(null)
+    } catch (err) {
+      alert('수정 중 오류가 발생했습니다: ' + err.message)
+    }
   }
 
   const fmt = (num) => new Intl.NumberFormat('ko-KR').format(num) + '원'
@@ -465,7 +487,7 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
                         </span>
                      </div>
                    </div>
-                   {/* 2행: 주문 상세 */}
+                   {/* 2행: 주문 상세 + 수정 버튼 */}
                    <div className="flex justify-between items-center bg-gray-50/50 p-2 rounded-xl border border-gray-100 mt-1">
                       <div className="flex items-center gap-1.5 overflow-hidden">
                         <Package size={14} className="text-teal-400 shrink-0" />
@@ -473,6 +495,15 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
                           {item.order_details || "-"}
                         </span>
                       </div>
+                      {viewMode === 'user' && (
+                        <button
+                          onClick={() => setEditRow({ ...item })}
+                          className="ml-2 shrink-0 p-1.5 rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                      )}
                    </div>
                 </td>
               </tr>
@@ -498,6 +529,50 @@ export default function SalesDashboard({ user, viewMode, branchFilter, hideIndiv
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
             <p className="font-black text-teal-800 animate-pulse text-sm">매출 집계 중...</p>
+          </div>
+        </div>
+      )}
+
+      {/* 수정 모달 */}
+      {editRow && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200]">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 bg-blue-600 flex items-center justify-between">
+              <h2 className="font-bold text-white text-base flex items-center gap-2">
+                <Edit2 size={16} /> 판매 내역 수정
+              </h2>
+              <button onClick={() => setEditRow(null)} className="text-white/70 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3 overflow-y-auto" style={{ maxHeight: '65vh' }}>
+              {[['구매자', 'customer_name'], ['연락처', 'phone'], ['결제수단', 'payment_method'], ['주문 상세', 'order_details']].map(([label, key]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={editRow[key] || ''}
+                    onChange={e => setEditRow(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">금액</label>
+                <input
+                  type="number"
+                  value={editRow.deposit_amount || ''}
+                  onChange={e => setEditRow(prev => ({ ...prev, deposit_amount: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex gap-2">
+              <button onClick={() => setEditRow(null)} className="flex-1 py-2.5 font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50">취소</button>
+              <button onClick={handleEditSave} className="flex-[2] py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 flex items-center justify-center gap-2">
+                <Save size={16} /> 저장
+              </button>
+            </div>
           </div>
         </div>
       )}

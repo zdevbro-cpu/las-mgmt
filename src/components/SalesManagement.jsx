@@ -32,6 +32,8 @@ import {
   ClipboardCheck,
   AlertTriangle,
   Info,
+  Edit2,
+  Save,
 } from "lucide-react";
 
 const compressImage = (file) => {
@@ -115,6 +117,8 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
     approvalDate: "",
   });
   const cancelReceiptInputRef = useRef(null);
+  const [editRow, setEditRow] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const itemsPerPage = 9999;
 
   const handleRowClick = (record) => {
@@ -376,6 +380,41 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
       console.error("Data load error:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editRow) return;
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .update({
+          customer_name: editRow.customer_name,
+          phone:         editRow.phone,
+          address:       editRow.address,
+        })
+        .eq("id", editRow.id);
+      if (error) throw error;
+      setSalesData(prev => prev.map(r => r.id === editRow.id ? { ...r, ...editRow } : r));
+      setEditRow(null);
+    } catch (err) {
+      alert("수정 중 오류가 발생했습니다: " + err.message);
+    }
+  };
+
+  const handleDeleteFromDetail = async () => {
+    if (!selectedRecord) return;
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .delete()
+        .eq("id", selectedRecord.id);
+      if (error) throw error;
+      setSalesData(prev => prev.filter(r => r.id !== selectedRecord.id));
+      setShowDeleteConfirm(false);
+      setShowDetailModal(false);
+    } catch (err) {
+      alert("삭제 중 오류가 발생했습니다: " + err.message);
     }
   };
 
@@ -824,8 +863,16 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                     {item.order_details || "-"}
                   </p>
                 </div>
-                <div className="shrink-0 flex items-center gap-0.5 text-[#249689] font-black text-[9px] opacity-80">
-                  상세보기 <ChevronRight size={9} />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={e => { e.stopPropagation(); setEditRow({ ...item }); }}
+                    className="p-1 rounded-md bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit2 size={11} />
+                  </button>
+                  <div className="shrink-0 flex items-center gap-0.5 text-[#249689] font-black text-[9px] opacity-80">
+                    상세보기 <ChevronRight size={9} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -866,8 +913,17 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                           {item.order_details || "-"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-0.5 text-[#249689] font-black text-[10px] group-hover:translate-x-1 transition-transform">
-                        상세보기 <ChevronRight size={11} />
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={e => { e.stopPropagation(); setEditRow({ ...item }); }}
+                          className="p-1 rounded-md bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors"
+                          title="수정"
+                        >
+                          <Edit2 size={12} />
+                        </button>
+                        <div className="flex items-center gap-0.5 text-[#249689] font-black text-[10px] group-hover:translate-x-1 transition-transform">
+                          상세보기 <ChevronRight size={11} />
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -898,6 +954,41 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
         </div>
       )}
 
+      {/* 배송지 변경 모달 */}
+      {editRow && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200]">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 bg-[#249689] flex items-center justify-between">
+              <h2 className="font-bold text-white text-base flex items-center gap-2">
+                <Edit2 size={16} /> 배송지 변경
+              </h2>
+              <button onClick={() => setEditRow(null)} className="text-white/70 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              {[['받는사람', 'customer_name'], ['전화번호', 'phone'], ['주소', 'address']].map(([label, key]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{label}</label>
+                  <input
+                    type="text"
+                    value={editRow[key] || ''}
+                    onChange={e => setEditRow(prev => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex gap-2">
+              <button onClick={() => setEditRow(null)} className="flex-1 py-2.5 font-bold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50">취소</button>
+              <button onClick={handleEditSave} className="flex-[2] py-2.5 bg-[#249689] text-white font-bold rounded-xl hover:bg-[#1a7a6e] flex items-center justify-center gap-2">
+                <Save size={16} /> 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 매출 상세 모달 */}
       {showDetailModal && selectedRecord && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[200] animate-in fade-in duration-300">
@@ -910,7 +1001,7 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                 </p>
               </div>
               <button
-                onClick={() => setShowDetailModal(false)}
+                onClick={() => { setShowDetailModal(false); setShowDeleteConfirm(false); }}
                 className="p-2 text-white/70 hover:text-white transition-colors"
               >
                 <X size={20} />
@@ -1104,12 +1195,43 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
                   }
                 } catch { return null; }
               })()}
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="flex-1 py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
-              >
-                닫기
-              </button>
+              {showDeleteConfirm ? (
+                <>
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 py-3.5 bg-gray-200 text-gray-700 font-black rounded-2xl hover:bg-gray-300 transition-all"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={handleDeleteFromDetail}
+                    className="flex-[2] py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 size={15} /> 삭제 확인
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 size={15} /> 삭제
+                  </button>
+                  <button
+                    onClick={() => { setShowDetailModal(false); setEditRow({ ...selectedRecord }); }}
+                    className="flex-1 py-3.5 bg-[#249689] text-white font-black rounded-2xl hover:bg-[#1a7a6e] transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Edit2 size={15} /> 배송지변경
+                  </button>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="flex-1 py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
+                  >
+                    닫기
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1573,16 +1695,8 @@ export default function SalesManagement({ user, onNavigate }) {
     });
   };
 
-  // 탭 및 권한 상태
+  // 탭 상태
   const [activeTab, setActiveTab] = useState("input"); // 'input' | 'stats'
-  const [viewMode, setViewMode] = useState("");
-
-  useEffect(() => {
-    if (user?.user_type === "시스템관리자") setViewMode("system");
-    else if (user?.user_type === "지점장" || user?.user_type === "지점관리자")
-      setViewMode("admin");
-    else setViewMode("user");
-  }, [user]);
 
   // 가격 정보 로드
   useEffect(() => {
@@ -2329,7 +2443,7 @@ export default function SalesManagement({ user, onNavigate }) {
         {activeTab === "stats" ? (
           <SalesDashboard
             user={user}
-            viewMode="admin"
+            viewMode="user"
             onNavigate={onNavigate}
             setActiveTab={setActiveTab}
           />
