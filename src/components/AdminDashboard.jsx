@@ -136,7 +136,7 @@ export default function AdminDashboard({ user, onNavigate, onLogout, onSwitchMod
             <button
               onClick={() => onNavigate('AdminSalesDashboard')}
               className="w-full py-4 text-white font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#0090D4', borderRadius: '10px', fontSize: '15px' }}
+              style={{ backgroundColor: '#249689', borderRadius: '10px', fontSize: '15px' }}
             >
               <FileText size={20} />
               매출보고서
