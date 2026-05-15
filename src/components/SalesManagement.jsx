@@ -1163,70 +1163,58 @@ const SalesDashboard = ({ user, viewMode, onNavigate, setActiveTab }) => {
               })()}
             </div>
 
-            <div className="p-4 bg-gray-50 border-t flex gap-2">
-              {(() => {
-                try {
-                  const info = typeof selectedRecord.payment_info === "string"
-                    ? JSON.parse(selectedRecord.payment_info)
-                    : selectedRecord.payment_info;
-                  const hasCards = info?.cards?.length > 0;
-                  const isCancelled = info?.cancelled;
-                  if (hasCards && !isCancelled) {
-                    return (
-                      <button
-                        onClick={() => openCancelModal(0)}
-                        className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
-                      >
-                        <RotateCcw size={15} />
-                        카드취소
-                      </button>
-                    );
-                  }
-                  if (isCancelled) {
-                    return (
-                      <button
-                        onClick={() => openCancelModal(0)}
-                        className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
-                      >
-                        <RotateCcw size={15} />
-                        결제취소
-                      </button>
-                    );
-                  }
-                } catch { return null; }
-              })()}
+            <div className="px-4 py-3 bg-gray-50 border-t flex gap-2">
               {showDeleteConfirm ? (
                 <>
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 py-3.5 bg-gray-200 text-gray-700 font-black rounded-2xl hover:bg-gray-300 transition-all"
+                    className="flex-1 py-2.5 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                   >
                     취소
                   </button>
                   <button
                     onClick={handleDeleteFromDetail}
-                    className="flex-[2] py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all flex items-center justify-center gap-1.5"
+                    className="flex-[2] py-2.5 text-sm font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors"
                   >
-                    <Trash2 size={15} /> 삭제 확인
+                    삭제 확인
                   </button>
                 </>
               ) : (
                 <>
+                  {(() => {
+                    try {
+                      const info = typeof selectedRecord.payment_info === "string"
+                        ? JSON.parse(selectedRecord.payment_info)
+                        : selectedRecord.payment_info;
+                      const hasCards = info?.cards?.length > 0;
+                      const isCancelled = info?.cancelled;
+                      if (hasCards && !isCancelled) return (
+                        <button onClick={() => openCancelModal(0)} className="flex-1 py-2.5 text-sm font-bold text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
+                          카드취소
+                        </button>
+                      );
+                      if (isCancelled) return (
+                        <button onClick={() => openCancelModal(0)} className="flex-1 py-2.5 text-sm font-bold text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors">
+                          결제취소
+                        </button>
+                      );
+                    } catch { return null; }
+                  })()}
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
-                    className="flex-1 py-3.5 bg-red-500 text-white font-black rounded-2xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 text-sm font-bold text-red-500 bg-red-50 rounded-xl hover:bg-red-100 transition-colors"
                   >
-                    <Trash2 size={15} /> 삭제
+                    삭제
                   </button>
                   <button
                     onClick={() => { setShowDetailModal(false); setEditRow({ ...selectedRecord }); }}
-                    className="flex-1 py-3.5 bg-[#249689] text-white font-black rounded-2xl hover:bg-[#1a7a6e] transition-all flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2.5 text-sm font-bold text-[#249689] bg-teal-50 rounded-xl hover:bg-teal-100 transition-colors"
                   >
-                    <Edit2 size={15} /> 배송지변경
+                    배송지변경
                   </button>
                   <button
                     onClick={() => setShowDetailModal(false)}
-                    className="flex-1 py-3.5 bg-gray-800 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg shadow-gray-200"
+                    className="flex-1 py-2.5 text-sm font-bold text-gray-500 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
                   >
                     닫기
                   </button>

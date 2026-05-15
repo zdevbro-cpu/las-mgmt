@@ -9,7 +9,7 @@
 # Agent Rules(STRICT)
 - **Do not modify anything beyond the given instructions**: Do not arbitrarily change the design, layout, or existing features except for the specific feature improvements explicitly requested by the user.
 - **Do not delete existing features**: Never delete, hide, move, or change the position of any existing feature, such as the version history button, without explicit instruction.
-- **Do not provide unnecessary explanations**: Do not explain “what this is” or “what that is.” Perform only the requested task accurately.
+- **Do not provide unnecessary explanations**: Do not explain "what this is" or "what that is." Perform only the requested task accurately.
 - **Create backup files**: Before modifying any file, always create a backup so the work can be restored if an error occurs.
 - **Follow the `agent.md` rules**: Once this file is created, always follow the rules written in `agent.md`.
 - **Explain progress in Korean**: Always explain the progress and work process in Korean.
