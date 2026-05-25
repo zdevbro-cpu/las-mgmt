@@ -291,9 +291,8 @@ export default function SystemSalesDashboard({ user, onNavigate, branchFilter })
       alert('검색된 매출 데이터가 없습니다.\n검색 조건을 확인한 후 다시 시도해 주세요.')
       return
     }
-    const targetDate = pending.startDate || todayStr
     try {
-      generateDailySalesReport(salesData, targetDate)
+      generateDailySalesReport(salesData, pending.startDate, pending.endDate)
     } catch (err) {
       alert('보고서 생성 오류: ' + err.message)
     }

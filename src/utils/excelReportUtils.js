@@ -4,7 +4,7 @@ import { saveAs } from 'file-saver';
 /**
  * 템플릿(일일매출현황취합.xlsx) 포맷을 그대로 유지하여 매출보고서를 생성합니다.
  */
-export const generateDailySalesReport = async (salesData, selectedDate) => {
+export const generateDailySalesReport = async (salesData, startDate, endDate) => {
   // 1. 템플릿 로드
   const res = await fetch('/일일매출현황취합.xlsx');
   const arrayBuffer = await res.arrayBuffer();
@@ -13,7 +13,7 @@ export const generateDailySalesReport = async (salesData, selectedDate) => {
 
   const templateWs = workbook.worksheets[0];
 
-  // 2. 단말기별 그룹화
+  // 2. 지점·단말기별 그룹화 (지점명 + 단말기번호 합성키)
   const terminalGroups = {};
   salesData.forEach(sale => {
     let info = {};
@@ -22,16 +22,25 @@ export const generateDailySalesReport = async (salesData, selectedDate) => {
         ? JSON.parse(sale.payment_info)
         : (sale.payment_info || {});
     } catch {}
+    const branchName = sale.branch_name || '미지정';
     const terminalNo = info.cards?.[0]?.terminalNo || '미지정';
-    if (!terminalGroups[terminalNo]) terminalGroups[terminalNo] = [];
-    terminalGroups[terminalNo].push({ ...sale, info });
+    const key = `${branchName}||${terminalNo}`;
+    if (!terminalGroups[key]) terminalGroups[key] = { branch: branchName, terminalNo, sales: [] };
+    terminalGroups[key].sales.push({ ...sale, info });
   });
 
-  // 3. 날짜 포맷
-  const dateObj = new Date(selectedDate);
-  const dateStr = dateObj.toLocaleDateString('ko-KR', {
+  // 3. 날짜 포맷: 단일 날짜 또는 시작일~종료일 범위 표시
+  const fmt = (d) => new Date(d).toLocaleDateString('ko-KR', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
   });
+  const todayLocal = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const sDate = startDate || endDate || todayLocal;
+  const eDate = endDate || startDate || todayLocal;
+  const isRange = sDate !== eDate;
+  const dateStr = isRange ? `${fmt(sDate)} ~ ${fmt(eDate)}` : fmt(sDate);
 
   // 4. 헬퍼: 셀 스타일 안전 복사
   const copyStyle = (cell) => {
@@ -75,13 +84,15 @@ export const generateDailySalesReport = async (salesData, selectedDate) => {
   const HEADER_ROW_COUNT = 5;
   const TEMPLATE_DATA_START = 6; // 템플릿에서 데이터가 시작되는 행
 
-  // 메인 처리: 단말기 순서대로 섹션 생성
+  // 메인 처리: 지점명 가나다순 → 같은 지점 내 단말기번호 순으로 섹션 생성
   let outRow = 1;
-  const terminals = Object.entries(terminalGroups);
+  const terminals = Object.values(terminalGroups).sort((a, b) => {
+    if (a.branch !== b.branch) return a.branch.localeCompare(b.branch, 'ko');
+    return String(a.terminalNo).localeCompare(String(b.terminalNo), 'ko', { numeric: true });
+  });
 
   for (let ti = 0; ti < terminals.length; ti++) {
-    const [terminalNo, groupData] = terminals[ti];
-    const branch = groupData[0]?.branch_name || '';
+    const { branch, terminalNo, sales: groupData } = terminals[ti];
 
     // --- 헤더 5행 복사 (스타일만) ---
     for (let hr = 1; hr <= HEADER_ROW_COUNT; hr++) {
@@ -220,8 +231,11 @@ export const generateDailySalesReport = async (salesData, selectedDate) => {
 
   // 11. 다운로드
   const buffer = await outputWb.xlsx.writeBuffer();
+  const filename = isRange
+    ? `매출보고서_${sDate}_${eDate}.xlsx`
+    : `매출보고서_${sDate}.xlsx`;
   saveAs(
     new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-    `매출보고서_${selectedDate}.xlsx`
+    filename
   );
 };
